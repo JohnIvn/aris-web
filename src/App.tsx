@@ -1,49 +1,49 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
+import { useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Outlet,
+} from "react-router-dom";
+import { AuthGuard } from "./lib/hooks/useAuth";
+import { useAuthStore } from "./lib/stores/auth.store";
+import ServerMaintenancePage from "./pages/ServerDown";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const initialize = useAuthStore((s) => s.initialize);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <main className="flex h-screen overflow-hidden bg-background text-on-background font-body antialiased">
+      <Router>
+        <Routes>
+          {/* Public routes */}
+          <Route element={<h1>Landing Page</h1>} path="/" />
+          <Route element={<h1>Sign In</h1>} path="/signin" />
+          <Route element={<h1>Sign Up</h1>} path="/signup" />
+          <Route
+            element={<ServerMaintenancePage />}
+            path="/server-maintenance"
+          />
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
+          {/* Protected routes */}
+          <Route
+            element={
+              <AuthGuard>
+                <Outlet />
+              </AuthGuard>
+            }
+          >
+            <Route element={<h1>Dashboard</h1>} path="/dashboard" />
+            <Route element={<h1>Tasks</h1>} path="/tasks" />
+            <Route element={<h1>Settings</h1>} path="/settings" />
+          </Route>
+        </Routes>
+      </Router>
     </main>
   );
 }
