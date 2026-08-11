@@ -9,6 +9,7 @@ import {
 import { AuthGuard } from "./lib/hooks/useAuth";
 import { useAuthStore } from "./lib/stores/auth.store";
 import ServerMaintenancePage from "./pages/ServerDown";
+import LandingPage from "./pages/LandingPage";
 
 function App() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -22,7 +23,7 @@ function App() {
       <Router>
         <Routes>
           {/* Public routes */}
-          <Route element={<h1>Landing Page</h1>} path="/" />
+          <Route element={<LandingPage />} path="/" />
           <Route element={<h1>Sign In</h1>} path="/signin" />
           <Route element={<h1>Sign Up</h1>} path="/signup" />
           <Route
