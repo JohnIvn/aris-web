@@ -80,6 +80,12 @@ jobs:
             ERRORS="Linter reported a failure (see actions log)."
           fi
 
+          case "$GITHUB_REPOSITORY" in
+            *aris-app*) COLOR=16711680;;
+            *aris-vista*) COLOR=65280;;
+            *) COLOR=255;;
+          esac
+
           JSON=$(jq -n \
             --arg title "Lint Check Failed" \
             --arg repo "$GITHUB_REPOSITORY" \
@@ -90,10 +96,11 @@ jobs:
             --arg message "$COMMIT_MESSAGE" \
             --arg url "https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA" \
             --arg time "$(date -u)" \
+            --arg color "$COLOR" \
             '{
               embeds: [{
                 title: $title,
-                color: 16711680,
+                color: $color,
                 fields: [
                   {
                     name: "Repository",
@@ -153,6 +160,12 @@ jobs:
 
           FILES=$(cat detected.txt)
 
+          case "$GITHUB_REPOSITORY" in
+            *aris-app*) COLOR=16711680;;
+            *aris-vista*) COLOR=65280;;
+            *) COLOR=255;;
+          esac
+
           JSON=$(jq -n \
             --arg title "GitHub Event: security" \
             --arg repo "$GITHUB_REPOSITORY" \
@@ -163,10 +176,11 @@ jobs:
             --arg message "$COMMIT_MESSAGE" \
             --arg url "https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA" \
             --arg time "$(date -u)" \
+            --arg color "$COLOR" \
             '{
               embeds: [{
                 title: $title,
-                color: 16711680,
+                color: $color,
                 fields: [
                   {
                     name: "Repository",
