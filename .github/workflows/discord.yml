@@ -21,7 +21,7 @@ jobs:
           case "$GITHUB_REPOSITORY" in
             *aris-app*) COLOR=16711680;;
             *aris-vista*) COLOR=65280;;
-            *) COLOR=255;;
+            *) COLOR=16776960;;
           esac
 
           JSON=$(jq -n \
@@ -97,7 +97,7 @@ jobs:
           case "$GITHUB_REPOSITORY" in
             *aris-app*) COLOR=16711680;;
             *aris-vista*) COLOR=65280;;
-            *) COLOR=255;;
+            *) COLOR=16776960;;
           esac
 
           JSON=$(jq -n \
@@ -207,7 +207,7 @@ jobs:
           case "$GITHUB_REPOSITORY" in
             *aris-app*) COLOR=16711680;;
             *aris-vista*) COLOR=65280;;
-            *) COLOR=255;;
+            *) COLOR=16776960;;
           esac
 
           JSON=$(jq -n \
@@ -337,7 +337,7 @@ jobs:
           case "$GITHUB_REPOSITORY" in
             *aris-app*) COLOR=16711680;;
             *aris-vista*) COLOR=65280;;
-            *) COLOR=255;;
+            *) COLOR=16776960;;
           esac
 
           JSON=$(jq -n \
@@ -417,7 +417,7 @@ jobs:
           case "$GITHUB_REPOSITORY" in
             *aris-app*) COLOR=16711680;;
             *aris-vista*) COLOR=65280;;
-            *) COLOR=255;;
+            *) COLOR=16776960;;
           esac
 
           JSON=$(jq -n \
