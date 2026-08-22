@@ -60,14 +60,14 @@ export const Header: React.FC<HeaderProps> = ({
   tagline = "ACCOMPLISH REPORT\n& IDENTITY SYSTEM",
   time,
   showClock = true,
-  clockOptions = { hour: "numeric", minute: "2-digit" },
+  clockOptions = { hour: "numeric", minute: "2-digit", hour12: true },
   onInfoClick,
   showInfoButton = true,
   accentColor = "#E8752C",
-  backgroundColor = "#141414",
+  backgroundColor = "#050808",
   borderColor,
   taglineColor = "#8a8a8a",
-  clockColor = "#f2f2f2",
+  clockColor = "#B8B8B8",
   className = "",
 }) => {
   const [clock, setClock] = useState(time ?? "");
@@ -75,7 +75,11 @@ export const Header: React.FC<HeaderProps> = ({
   useEffect(() => {
     if (time || !showClock) return;
     const update = () =>
-      setClock(new Date().toLocaleTimeString([], clockOptions));
+      setClock(
+        new Date()
+          .toLocaleTimeString([], clockOptions)
+          .replace(/am|pm/i, (match) => match.toUpperCase())
+      );
     update();
     const id = setInterval(update, 30_000);
     return () => clearInterval(id);
@@ -83,8 +87,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header
-      className={`flex items-center justify-between px-6 py-3 border-b-2 ${className}`}
-      style={{ backgroundColor, borderColor: borderColor ?? accentColor }}
+      className={`flex z-1 items-center justify-between px-6 py-3 
+        ${borderColor ? "border-b-2" : "border-0"} ${className}`}
+      style={{ backgroundColor, borderColor }}
     >
       <div className="flex items-center gap-3">
         <div
@@ -125,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-4">
         {showClock && (
           <span
-            className="text-base font-medium tabular-nums"
+            className="sm-text-2xl text-base  font-base tabular-nums"
             style={{ color: clockColor }}
           >
             {clock}
@@ -141,16 +146,16 @@ export const Header: React.FC<HeaderProps> = ({
             style={{ borderColor: accentColor, color: accentColor }}
           >
             <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              viewBox="0 0 24 30"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="3"
+              strokeLinecap="round"
             >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="11" />
-              <line x1="12" y1="8" x2="12.01" y2="8" />
+              <line x1="12" y1="25" x2="12" y2="12" />
+              <circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none" />
             </svg>
           </button>
         )}
