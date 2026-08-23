@@ -95,7 +95,7 @@ const FailureReportRoute = () => {
 
   return (
     <FailureReport 
-      onContinue={handleContinue}
+      onRetry={handleContinue}
     />
   )
 }
