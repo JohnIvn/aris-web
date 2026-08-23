@@ -2,7 +2,7 @@ import React from "react";
 
 // Assets
 import DocumentIcon from "../assets/icons/docu.png";
-import ScannerImage from "../assets/images/scanner.png";
+import SuccessImage from "../assets/images/success.png";
 
 // Components
 import StepProgress from "../components/StepProgress";
@@ -13,7 +13,7 @@ import Divider from "../components/Divider";
 export interface SuccessReportProps {
   title?: string;
   tagline?: string;
-  scannerImage?: string;
+  image?: string;
   accentColor?: string;
   secondaryColor?: string;
   onContinue?: () => void;
@@ -22,7 +22,7 @@ export interface SuccessReportProps {
 export const SuccessReport: React.FC<SuccessReportProps> = ({
   title = "SCAN ACCOMPLISHMENT REPORT",
   tagline = "Success your accomplishment report on the scanner",
-  scannerImage = ScannerImage,
+  image = SuccessImage,
   accentColor = "#0E6528",
   secondaryColor = "#7A7F89",
   onContinue
@@ -84,7 +84,7 @@ export const SuccessReport: React.FC<SuccessReportProps> = ({
         <Divider />
 
         <img
-          src={scannerImage}
+          src={image}
           className="w-[46.61vh] h-auto"
         />
 
