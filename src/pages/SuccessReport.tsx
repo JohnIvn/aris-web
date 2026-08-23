@@ -9,29 +9,28 @@ import StepProgress from "../components/StepProgress";
 import IconCircle from "../components/IconCircle";
 import Spacer from "../components/Spacer";
 import Divider from "../components/Divider";
-import ScannerStatus from "../components/ScannerStatus";
 
-export interface PlaceReportProps {
+export interface SuccessReportProps {
   title?: string;
   tagline?: string;
   scannerImage?: string;
   accentColor?: string;
   secondaryColor?: string;
-  onPlace?: () => void;
+  onContinue?: () => void;
 }
 
-export const PlaceReport: React.FC<PlaceReportProps> = ({
+export const SuccessReport: React.FC<SuccessReportProps> = ({
   title = "SCAN ACCOMPLISHMENT REPORT",
-  tagline = "Place your accomplishment report on the scanner",
+  tagline = "Success your accomplishment report on the scanner",
   scannerImage = ScannerImage,
   accentColor = "#0E6528",
   secondaryColor = "#7A7F89",
-  onPlace
+  onContinue
 }) => {
-  const handlePlace = () => {
+  const handleContinue = () => {
     // Detect document from scanner hardware
 
-    onPlace?.();
+    onContinue?.();
 
     // Once we have hardware
   };
@@ -89,16 +88,9 @@ export const PlaceReport: React.FC<PlaceReportProps> = ({
           className="w-[46.61vh] h-auto"
         />
 
-        <Spacer size={6} />
-
-        <ScannerStatus
-          status="waiting"
-          title="Waiting for report..."
-          message="Please place the report on the scanner."
-        />
       </section>
     </>
   );
 };
 
-export default PlaceReport;
+export default SuccessReport;

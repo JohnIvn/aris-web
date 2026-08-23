@@ -1,7 +1,6 @@
 import React from "react";
 // Assets
 import UniversityLogo from "../assets/images/UCC-logo.png";
-import Background from "../assets/images/light-background.png";
 import FingerPrintIcon from "../assets/images/finger.png";
 
 // Components
@@ -26,7 +25,6 @@ export interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
-  backgroundImageSrc = Background,
   brandLetters = "A.R.I.S",
   eyebrow = "Welcome to",
   tagline = "Accomplishment Report and Identity System",
@@ -85,7 +83,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   });
 
   return (
-    <main
+    <div
       onClick={onTouch}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -95,11 +93,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       role="button"
       tabIndex={0}
       className={`relative flex h-screen w-full flex-col items-center justify-center ${className}`}
-      style={{
-        backgroundImage: `url(${backgroundImageSrc})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center"
-      }}
     >
 
       {/* Branding */}
@@ -189,7 +182,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {">>"}
         </span>
       </section>
-    </main>
+    </div>
   );
 };
 
