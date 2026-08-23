@@ -1,39 +1,39 @@
 import React from "react";
 
 // Assets
-import SuccessImage from "../assets/images/success.png";
-import CheckIcon from "../assets/icons/check.png";
+import FingerIcon from "../assets/images/finger.png";
+import ScannerImage from "../assets/images/finger-scanner.png";
 
 // Components
 import StepProgress from "../components/StepProgress";
 import IconCircle from "../components/IconCircle";
 import Spacer from "../components/Spacer";
 import Divider from "../components/Divider";
-import Button from "../components/Button";
+import ScannerStatus from "../components/ScannerStatus";
 
-export interface SuccessReportProps {
+export interface ScanReportProps {
   title?: string;
   icon?: string;
   tagline?: string;
-  image?: string;
+  scannerImage?: string;
   accentColor?: string;
   secondaryColor?: string;
-  onContinue?: () => void;
+  onScan?: () => void;
 }
 
-export const SuccessReport: React.FC<SuccessReportProps> = ({
+export const ScanReport: React.FC<ScanReportProps> = ({
   title = "SCAN ACCOMPLISHMENT REPORT",
-  icon = CheckIcon,
-  tagline = "Success your accomplishment report on the scanner",
-  image = SuccessImage,
+  icon = FingerIcon,
+  tagline = "Scan your accomplishment report on the scanner",
+  scannerImage = ScannerImage,
   accentColor = "#0E6528",
   secondaryColor = "#7A7F89",
-  onContinue
+  onScan
 }) => {
-  const handleContinue = () => {
+  const handleScan = () => {
     // Detect document from scanner hardware
 
-    onContinue?.();
+    onScan?.();
 
     // Once we have hardware
   };
@@ -44,7 +44,7 @@ export const SuccessReport: React.FC<SuccessReportProps> = ({
       <div className="absolute top-[7vh] left-1/2 -translate-x-1/2">
         <StepProgress
           steps={3}
-          currentStep={1}
+          currentStep={2}
         />
       </div>
 
@@ -52,18 +52,15 @@ export const SuccessReport: React.FC<SuccessReportProps> = ({
       <section className="flex flex-col justify-center items-center">
         <IconCircle
           size={"19.12vh"}
-          border
           shadow
-          borderColor="#4FAE4A"
-          borderSize="1.1719vh"
           shadowOffsetY={4}
-          shadowBlur={53}
-          shadowSpread={-8}
+          shadowBlur={40}
+          shadowSpread={3}
         >
           <img
             src={icon}
             alt="Document Icon"
-            className="w-[10.2721vh] h-auto"
+            className="w-[9.2682vh] h-auto"
           />
         </IconCircle>
 
@@ -92,22 +89,20 @@ export const SuccessReport: React.FC<SuccessReportProps> = ({
         <Spacer size={6} />
 
         <img
-          src={image}
-          className="w-[46.61vh] h-auto"
-        />
-        
-        <Spacer size={15} />
-
-        <Button
-            onClick={onContinue}
-            width={"47.1354vh"}
-            height={"6.5833vh"}
-            fontSize={"2.6042vh"}
+          src={scannerImage}
+          className="w-[35.6771vh] h-auto"
         />
 
+        <Spacer size={12} />
+
+        <ScannerStatus
+          status="waiting"
+          title="Waiting for report..."
+          message="Please Scan the report on the scanner."
+        />
       </section>
     </>
   );
 };
 
-export default SuccessReport;
+export default ScanReport;

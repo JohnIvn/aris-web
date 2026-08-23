@@ -11,14 +11,20 @@ import { useAuthStore } from "./lib/stores/auth.store";
 
 import MainLayout from "./pages/MainLayout";
 import LandingPage from "./pages/LandingPage";
+
+// Documents
 import PlaceReport from "./pages/PlaceReport";
 import ScanningReport from "./pages/ScanningReport";
 import SuccessReport from "./pages/SuccessReport";
+import FailureReport from "./pages/FailureReport";
+
+// Finger
+import ScanFinger from "./pages/ScanFinger";
 
 // Landing Route Navigation (On Touch)
 const LandingRoute = () => {
   const navigate = useNavigate();
-  
+
   return (
     <LandingPage
       onTouch={() => navigate("/place-report")}
@@ -54,7 +60,7 @@ const ScanningReportRoute = () => {
     if (success) {
       navigate("/success-report");
     } else {
-      navigate("/fail-report");
+      navigate("/failure-report");
     }
   };
 
@@ -64,6 +70,50 @@ const ScanningReportRoute = () => {
     />
   );
 };
+
+// Success Report -> On Continue
+const SuccessReportRoute = () => {
+  const navigate = useNavigate();
+
+  const handleContinue = () => {
+    navigate("/scan-finger")
+  }
+
+  return (
+    <SuccessReport 
+      onContinue={handleContinue}
+    />
+  )
+}
+// Failure Report -> On Continue
+const FailureReportRoute = () => {
+  const navigate = useNavigate();
+
+  const handleContinue = () => {
+    navigate("/place-report")
+  }
+
+  return (
+    <FailureReport 
+      onContinue={handleContinue}
+    />
+  )
+}
+
+// Scan Finger 
+const ScanFingerRoute = () => {
+  const navigate = useNavigate()
+
+  const handleScan = () => {
+
+  }
+
+  return (
+    <ScanFinger 
+      onScan={handleScan}
+    />
+  )
+}
 
 function App() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -79,7 +129,9 @@ function App() {
           <Route path="/" element={<LandingRoute />} />
           <Route path="/place-report" element={<PlaceReportRoute />} />
           <Route path="/scanning-report" element={<ScanningReportRoute />} />
-          <Route path="/success-report" element={<SuccessReport />} />
+          <Route path="/success-report" element={<SuccessReportRoute />} />
+          <Route path="/failure-report" element={<FailureReportRoute />} />
+          <Route path="/scan-finger" element={<ScanFingerRoute />} />
         </Route>
       </Routes>
     </Router>

@@ -17,15 +17,21 @@ const StepProgress: React.FC<StepProgressProps> = ({
     <div className="flex items-center">
       {Array.from({ length: steps }).map((_, index) => {
         const step = index + 1;
-        const isActive = step === currentStep;
+
+        // Step is completed/current
+        const isCompleted = step <= currentStep;
+
+        // The line after this step should be green
+        // if the NEXT step has already been reached.
+        const isLineCompleted = step < currentStep;
 
         return (
           <React.Fragment key={step}>
             {/* Step Circle */}
             <div
-              className="w-[1.2vh] h-[1.2vh] rounded-full"
+              className="w-[1.5vh] h-[1.5vh] rounded-full"
               style={{
-                backgroundColor: isActive
+                backgroundColor: isCompleted
                   ? highlightColor
                   : normalColor,
               }}
@@ -36,7 +42,9 @@ const StepProgress: React.FC<StepProgressProps> = ({
               <div
                 className="w-[9vh] h-[0.4vh]"
                 style={{
-                  backgroundColor: normalColor,
+                  backgroundColor: isLineCompleted
+                    ? highlightColor
+                    : normalColor,
                 }}
               />
             )}
