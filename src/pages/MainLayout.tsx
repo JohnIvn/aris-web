@@ -1,12 +1,24 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import DateTimeBar from "../components/DateTimeBar";
-const MainLayout = () => {
+import Background from "../assets/images/light-background.png";
+
+export interface MainLayoutProps {
+  backgroundImageSrc?: string;
+}
+
+const MainLayout: React.FC<MainLayoutProps> = ({ backgroundImageSrc = Background })  => {
   return (
-    <div className="w-screen h-screen bg-red-500">
+    <main 
+      className={`relative flex h-screen w-full flex-col items-center justify-center`}
+      style={{
+        backgroundImage: `url(${backgroundImageSrc})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center"
+      }}>
       <Outlet />
       <DateTimeBar />
-    </div>
+    </main>
   );
 };
 
