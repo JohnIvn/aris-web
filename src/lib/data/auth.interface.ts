@@ -29,3 +29,15 @@ export interface SignUpData {
   age?: number;
   role?: UserRoles;
 }
+
+export interface UserData {
+  avatar_url?: string;
+  email: string;
+  username: string;
+  firstname: string;
+  middlename: string;
+  lastname: string;
+  gender?: string;
+  birthday?: string;
+  age?: number;
+}
