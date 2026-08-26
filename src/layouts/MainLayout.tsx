@@ -1,5 +1,5 @@
 import React from "react";
 
-export function MainLayout() {
+export default function MainLayout() {
   return <section></section>;
 }
