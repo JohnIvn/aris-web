@@ -16,7 +16,6 @@ export interface SignInData {
 }
 
 export interface SignUpData {
-  avatar_url?: string;
   email: string;
   password: string;
   confirm_password: string;
@@ -26,8 +25,6 @@ export interface SignUpData {
   lastname: string;
   gender?: string;
   birthday?: string;
-  age?: number;
-  role?: UserRoles;
 }
 
 export interface UserData {
