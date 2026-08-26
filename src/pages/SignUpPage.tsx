@@ -4,6 +4,7 @@ import { signUp } from "../api/auth";
 export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [success, setSuccess] = useState(false);
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -25,6 +26,7 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors([]);
+    setSuccess(false);
 
     if (form.password !== form.confirm_password) {
       setErrors(["Passwords do not match"]);
@@ -41,6 +43,8 @@ export default function SignUpPage() {
             : [response.error]
           : ["Failed to sign in, please try again later!"],
       );
+    } else {
+      setSuccess(true);
     }
     setLoading(false);
   };
@@ -58,6 +62,12 @@ export default function SignUpPage() {
             {errors.map((err, i) => (
               <p key={i}>{err}</p>
             ))}
+          </div>
+        )}
+
+        {success && (
+          <div className="rounded bg-success-container p-2 text-sm text-on-success-container">
+            <p>Account created successfully!</p>
           </div>
         )}
 

@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { signIn } from "../api/auth";
+import { useAuth } from "../lib/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export default function SignInPage() {
+  const navigate = useNavigate();
+  const { signin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [form, setForm] = useState({
@@ -17,17 +20,21 @@ export default function SignInPage() {
     e.preventDefault();
     setErrors([]);
     setLoading(true);
-    const response = await signIn(form);
+
+    const response = await signin(form);
+
     if (!response.ok) {
       setErrors(
-        response.error
-          ? Array.isArray(response.error)
-            ? response.error
-            : [response.error]
+        response.error && response.error.length > 0
+          ? response.error
           : ["Failed to sign in, please try again later!"],
       );
+      setLoading(false);
+      return;
     }
+
     setLoading(false);
+    navigate("/");
   };
 
   return (
@@ -48,9 +55,9 @@ export default function SignInPage() {
 
         <input
           className="input w-full"
-          type="text"
-          name="username"
-          placeholder="Username or email"
+          type="email"
+          name="email"
+          placeholder="Email"
           value={form.email}
           onChange={handleChange}
           required

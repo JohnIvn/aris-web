@@ -10,7 +10,6 @@ export async function verifyuser(): Promise<ApiCallResponse> {
 export async function signIn(data: SignInData): Promise<ApiCallResponse> {
   const { email, password } = data;
   const errors = [];
-  // Use an email validation algorithm for this
   if (!email) errors.push("Email is required!");
   if (!password) errors.push("Password is required!");
 
@@ -25,7 +24,7 @@ export async function signIn(data: SignInData): Promise<ApiCallResponse> {
 
   return await httpRequest("/auth/signin", {
     method: "POST",
-    data: JSON.stringify(data),
+    data: data,
   });
 }
 
@@ -52,7 +51,7 @@ export async function signUp(data: SignUpData): Promise<ApiCallResponse> {
 
   return await httpRequest("/auth/signup", {
     method: "POST",
-    data: JSON.stringify(data),
+    data: data,
   });
 }
 

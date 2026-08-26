@@ -12,7 +12,12 @@ import {
   signOut as apiSignOut,
 } from "../../api/auth";
 import { UserData, SignInData, SignUpData } from "../data/auth.interface";
-import { setAccessToken } from "../token";
+import {
+  getAccessToken,
+  getStoredUser,
+  setAuthSession,
+  clearAuthSession,
+} from "../token";
 
 interface AuthState {
   user: UserData | null;
@@ -23,11 +28,11 @@ interface AuthState {
 
 interface AuthContextValue extends AuthState {
   initialize: () => Promise<void>;
-  login: (
+  signin: (
     credentials: SignInData,
   ) => Promise<{ ok: boolean; error?: string[] }>;
   signup: (payload: SignUpData) => Promise<{ ok: boolean; error?: string[] }>;
-  logout: () => Promise<void>;
+  signout: () => Promise<void>;
 }
 
 const initialState: AuthState = {
@@ -43,7 +48,7 @@ function applyAuthResult(
   setState: React.Dispatch<React.SetStateAction<AuthState>>,
   data: { user: UserData; token: string },
 ) {
-  setAccessToken(data.token);
+  setAuthSession(data.token, data.user);
   setState({
     user: data.user,
     token: data.token,
@@ -56,10 +61,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState);
 
   const initialize = useCallback(async () => {
+    // seed from sessionStorage first so a refresh doesn't flash logged-out
+    const storedToken = getAccessToken();
+    const storedUser = getStoredUser();
+    if (storedToken && storedUser) {
+      setState({
+        user: storedUser,
+        token: storedToken,
+        initialized: false,
+        loading: false,
+      });
+    }
+
     const response = await verifyuser();
 
     if (!response.ok) {
-      setAccessToken("");
+      clearAuthSession();
       setState({ ...initialState, initialized: true });
       return;
     }
@@ -70,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const login = useCallback(async (credentials: SignInData) => {
+  const signin = useCallback(async (credentials: SignInData) => {
     setState((s) => ({ ...s, loading: true }));
     const response = await apiSignIn(credentials);
 
@@ -102,15 +119,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, []);
 
-  const logout = useCallback(async () => {
+  const signout = useCallback(async () => {
     await apiSignOut();
-    setAccessToken("");
+    clearAuthSession();
     setState({ ...initialState, initialized: true });
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ ...state, initialize, login, signup, logout }}
+      value={{ ...state, initialize, signin, signup, signout }}
     >
       {children}
     </AuthContext.Provider>
