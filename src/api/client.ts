@@ -37,24 +37,13 @@ function dispatchServerDown(endpoint: string, reason: "network" | "timeout") {
   );
 }
 
-let getAccessToken: () => string | null = () => null;
-export function registerAccessTokenGetter(getter: () => string | null) {
-  getAccessToken = getter;
-}
-
 export const apiClient = axios.create({
   timeout: DEFAULT_TIMEOUT_MS,
+  withCredentials: true, // send/receive the auth cookie automatically
 });
 
 apiClient.interceptors.request.use((config) => {
   config.baseURL = getBaseUrl();
-
-  const token = getAccessToken();
-  if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
   return config;
 });
 
@@ -173,7 +162,7 @@ function handleError<T>(
       error: timedOut
         ? "Request timed out"
         : axiosError.message || "Error fetching data",
-      serverDown: true,
+      server_status: true,
     };
   }
 

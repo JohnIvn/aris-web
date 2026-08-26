@@ -3,8 +3,8 @@ export type ApiCallResponse<T = unknown> = {
   ok: boolean;
   data: T | null;
   message?: string | null;
-  error?: string | null;
-  serverDown?: boolean;
+  error?: string | string[] | null;
+  server_status?: boolean;
 };
 
 export interface ServerDownEventDetail {

@@ -1,4 +1,4 @@
-import { SettingsThemes } from "./types";
+import { SettingsThemes, UserRoles } from "./types";
 
 export interface UserSession {
   id: string;
@@ -16,14 +16,16 @@ export interface SignInData {
 }
 
 export interface SignUpData {
+  avatar_url?: string;
   email: string;
   password: string;
+  confirm_password: string;
+  username: string;
   firstname: string;
   middlename: string;
   lastname: string;
   gender?: string;
-  birthday: string;
-  age?: string | null;
-  address?: string | null;
-  position?: string | null; // Change this when we know the professor's hierarchy
+  birthday?: string;
+  age?: number;
+  role?: UserRoles;
 }
