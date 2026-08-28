@@ -1,17 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
-
-@theme {
-  --font-seoul: "SeoulNamsan", sans-serif;
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
 body {
     font-family: 'Poppins', sans-serif;
-}
-
-@font-face {
-  font-family: "SeoulNamsan";
-  src: url("/fonts/SeoulNamsanCB.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
 }

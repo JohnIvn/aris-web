@@ -1,13 +1,19 @@
-import { SettingsThemes } from "./types";
+import type { SettingsTheme } from "./app.types";
 
 export interface UserSession {
   id: string;
   email: string;
   role: string;
+  name?: string;
+  fullName?: string;
+  position?: string;
+  department?: string;
+  avatarUrl?: string;
+  photoUrl?: string;
 }
 
 export interface UserSettings {
-  theme: SettingsThemes;
+  theme: SettingsTheme;
 }
 
 export interface SignInData {

@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
 import { SignInData, SignUpData, UserSession } from "../data/auth.interface";
 import { httpRequest, registerAccessTokenGetter } from "../utils/api";
 import {
   clearPersistedRefreshToken,
+  getPersistedRefreshToken,
   persistRefreshToken,
 } from "../utils/auth.helpers";
 import { useUIStore } from "./ui.store";
@@ -42,9 +42,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     }
 
     try {
-      const refreshToken = await invoke<string | null>("get_refresh_token", {
-        user: lastUser,
-      });
+      const refreshToken = getPersistedRefreshToken(lastUser);
 
       if (!refreshToken) {
         set({ loading: false, initialized: true });
@@ -131,11 +129,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       console.error(message);
       set({ loading: false });
       useUIStore().addToast({
-        type: "success",
-        message: "Signed In Successfully",
-        description: `Successfully Signed In as ${get().user?.email}`,
+        type: "error",
+        message: "Unable to sign in",
+        description: message,
       });
-      return;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw error;
     }
   },
 

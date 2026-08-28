@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Toast } from "../data/interfaces";
+import type { Toast } from "../data/toast.types";
 
 interface ConfirmationState {
   isOpen: boolean;

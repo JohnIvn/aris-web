@@ -4,7 +4,6 @@ import tseslint from "typescript-eslint";
 export default [
   {
     ignores: [
-      "**/src-tauri/target/**",
       "**/dist/**",
       "**/build/**",
       "**/node_modules/**",

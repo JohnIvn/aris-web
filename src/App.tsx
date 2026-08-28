@@ -1,118 +1,46 @@
 import "./App.css";
-import { useEffect } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  useNavigate
-} from "react-router-dom";
+import { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "./lib/stores/auth.store";
 
-import MainLayout from "./pages/MainLayout";
-import LandingPage from "./pages/LandingPage";
+// Layout
+import AppLayoutRoute from "./layouts/AppLayoutRoute";
 
-// Documents
-import PlaceReport from "./pages/PlaceReport";
-import ScanningReport from "./pages/ScanningReport";
-import SuccessReport from "./pages/SuccessReport";
-import FailureReport from "./pages/FailureReport";
+// Pages
+import Dashboard from "./pages/Dashboard";
+import Login from "./pages/Login";
+import Profile from "./pages/Profile";
+import MeetingAttendance from "./pages/MeetingAttendance";
+import { ThemeProvider } from "./components/context/ThemeContext";
 
-// Finger
-import ScanFinger from "./pages/ScanFinger";
 
-// Landing Route Navigation (On Touch)
-const LandingRoute = () => {
+const LoginRoute = () => {
   const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const signIn = useAuthStore((s) => s.signIn);
 
-  return (
-    <LandingPage
-      onTouch={() => navigate("/place-report")}
-    />
-  )
-}
-
-// Place Report Navigation (On Document Place)
-const PlaceReportRoute = () => {
-  const navigate = useNavigate();
-
-  // Remove this after we have hardware
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      navigate("/scanning-report");
-    }, 10000);
-
-    return () => clearTimeout(timer);
-  }, [navigate]);
-
-  return (
-    <PlaceReport
-      onPlace={() => navigate("/scanning-report")}
-    />
-  )
-}
-
-// Scanning Reports Done (Failure or Success)
-const ScanningReportRoute = () => {
-  const navigate = useNavigate();
-
-  const handleComplete = (success: boolean) => {
-    if (success) {
-      navigate("/success-report");
-    } else {
-      navigate("/failure-report");
+  const handleLogin = async (email: string, password: string) => {
+    setError(null);
+    try {
+      await signIn({ email, password });
+      navigate("/user/dashboard");
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : "Unable to sign in.");
     }
   };
 
-  return (
-    <ScanningReport
-      onComplete={handleComplete}
-    />
-  );
+  return <Login onLogin={handleLogin} error={error} />;
 };
 
-// Success Report -> On Continue
-const SuccessReportRoute = () => {
-  const navigate = useNavigate();
-
-  const handleContinue = () => {
-    navigate("/scan-finger")
-  }
-
-  return (
-    <SuccessReport 
-      onContinue={handleContinue}
-    />
-  )
-}
-// Failure Report -> On Continue
-const FailureReportRoute = () => {
-  const navigate = useNavigate();
-
-  const handleContinue = () => {
-    navigate("/place-report")
-  }
-
-  return (
-    <FailureReport 
-      onRetry={handleContinue}
-    />
-  )
+// Profile Route
+const ProfileRoute = () => {
+  return <Profile />;
 }
 
-// Scan Finger 
-const ScanFingerRoute = () => {
-  const navigate = useNavigate()
-
-  const handleScan = () => {
-
-  }
-
-  return (
-    <ScanFinger 
-      onScan={handleScan}
-    />
-  )
+// Meeting Attendance Route
+const MeetingAttendanceRoute = () => {
+  return <MeetingAttendance />;
 }
 
 function App() {
@@ -123,18 +51,18 @@ function App() {
   }, [initialize]);
 
   return (
-    <Router>
-      <Routes>
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<LandingRoute />} />
-          <Route path="/place-report" element={<PlaceReportRoute />} />
-          <Route path="/scanning-report" element={<ScanningReportRoute />} />
-          <Route path="/success-report" element={<SuccessReportRoute />} />
-          <Route path="/failure-report" element={<FailureReportRoute />} />
-          <Route path="/scan-finger" element={<ScanFingerRoute />} />
-        </Route>
-      </Routes>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<LoginRoute />} />
+          <Route path="/user" element={<AppLayoutRoute />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="profile" element={<ProfileRoute />} />
+            <Route path="meetings" element={<MeetingAttendanceRoute />} />
+          </Route>
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
 

@@ -1,7 +1,21 @@
-# Tauri + React + Typescript
+# ARIS Website
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+Frontend for the Accomplishment Report and Information System, built with React, TypeScript, and Vite.
 
-## Recommended IDE Setup
+## Development
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+```bash
+npm install
+npm run dev
+```
+
+## Validation
+
+```bash
+npm run lint
+npm run build
+```
+
+Meeting attendance currently uses mock frontend data. API calls are isolated in `src/lib/services` so backend integration can replace data implementations without changing page UI components.
+
+Use VS Code with the ESLint and TypeScript extensions for the best development experience.
