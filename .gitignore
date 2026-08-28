@@ -23,8 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
+<<<<<<< HEAD
 # Credentials
 .env
 env
 .env-local
 .env-example
+=======
+.env
+>>>>>>> 8f6ee662d974edb2a3728911af7628c2ebb40e1f
