@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     FileText,
     CalendarCheck,
@@ -12,15 +12,16 @@ import {
     UserCheck,
 } from 'lucide-react';
 
-import StatCard from '../components/ui/StatCard';
-import Card from '../components/ui/Card';
-import ReportTimeline from '../components/ui/ReportTimeline';
-import type { TimelineStep } from '../components/ui/ReportTimeline';
-import NotificationItem from '../components/ui/NotificationItem';
-import QuickActionButton from '../components/ui/QuickActionButton';
-import InfoBanner from '../components/ui/InfoBanner';
-import Topbar from '../components/Topbar';
-import type { DashboardData, DashboardNotification } from '../lib/data/dashboard.types';
+import StatCard from '../../components/ui/StatCard';
+import Card from '../../components/ui/Card';
+import Modal from '../../components/ui/Modal';
+import ReportTimeline from '../../components/ui/ReportTimeline';
+import type { TimelineStep } from '../../components/ui/ReportTimeline';
+import NotificationItem from '../../components/ui/NotificationItem';
+import QuickActionButton from '../../components/ui/QuickActionButton';
+import InfoBanner from '../../components/ui/InfoBanner';
+import Topbar from '../../components/Topbar';
+import type { DashboardData, DashboardNotification } from '../../lib/data/dashboard.types';
 
 export interface DashboardProps extends Partial<DashboardData> {
 
@@ -130,6 +131,12 @@ const DashboardContent: React.FC<DashboardProps> = ({
     onStartMeeting,
     onUploadDocument,
 }) => {
+    const [modal, setModal] = useState<{ title: string; description: string; body: string } | null>(null);
+
+    const openModal = (title: string, description: string, body: string) => {
+        setModal({ title, description, body });
+    };
+
     return (
         <div className="min-h-screen w-full flex bg-slate-100 dark:bg-slate-950 transition-colors">
 
@@ -235,14 +242,20 @@ const DashboardContent: React.FC<DashboardProps> = ({
                                     label="Create New AR"
                                     description="Start a new report"
                                     accentColor={accentColor}
-                                    onClick={onCreateReport}
+                                    onClick={() => {
+                                        if (onCreateReport) onCreateReport();
+                                        else openModal('Create New AR', 'Start a report from the web app', 'This action is ready for your backend endpoint. Connect it by replacing the callback handler or the service URL in the dashboard flow.');
+                                    }}
                                 />
                                 <QuickActionButton
                                     icon={Video}
                                     label="Start Meeting"
                                     description="Record meeting attendance"
                                     accentColor={accentColor}
-                                    onClick={onStartMeeting}
+                                    onClick={() => {
+                                        if (onStartMeeting) onStartMeeting();
+                                        else openModal('Start Meeting', 'Begin attendance tracking', 'This button is prepared for a backend call once the meeting service endpoint is available.');
+                                    }}
                                 />
                                 <QuickActionButton
                                     icon={CalendarCheck}
@@ -256,7 +269,10 @@ const DashboardContent: React.FC<DashboardProps> = ({
                                     label="Upload Document"
                                     description="Add supporting documents"
                                     accentColor={accentColor}
-                                    onClick={onUploadDocument}
+                                    onClick={() => {
+                                        if (onUploadDocument) onUploadDocument();
+                                        else openModal('Upload Document', 'Attach supporting file', 'The upload flow is ready to connect to your file endpoint when the backend is live.');
+                                    }}
                                 />
                             </div>
                         </Card>
@@ -315,7 +331,8 @@ const DashboardContent: React.FC<DashboardProps> = ({
                                 action={
                                     <button
                                         type="button"
-                                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                                        onClick={() => openModal('Meeting Proof', 'Initial attendance verification', 'Proof recorded at 8:01 AM. This is the placeholder record for backend sync; replace it with your actual proof response when the API is connected.')}
+                                        className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                     >
                                         View Proof
                                     </button>
@@ -345,6 +362,25 @@ const DashboardContent: React.FC<DashboardProps> = ({
                     © 2026 ARIS. All rights reserved.
                 </p>
             </main>
+
+            <Modal
+                isOpen={!!modal}
+                title={modal?.title ?? 'Action'}
+                description={modal?.description ?? ''}
+                onClose={() => setModal(null)}
+                size="md"
+                footer={
+                    <button
+                        type="button"
+                        onClick={() => setModal(null)}
+                        className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-500 hover:shadow-md"
+                    >
+                        Close
+                    </button>
+                }
+            >
+                <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{modal?.body}</p>
+            </Modal>
         </div>
     );
 };

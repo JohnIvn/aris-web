@@ -12,18 +12,19 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 
-import Card from '../components/ui/Card';
-import InfoBanner from '../components/ui/InfoBanner';
-import Topbar from '../components/Topbar';
-import StatusBadge from '../components/ui/StatusBadge';
-import FilterDropdown from '../components/ui/FilterDropdown';
-import SearchInput from '../components/ui/SearchInput';
+import Card from '../../components/ui/Card';
+import Modal from '../../components/ui/Modal';
+import InfoBanner from '../../components/ui/InfoBanner';
+import Topbar from '../../components/Topbar';
+import StatusBadge from '../../components/ui/StatusBadge';
+import FilterDropdown from '../../components/ui/FilterDropdown';
+import SearchInput from '../../components/ui/SearchInput';
 
-import type { MeetingAttendanceData } from '../lib/data/meetingAttendance.types';
+import type { MeetingAttendanceData } from '../../lib/data/meetingAttendance.types';
 import {
     fetchMeetingAttendanceData,
     startMeeting as startMeetingRequest,
-} from '../lib/services/meetingAttendance.service';
+} from '../../lib/services/meetingAttendance.service';
 
 export interface MeetingAttendanceProps {
     dateLabel?: string;
@@ -99,6 +100,7 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [searchValue, setSearchValue] = useState('');
     const [startingMeetingId, setStartingMeetingId] = useState<string | undefined>(undefined);
+    const [selectedMeeting, setSelectedMeeting] = useState<MeetingAttendanceData['meetingHistory'][number] | null>(null);
 
     const loadData = useCallback(() => {
         let cancelled = false;
@@ -225,7 +227,7 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
                                         type="button"
                                         onClick={() => handleStartMeeting()}
                                         disabled={startingMeetingId === 'new'}
-                                        className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-60"
+                                        className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:opacity-60"
                                         style={{ backgroundColor: accentColor }}
                                     >
                                         {startingMeetingId === 'new' ? (
@@ -243,7 +245,7 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
                                     <button
                                         type="button"
                                         onClick={onViewHistory}
-                                        className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                        className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
                                     >
                                         <History size={18} className="text-slate-500 dark:text-slate-400 shrink-0" />
                                         <span>
@@ -341,8 +343,11 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
                                                         {row.isRecorded ? (
                                                             <button
                                                                 type="button"
-                                                                onClick={() => onViewDetails?.(row.id)}
-                                                                className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline"
+                                                                onClick={() => {
+                                                                    onViewDetails?.(row.id);
+                                                                    setSelectedMeeting(row);
+                                                                }}
+                                                                className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline transition-transform duration-200 hover:-translate-y-0.5"
                                                                 style={{ color: accentColor }}
                                                             >
                                                                 <Eye size={14} />
@@ -353,7 +358,7 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
                                                                 type="button"
                                                                 onClick={() => handleStartMeeting(row.id)}
                                                                 disabled={startingMeetingId === row.id}
-                                                                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-white shrink-0 disabled:opacity-60"
+                                                                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-white shrink-0 disabled:opacity-60 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                                                                 style={{ backgroundColor: accentColor }}
                                                             >
                                                                 {startingMeetingId === row.id ? (
@@ -386,6 +391,42 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
                     © 2026 ARIS. All rights reserved.
                 </p>
             </main>
+
+            <Modal
+                isOpen={!!selectedMeeting}
+                title={selectedMeeting ? selectedMeeting.title : 'Meeting details'}
+                description={selectedMeeting ? `${selectedMeeting.dateLabel} • ${selectedMeeting.timeLabel}` : ''}
+                onClose={() => setSelectedMeeting(null)}
+                size="md"
+                footer={
+                    <button
+                        type="button"
+                        onClick={() => setSelectedMeeting(null)}
+                        className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-500 hover:shadow-md"
+                    >
+                        Close
+                    </button>
+                }
+            >
+                {selectedMeeting && (
+                    <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+                        <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Purpose</p>
+                            <p className="mt-2 text-slate-800 dark:text-slate-100">{selectedMeeting.purpose}</p>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Duration</p>
+                                <p className="mt-2 text-slate-800 dark:text-slate-100">{selectedMeeting.durationLabel}</p>
+                            </div>
+                            <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                                <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</p>
+                                <p className="mt-2 text-slate-800 dark:text-slate-100">{selectedMeeting.isRecorded ? 'Recorded' : 'Not Recorded'}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 };

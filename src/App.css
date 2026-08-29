@@ -2,6 +2,23 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  font-family: 'Poppins', sans-serif;
+  color-scheme: light;
+}
+
+html, body, #root {
+  min-height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
 body {
-    font-family: 'Poppins', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  font-family: 'Poppins', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
 }

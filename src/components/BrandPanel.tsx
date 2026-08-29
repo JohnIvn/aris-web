@@ -20,7 +20,7 @@ const BrandPanel: React.FC<BrandPanelProps> = ({
   taglines = ['Streamlined reporting.', 'Transparent approvals.', 'Stronger performance.'],
 }) => {
   return (
-    <div className="relative md:w-[46%] h-full min-h-[280px] text-white overflow-hidden bg-emerald-950">
+    <div className="relative w-full md:w-[46%] min-h-[260px] md:min-h-[640px] text-white overflow-hidden bg-emerald-950">
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-950" />
       <div
         className="absolute inset-0 opacity-20"
@@ -31,19 +31,19 @@ const BrandPanel: React.FC<BrandPanelProps> = ({
       />
       <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/90 via-emerald-950/30 to-transparent" />
 
-      <div className="relative z-10 h-full flex flex-col justify-between p-8 md:p-10">
+      <div className="relative z-10 flex h-full min-h-[260px] flex-col justify-between p-6 sm:p-8 md:p-10">
         <div>
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center ring-2 ring-yellow-100/70 shrink-0">
-              <GraduationCap className="w-7 h-7 text-emerald-950" strokeWidth={2.4} />
+          <div className="mb-5 flex items-center gap-3">
+            <div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 ring-2 ring-yellow-100/70 flex items-center justify-center sm:h-14 sm:w-14">
+              <GraduationCap className="h-6 w-6 text-emerald-950 sm:h-7 sm:w-7" strokeWidth={2.4} />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-widest leading-none">{title}</h1>
+            <h1 className="text-xl font-bold tracking-widest leading-none sm:text-2xl md:text-3xl">{title}</h1>
           </div>
-          <p className="text-lg md:text-xl font-medium leading-snug">{subtitle}</p>
+          <p className="text-base font-medium leading-snug sm:text-lg md:text-xl">{subtitle}</p>
 
-          <div className="w-14 h-0.5 bg-emerald-400/70 my-6 rounded-full" />
+          <div className="my-5 h-0.5 w-14 rounded-full bg-emerald-400/70" />
 
-          <ul className="space-y-1.5 text-sm md:text-base text-emerald-50/90 font-medium">
+          <ul className="space-y-1.5 text-sm font-medium text-emerald-50/90 sm:text-base">
             {taglines.map((line) => (
               <li key={line}>{line}</li>
             ))}

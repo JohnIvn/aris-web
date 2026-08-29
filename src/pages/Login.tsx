@@ -10,6 +10,7 @@ import ErrorBanner from "../components/ui/ErrorBanner";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import Spacer from "../components/ui/Spacer";
 import { useTheme } from "../components/context/ThemeContext";
+import { DEMO_EMAIL, DEMO_PASSWORD } from '../lib/demoAuth';
 
 export interface LoginProps {
     email?: string;
@@ -21,10 +22,12 @@ export interface LoginProps {
     accentActive?: string;
     accentHover?: string;
     error?: string | null;
-    onLogin?: (email: string, password: string, remember: boolean) => void;
+    onLogin?: (email: string, password: string, remember: boolean, role: Role) => void;
+    onGoogleLogin?: () => void;
+    onForgotPassword?: () => void;
 }
 
-type Role = 'professor' | 'staff';
+export type Role = 'professor' | 'staff';
 
 const roleOptions: [TabOption<Role>, TabOption<Role>] = [
     { value: 'professor', label: 'Professor', badge: 'Google Account', icon: GraduationCap },
@@ -33,6 +36,8 @@ const roleOptions: [TabOption<Role>, TabOption<Role>] = [
 
 const LoginForm: React.FC<LoginProps> = ({
     onLogin,
+    onGoogleLogin,
+    onForgotPassword,
     error,
     // textColor = "#1e293b",      // Tailwind slate-800
     accentColor = "#047857",    // Tailwind emerald-700
@@ -51,8 +56,12 @@ const LoginForm: React.FC<LoginProps> = ({
 
     const handleSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
-        onLogin?.(email, password, remember);
+        onLogin?.(email, password, remember, role);
     };
+
+    const demoBadgeText = role === 'staff'
+        ? 'Demo staff account: checker@aris.edu.ph / Checker123'
+        : `Demo professor account: ${DEMO_EMAIL} / ${DEMO_PASSWORD}`;
 
     // In light mode, props drive the inline color directly. In dark mode we
     // leave style undefined and let the dark: Tailwind classes take over,
@@ -71,17 +80,17 @@ const LoginForm: React.FC<LoginProps> = ({
         : undefined;
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-slate-100 dark:bg-slate-950 p-4 transition-colors">
-            <div className="w-full max-w-5xl bg-white dark:bg-slate-900 rounded-2xl shadow-xl dark:shadow-black/40 overflow-hidden flex flex-col md:flex-row relative">
-                <div className="absolute top-4 right-4 z-20">
+        <div className="min-h-screen w-full overflow-hidden bg-slate-100 dark:bg-slate-950 p-3 sm:p-4 transition-colors">
+            <div className="relative mx-auto flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-slate-900 dark:shadow-black/40 md:max-h-[760px] md:flex-row">
+                <div className="absolute right-4 top-4 z-20 hidden sm:block">
                     <ThemeToggle />
                 </div>
 
                 <BrandPanel />
 
                 {/* Right panel */}
-                <div className="md:w-[54%] p-8 flex flex-col">
-                    <div className="max-w-md mx-auto w-full flex-1 flex flex-col">
+                <div className="w-full p-4 sm:p-6 md:w-[54%] md:p-8">
+                    <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
                         <h2 style={accentStyle} className="text-3xl font-bold dark:text-emerald-400">
                             Welcome Back!
                         </h2>
@@ -107,7 +116,7 @@ const LoginForm: React.FC<LoginProps> = ({
                                     Continue using your Google account to access the system.
                                 </p>
                                 <Spacer size={16} />
-                                <GoogleButton />
+                                <GoogleButton onClick={onGoogleLogin} />
                             </div>
                         )}
 
@@ -120,18 +129,24 @@ const LoginForm: React.FC<LoginProps> = ({
                                 <Spacer size={16} />
 
                                 <form onSubmit={handleSubmit} className="space-y-3">
+                                    <div className="rounded-xl border border-dashed border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-[11px] font-medium text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-950/40 dark:text-emerald-300">
+                                        {demoBadgeText}
+                                    </div>
+
                                     <TextField
                                         icon={Mail}
                                         type="email"
                                         placeholder="Email Address"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
+                                        autoComplete="email"
                                     />
 
                                     <PasswordField
                                         placeholder="Password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
+                                        autoComplete="current-password"
                                     />
 
                                     <div className="flex items-center justify-between text-sm pt-1">
@@ -145,13 +160,14 @@ const LoginForm: React.FC<LoginProps> = ({
                                             />
                                             Remember me
                                         </label>
-                                        <a
-                                            href="#"
+                                        <button
+                                            type="button"
+                                            onClick={onForgotPassword}
                                             style={accentStyle}
                                             className="font-medium hover:underline dark:text-emerald-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded"
                                         >
                                             Forgot password?
-                                        </a>
+                                        </button>
                                     </div>
 
                                     <ErrorBanner message={error} />
@@ -163,7 +179,7 @@ const LoginForm: React.FC<LoginProps> = ({
                                         onMouseLeave={() => setBtnState('idle')}
                                         onMouseDown={() => setBtnState('active')}
                                         onMouseUp={() => setBtnState('hover')}
-                                        className="w-full dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                                        className="w-full dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-sm hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                                     >
                                         Sign In
                                     </button>

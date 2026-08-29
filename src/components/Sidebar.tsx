@@ -31,6 +31,7 @@ export interface SidebarProps {
     logoUrl?: string;
     user: SidebarUser;
     activeKey: string;
+    navItems?: SidebarNavItemData[];
     notificationCount?: number;
     onNavigate?: (key: string) => void;
     onSignOut?: () => void;
@@ -39,7 +40,7 @@ export interface SidebarProps {
     accentColor?: string;
 }
 
-const primaryNavItems: SidebarNavItemData[] = [
+const professorNavItems: SidebarNavItemData[] = [
     { key: 'dashboard', label: 'Dashboard', icon: Home },
     { key: 'profile', label: 'My Profile', icon: User },
     { key: 'dtr', label: 'My DTR', icon: CalendarCheck },
@@ -63,10 +64,11 @@ const NavButton: React.FC<{
             type="button"
             onClick={onClick}
             aria-current={active ? 'page' : undefined}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${active
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+                active
                     ? 'bg-white/15 text-white font-semibold'
-                    : 'text-emerald-100/80 hover:bg-white/10 hover:text-white'
-                }`}
+                    : 'text-emerald-50/85 hover:bg-white/10 hover:text-white'
+            }`}
         >
             <Icon size={18} className="shrink-0" />
             <span className="flex-1 leading-tight">{item.label}</span>
@@ -91,6 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     logoUrl,
     user,
     activeKey,
+    navItems = professorNavItems,
     notificationCount = 0,
     onNavigate,
     onSignOut,
@@ -118,7 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* Primary nav */}
             <nav className="flex flex-col gap-1" aria-label="Primary">
-                {primaryNavItems.map((item) => (
+                {navItems.map((item) => (
                     <NavButton
                         key={item.key}
                         item={item}

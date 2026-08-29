@@ -34,7 +34,7 @@ const StatCard: React.FC<StatCardProps> = ({
     const isLight = theme === 'light';
 
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 flex flex-col">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-5 flex flex-col transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{label}</p>
 
             <div className="flex items-center gap-3 mt-3 mb-4">
@@ -53,7 +53,7 @@ const StatCard: React.FC<StatCardProps> = ({
                 type="button"
                 onClick={onAction}
                 style={isLight ? { color: accentColor, borderColor: 'currentColor' } : undefined}
-                className="mt-auto w-full flex items-center justify-center gap-1.5 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-xl py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-emerald-400 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                className="mt-auto w-full flex items-center justify-center gap-1.5 text-sm font-medium border border-slate-200 dark:border-slate-700 rounded-xl py-2 hover:bg-slate-50 dark:hover:bg-slate-800 dark:text-emerald-400 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
                 {actionLabel}
                 <ArrowRight size={14} />

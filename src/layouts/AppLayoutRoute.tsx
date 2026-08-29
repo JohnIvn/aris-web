@@ -12,7 +12,8 @@ const AppLayoutRoute: React.FC = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const activeKey = location.pathname.split("/").pop() || "dashboard";
+    const segments = location.pathname.split("/").filter(Boolean);
+    const activeKey = segments.includes("reports") ? "reports" : segments[segments.length - 1] || "dashboard";
 
     if (isLoading) {
         return (
@@ -34,7 +35,7 @@ const AppLayoutRoute: React.FC = () => {
     };
 
     const handleNavigate = (key: string) => {
-        navigate(`/user/${key}`);
+        navigate(key === "dashboard" ? "/user/dashboard" : `/user/${key}`);
     };
 
     const handleSignOut = () => {

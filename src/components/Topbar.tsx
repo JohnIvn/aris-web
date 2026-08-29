@@ -37,15 +37,15 @@ const Topbar: React.FC<TopbarProps> = ({
     onNotificationClick,
 }) => {
     return (
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-6" style={{ color: textColor }}>
             <div>
-                <h1 style={{ color: textColor }} className="text-3xl font-bold dark:text-white">
+                <h1 className="text-3xl font-bold dark:text-white">
                     {title}
                 </h1>
                 {subtitle && <div className="mt-1">{subtitle}</div>}
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="hidden items-center gap-4 sm:flex">
                 {showThemeToggle && <ThemeToggle />}
 
                 <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">

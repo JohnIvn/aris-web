@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { SignInData, SignUpData, UserSession } from "../data/auth.interface";
+import { DEMO_ACCOUNTS } from "../demoAuth";
 import { httpRequest, registerAccessTokenGetter } from "../utils/api";
 import {
   clearPersistedRefreshToken,
@@ -93,6 +94,53 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   signIn: async (data) => {
     set({ loading: true });
     try {
+      const normalizedEmail = data.email.trim().toLowerCase();
+      const demoMode = import.meta.env.VITE_DEMO_AUTH_ENABLED !== "false";
+      const matchedDemoAccount = DEMO_ACCOUNTS.find(
+        (account) => account.email.trim().toLowerCase() === normalizedEmail,
+      );
+
+      if (demoMode) {
+        if (matchedDemoAccount && matchedDemoAccount.password !== data.password) {
+          throw new Error(
+            `Incorrect password for ${matchedDemoAccount.email}. Use the demo password shown in the form.`,
+          );
+        }
+
+        if (!matchedDemoAccount) {
+          throw new Error(
+            "Demo account not found. Use one of the sample ARIS accounts shown on the login screen.",
+          );
+        }
+
+        await persistRefreshToken(LAST_USER_KEY, matchedDemoAccount.email, "demo-refresh-token");
+
+        const mappedUser: UserSession = {
+          id: matchedDemoAccount.id,
+          email: matchedDemoAccount.email,
+          role: matchedDemoAccount.role,
+          name: matchedDemoAccount.name,
+          fullName: matchedDemoAccount.fullName,
+          position: matchedDemoAccount.position,
+          department: matchedDemoAccount.department,
+          photoUrl: matchedDemoAccount.photoUrl,
+        };
+
+        set({
+          user: mappedUser,
+          token: "demo-access-token",
+          loading: false,
+          initialized: true,
+        });
+
+        useUIStore.getState().addToast({
+          type: "success",
+          message: "Demo sign in successful",
+          description: `Welcome back, ${matchedDemoAccount.fullName}.`,
+        });
+        return;
+      }
+
       const response = await httpRequest("/auth/signin", {
         method: "POST",
         data,
@@ -117,7 +165,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         token: responseData.token,
         loading: false,
       });
-      useUIStore().addToast({
+      useUIStore.getState().addToast({
         type: "success",
         message: "Signed In Successfully",
         description: `Successfully Signed In as ${get().user?.email}`,
@@ -128,7 +176,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         error instanceof Error ? error.message : "Error signing in";
       console.error(message);
       set({ loading: false });
-      useUIStore().addToast({
+      useUIStore.getState().addToast({
         type: "error",
         message: "Unable to sign in",
         description: message,
@@ -174,7 +222,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       console.error(message);
       set({ loading: false });
 
-      useUIStore().addToast({
+      useUIStore.getState().addToast({
         type: "success",
         message: "Signed In Successfully",
         description: `Successfully Signed In as ${get().user?.email}`,

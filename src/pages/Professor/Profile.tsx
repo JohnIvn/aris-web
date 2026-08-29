@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     ChevronRight,
     Pencil,
@@ -14,14 +14,15 @@ import {
     Monitor,
 } from 'lucide-react';
 
-import Card from '../components/ui/Card';
-import InfoBanner from '../components/ui/InfoBanner';
-import Topbar from '../components/Topbar';
+import Card from '../../components/ui/Card';
+import Modal from '../../components/ui/Modal';
+import InfoBanner from '../../components/ui/InfoBanner';
+import Topbar from '../../components/Topbar';
 import type {
     ProfileDetailField,
     ProfileEmploymentField,
     ProfileSecurityItem,
-} from '../lib/data/profile.types';
+} from '../../lib/data/profile.types';
 
 export interface ProfileProps {
     dateLabel?: string;
@@ -197,6 +198,12 @@ const ProfileContent: React.FC<ProfileProps> = ({
     onEditProfile,
     onEditEmployment,
 }) => {
+    const [modal, setModal] = useState<{ title: string; description: string; body: string } | null>(null);
+
+    const openModal = (title: string, description: string, body: string) => {
+        setModal({ title, description, body });
+    };
+
     return (
         <div className="min-h-screen w-full flex bg-slate-100 dark:bg-slate-950 transition-colors">
             <main className="flex-1 min-w-0 p-6 md:p-8">
@@ -245,8 +252,11 @@ const ProfileContent: React.FC<ProfileProps> = ({
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={onEditProfile}
-                                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm focus:outline-none"
+                                    onClick={() => {
+                                        if (onEditProfile) onEditProfile();
+                                        else openModal('Edit Profile Photo', 'Update your profile image', 'This action is prepared for a future file upload or profile image endpoint once the backend is connected.');
+                                    }}
+                                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center text-white shadow-sm focus:outline-none transition-all duration-200 hover:scale-105"
                                     style={{ backgroundColor: accentColor }}
                                     aria-label="Edit photo"
                                 >
@@ -297,7 +307,10 @@ const ProfileContent: React.FC<ProfileProps> = ({
                             title="Personal Information"
                             actionLabel="Edit Profile"
                             accentColor={accentColor}
-                            onAction={onEditProfile}
+                            onAction={() => {
+                                if (onEditProfile) onEditProfile();
+                                else openModal('Edit Personal Information', 'Update your profile details', 'This edit flow is ready for your API endpoint. Replace the placeholder action with your profile update URL when the backend is available.');
+                            }}
                         >
                             <div>
                                 {personalInfo.map((f) => (
@@ -315,7 +328,10 @@ const ProfileContent: React.FC<ProfileProps> = ({
                             title="Employment Information"
                             actionLabel="Edit"
                             accentColor={accentColor}
-                            onAction={onEditEmployment}
+                            onAction={() => {
+                                if (onEditEmployment) onEditEmployment();
+                                else openModal('Edit Employment Information', 'Update department records', 'This section is aligned to accept your employment API data once the backend endpoint is available.');
+                            }}
                         >
                             <div>
                                 {employment.map((f) => (
@@ -332,7 +348,11 @@ const ProfileContent: React.FC<ProfileProps> = ({
                     >
                         <div>
                             {security.map((s) => (
-                                <SecurityRow key={s.title} {...s} />
+                                <SecurityRow
+                                    key={s.title}
+                                    {...s}
+                                    onClick={() => openModal(s.title, s.subtitle, `This security item can be connected to its specific backend endpoint once the related API is available. Current data is displayed as a front-end placeholder.`)}
+                                />
                             ))}
                         </div>
                     </Card>
@@ -353,6 +373,25 @@ const ProfileContent: React.FC<ProfileProps> = ({
                     © 2026 ARIS. All rights reserved.
                 </p>
             </main>
+
+            <Modal
+                isOpen={!!modal}
+                title={modal?.title ?? 'Profile'}
+                description={modal?.description ?? ''}
+                onClose={() => setModal(null)}
+                size="md"
+                footer={
+                    <button
+                        type="button"
+                        onClick={() => setModal(null)}
+                        className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-emerald-500 hover:shadow-md"
+                    >
+                        Close
+                    </button>
+                }
+            >
+                <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{modal?.body}</p>
+            </Modal>
         </div>
     );
 };
