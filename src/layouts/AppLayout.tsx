@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Bell, Menu, X } from "lucide-react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar, { SidebarNavItemData, SidebarUser } from "../components/Sidebar";
+import Modal from "../components/ui/Modal";
 import ThemeToggle from "../components/ui/ThemeToggle";
 
 interface AppLayoutProps {
@@ -22,6 +23,37 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     onSignOut,
 }) => {
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const navigate = useNavigate();
+
+    const handleSidebarNavigate = (key: string) => {
+        onNavigate?.(key);
+
+        if (key === "dashboard") {
+            navigate("/user/dashboard");
+            return;
+        }
+
+        if (key === "profile") {
+            navigate("/user/profile");
+            return;
+        }
+
+        if (key === "dtr") {
+            navigate("/user/dtr");
+            return;
+        }
+
+        if (key === "meetings") {
+            navigate("/user/meetings");
+            return;
+        }
+
+        if (key === "reports") {
+            navigate("/user/reports");
+            return;
+        }
+    };
 
     return (
         <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950">
@@ -37,12 +69,45 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                         navItems={navItems}
                         notificationCount={notificationCount}
                         onNavigate={(key) => {
-                            onNavigate?.(key);
+                            handleSidebarNavigate(key);
                             setMobileOpen(false);
                         }}
-                        onSignOut={onSignOut}
+                        onSignOut={() => setShowLogoutConfirm(true)}
                     />
                 </div>
+
+                <Modal
+                    isOpen={showLogoutConfirm}
+                    title="Confirm sign out"
+                    description="You will be signed out of your current session."
+                    onClose={() => setShowLogoutConfirm(false)}
+                    size="sm"
+                    footer={
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => setShowLogoutConfirm(false)}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowLogoutConfirm(false);
+                                    onSignOut?.();
+                                }}
+                                className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                            >
+                                Sign out
+                            </button>
+                        </>
+                    }
+                >
+                    <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        Are you sure you want to log out of ARIS? You can sign back in anytime.
+                    </p>
+                </Modal>
 
                 {mobileOpen && (
                     <button

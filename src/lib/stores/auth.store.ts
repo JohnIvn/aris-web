@@ -4,8 +4,11 @@ import { DEMO_ACCOUNTS } from "../demoAuth";
 import { httpRequest, registerAccessTokenGetter } from "../utils/api";
 import {
   clearPersistedRefreshToken,
+  clearSessionCookie,
   getPersistedRefreshToken,
+  getSessionCookie,
   persistRefreshToken,
+  setSessionCookie,
 } from "../utils/auth.helpers";
 import { useUIStore } from "./ui.store";
 
@@ -37,55 +40,127 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ loading: true });
 
     const lastUser = localStorage.getItem(LAST_USER_KEY);
-    if (!lastUser) {
+    const cachedSession = getSessionCookie();
+
+    if (!lastUser && !cachedSession) {
       set({ loading: false, initialized: true });
       return { down: false };
     }
 
     try {
-      const refreshToken = getPersistedRefreshToken(lastUser);
+      const refreshToken = lastUser ? getPersistedRefreshToken(lastUser) : null;
 
-      if (!refreshToken) {
+      if (!refreshToken && !cachedSession) {
         set({ loading: false, initialized: true });
         return { down: false };
       }
 
-      const response = await httpRequest("/auth/refresh", {
-        method: "POST",
-        data: { refreshToken },
-      });
+      if (lastUser && refreshToken) {
+        const response = await httpRequest("/auth/refresh", {
+          method: "POST",
+          data: { refreshToken },
+        });
 
-      if (response.serverDown) {
-        set({ loading: false, initialized: true, serverDown: true });
-        return { down: true };
+        if (response.serverDown) {
+          const cachedRole = cachedSession?.role ?? DEMO_ACCOUNTS.find((account) => account.email.toLowerCase() === lastUser.toLowerCase())?.role;
+          if (cachedRole) {
+            const fallbackUser = DEMO_ACCOUNTS.find((account) => account.email.toLowerCase() === lastUser.toLowerCase());
+            if (fallbackUser) {
+              set({
+                user: {
+                  id: fallbackUser.id,
+                  email: fallbackUser.email,
+                  role: fallbackUser.role,
+                  name: fallbackUser.name,
+                  fullName: fallbackUser.fullName,
+                  position: fallbackUser.position,
+                  department: fallbackUser.department,
+                  photoUrl: fallbackUser.photoUrl,
+                },
+                token: "demo-access-token",
+                loading: false,
+                initialized: true,
+                serverDown: true,
+              });
+              return { down: true };
+            }
+          }
+
+          set({ loading: false, initialized: true, serverDown: true });
+          return { down: true };
+        }
+
+        if (response.error) throw new Error(response.error);
+
+        const responseData = response.data as {
+          user: UserSession;
+          token: string;
+          refreshToken: string;
+        };
+
+        await persistRefreshToken(
+          LAST_USER_KEY,
+          lastUser,
+          responseData.refreshToken,
+        );
+
+        setSessionCookie({
+          email: responseData.user.email,
+          role: responseData.user.role,
+        });
+
+        set({
+          user: responseData.user,
+          token: responseData.token,
+          loading: false,
+          initialized: true,
+          serverDown: false,
+        });
+
+        return { down: false };
       }
 
-      if (response.error) throw new Error(response.error);
+      if (cachedSession) {
+        const matchedDemoAccount = DEMO_ACCOUNTS.find(
+          (account) => account.email.trim().toLowerCase() === cachedSession.email.trim().toLowerCase(),
+        );
 
-      const responseData = response.data as {
-        user: UserSession;
-        token: string;
-        refreshToken: string;
-      };
+        if (!matchedDemoAccount) {
+          clearSessionCookie();
+          set({ loading: false, initialized: true });
+          return { down: false };
+        }
 
-      await persistRefreshToken(
-        LAST_USER_KEY,
-        lastUser,
-        responseData.refreshToken,
-      );
+        const mappedUser: UserSession = {
+          id: matchedDemoAccount.id,
+          email: matchedDemoAccount.email,
+          role: matchedDemoAccount.role,
+          name: matchedDemoAccount.name,
+          fullName: matchedDemoAccount.fullName,
+          position: matchedDemoAccount.position,
+          department: matchedDemoAccount.department,
+          photoUrl: matchedDemoAccount.photoUrl,
+        };
 
-      set({
-        user: responseData.user,
-        token: responseData.token,
-        loading: false,
-        initialized: true,
-        serverDown: false,
-      });
+        set({
+          user: mappedUser,
+          token: "demo-access-token",
+          loading: false,
+          initialized: true,
+          serverDown: false,
+        });
 
+        return { down: false };
+      }
+
+      set({ loading: false, initialized: true });
       return { down: false };
     } catch (error) {
       console.error("Error initializing session:", error);
-      await clearPersistedRefreshToken(LAST_USER_KEY, lastUser);
+      if (lastUser) {
+        await clearPersistedRefreshToken(LAST_USER_KEY, lastUser);
+      }
+      clearSessionCookie();
       set({ loading: false, initialized: true });
       return { down: false };
     }
@@ -114,6 +189,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         }
 
         await persistRefreshToken(LAST_USER_KEY, matchedDemoAccount.email, "demo-refresh-token");
+        setSessionCookie({ email: matchedDemoAccount.email, role: matchedDemoAccount.role });
 
         const mappedUser: UserSession = {
           id: matchedDemoAccount.id,
@@ -159,6 +235,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         responseData.user.email,
         responseData.refreshToken,
       );
+      setSessionCookie({ email: responseData.user.email, role: responseData.user.role });
 
       set({
         user: responseData.user,
@@ -200,6 +277,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         LAST_USER_KEY,
         currentUser?.email ?? null,
       );
+      clearSessionCookie();
       set({ ...authStateInit, initialized: true });
     }
   },

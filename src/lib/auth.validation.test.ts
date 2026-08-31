@@ -1,4 +1,88 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  clearSessionCookie,
+  getDashboardRouteForUser,
+  getSessionCookie,
+  setSessionCookie,
+} from './utils/auth.helpers';
+
+const installCookieStub = () => {
+  let cookieJar: Record<string, string> = {};
+  let storage: Record<string, string> = {};
+
+  const documentStub = {
+    get cookie() {
+      return Object.entries(cookieJar)
+        .map(([name, value]) => `${name}=${value}`)
+        .join('; ');
+    },
+    set cookie(value: string) {
+      const [rawPair, ...rest] = value.split(';');
+      const [name, ...nameParts] = rawPair.split('=');
+      const cookieValue = nameParts.join('=');
+
+      if (!name) {
+        return;
+      }
+
+      if (rest.some((part) => part.trim().toLowerCase().startsWith('expires='))) {
+        const expiresPart = rest.find((part) => part.trim().toLowerCase().startsWith('expires='));
+        const expires = expiresPart?.split('=')[1];
+        if (expires && new Date(expires).getTime() <= Date.now()) {
+          delete cookieJar[name];
+          return;
+        }
+      }
+
+      if (cookieValue === '') {
+        delete cookieJar[name];
+        return;
+      }
+
+      cookieJar[name] = cookieValue;
+    },
+  };
+
+  const localStorageStub = {
+    getItem(key: string) {
+      return Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null;
+    },
+    setItem(key: string, value: string) {
+      storage[key] = String(value);
+    },
+    removeItem(key: string) {
+      delete storage[key];
+    },
+    clear() {
+      storage = {};
+    },
+  };
+
+  Object.defineProperty(globalThis, 'document', {
+    value: documentStub,
+    configurable: true,
+    writable: true,
+  });
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: localStorageStub,
+    configurable: true,
+    writable: true,
+  });
+
+  Object.defineProperty(globalThis, 'window', {
+    value: globalThis,
+    configurable: true,
+    writable: true,
+  });
+
+  return () => {
+    cookieJar = {};
+    storage = {};
+  };
+};
+
+const resetCookieStub = installCookieStub();
 
 const DEMO_EMAIL = 'rafhaelmaglunob@gmail.com';
 const DEMO_PASSWORD = 'Aris#123';
@@ -49,5 +133,30 @@ describe('login validation', () => {
 
   it('rejects the wrong password for the demo account', () => {
     expect(validateLogin(DEMO_EMAIL, 'WrongPass1')).toBe('The password is incorrect for this test account.');
+  });
+});
+
+describe('session cache', () => {
+  beforeEach(() => {
+    resetCookieStub();
+    clearSessionCookie();
+    globalThis.localStorage.clear();
+  });
+
+  it('routes professor users to the professor dashboard and staff users to staff dashboard', () => {
+    expect(getDashboardRouteForUser({ role: 'Professor' } as any)).toBe('/user/dashboard');
+    expect(getDashboardRouteForUser({ role: 'Checker' } as any)).toBe('/staff');
+  });
+
+  it('persists and reads a login session cookie', () => {
+    setSessionCookie({ email: 'professor@aris.edu.ph', role: 'Professor' });
+
+    expect(getSessionCookie()).toMatchObject({
+      email: 'professor@aris.edu.ph',
+      role: 'Professor',
+    });
+
+    clearSessionCookie();
+    expect(getSessionCookie()).toBeNull();
   });
 });

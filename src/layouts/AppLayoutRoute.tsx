@@ -35,7 +35,18 @@ const AppLayoutRoute: React.FC = () => {
     };
 
     const handleNavigate = (key: string) => {
-        navigate(key === "dashboard" ? "/user/dashboard" : `/user/${key}`);
+        const routeMap: Record<string, string> = {
+            dashboard: "/user/dashboard",
+            profile: "/user/profile",
+            dtr: "/user/dtr",
+            meetings: "/user/meetings",
+            reports: "/user/reports",
+            notifications: "/user/dashboard",
+            help: "/user/dashboard",
+        };
+
+        const target = routeMap[key] ?? "/user/dashboard";
+        navigate(target, { replace: false });
     };
 
     const handleSignOut = () => {

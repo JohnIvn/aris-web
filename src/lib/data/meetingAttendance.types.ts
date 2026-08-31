@@ -26,5 +26,9 @@ export interface MeetingAttendanceData {
 
 export interface StartMeetingResult {
   meetingId: string;
+  meetingCode?: string;
+  meetingUrl?: string;
   startedAt: string;
+  workspaceRequired?: boolean;
+  message?: string;
 }

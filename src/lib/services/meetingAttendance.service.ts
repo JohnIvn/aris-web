@@ -2,6 +2,7 @@ import type {
   MeetingAttendanceData,
   StartMeetingResult,
 } from "../data/meetingAttendance.types";
+import { httpRequest } from "../utils/api";
 
 const mockMeetingAttendanceData: MeetingAttendanceData = {
   todaysMeeting: {
@@ -33,9 +34,46 @@ export async function fetchMeetingAttendanceData(): Promise<MeetingAttendanceDat
 }
 
 export async function startMeeting(meetingId?: string): Promise<StartMeetingResult> {
-  // Replace this implementation with an httpRequest call when the API is available.
+  const generatedMeetingId = meetingId ?? crypto.randomUUID();
+  const startedAt = new Date().toISOString();
+
+  const backendUrl = import.meta.env.VITE_MEET_START_ENDPOINT;
+  const workspaceModeEnabled = import.meta.env.VITE_GOOGLE_WORKSPACE_MODE === "true";
+
+  if (backendUrl) {
+    try {
+      const result = await httpRequest<StartMeetingResult>(backendUrl, {
+        method: "POST",
+        data: {
+          meetingId: generatedMeetingId,
+          startedAt,
+          source: "aris-web",
+          workspaceMode: workspaceModeEnabled,
+        },
+      });
+
+      if (result.ok && result.data) {
+        return {
+          ...result.data,
+          meetingId: result.data.meetingId ?? generatedMeetingId,
+          startedAt: result.data.startedAt ?? startedAt,
+        };
+      }
+    } catch {
+      // Fall back below when the backend is unavailable.
+    }
+  }
+
+  const meetingCode = `aris-${Math.random().toString(36).slice(2, 8)}`;
+
   return {
-    meetingId: meetingId ?? crypto.randomUUID(),
-    startedAt: new Date().toISOString(),
+    meetingId: generatedMeetingId,
+    meetingCode,
+    meetingUrl: `https://meet.google.com/${meetingCode}`,
+    startedAt,
+    workspaceRequired: !workspaceModeEnabled,
+    message: workspaceModeEnabled
+      ? "Google Workspace is enabled. Connect the backend endpoint to create a real organization-managed Meet room."
+      : "Demo mode is active. Once a Workspace account and backend endpoint are ready, this flow will create the live Google Meet room.",
   };
 }

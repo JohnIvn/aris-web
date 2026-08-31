@@ -227,7 +227,11 @@ const DashboardContent: React.FC<DashboardProps> = ({
                                     {reportSubmittedLabel}
                                 </p>
 
-                                <ReportTimeline steps={reportSteps} accentColor={accentColor} />
+                                <div className="overflow-x-auto max-w-full pb-1">
+                                    <div className="min-w-[480px] sm:min-w-0">
+                                        <ReportTimeline steps={reportSteps} accentColor={accentColor} />
+                                    </div>
+                                </div>
 
                                 <div className="mt-6">
                                     <InfoBanner variant="warning">{reportStatusMessage}</InfoBanner>

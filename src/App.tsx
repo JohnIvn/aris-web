@@ -5,6 +5,7 @@ import { Bell, FileText, Home, ShieldCheck } from "lucide-react";
 
 import { useAuthStore } from "./lib/stores/auth.store";
 import { DEMO_EMAIL, DEMO_PASSWORD, validateLogin, buildGoogleAuthUrl } from "./lib/demoAuth";
+import { getDashboardRouteForUser, getSessionCookie } from "./lib/utils/auth.helpers";
 
 // Layout
 import AppLayoutRoute from "./layouts/AppLayoutRoute";
@@ -58,9 +59,11 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (user) {
-    const target = user.role?.toLowerCase().includes("professor") ? "/user/dashboard" : "/staff";
-    return <Navigate to={target} replace />;
+  const cachedSession = getSessionCookie();
+  const sessionUser = user ?? cachedSession;
+
+  if (sessionUser) {
+    return <Navigate to={getDashboardRouteForUser(sessionUser)} replace />;
   }
 
   return <>{children}</>;
@@ -102,12 +105,15 @@ const StaffLayoutRoute = () => {
         : "dashboard";
 
   const handleNavigate = (key: string) => {
-    if (key === "dashboard") {
-      navigate("/staff");
-      return;
-    }
+    const routeMap: Record<string, string> = {
+      dashboard: "/staff",
+      reports: "/staff/reports",
+      history: "/staff/history",
+      audit: "/staff/audit",
+    };
 
-    navigate(`/staff/${key}`);
+    const target = routeMap[key] ?? "/staff";
+    navigate(target, { replace: false });
   };
 
   const handleSignOut = () => {
@@ -215,12 +221,47 @@ const GoogleCallbackRoute = () => {
 
 // Profile Route
 const ProfileRoute = () => {
-  return <Profile />;
+  const navigate = useNavigate();
+
+  return <Profile onNavigate={(key) => {
+    const routeMap: Record<string, string> = {
+      dashboard: "/user/dashboard",
+      notifications: "/user/dashboard",
+    };
+
+    navigate(routeMap[key] ?? "/user/dashboard");
+  }} />;
 }
 
 // Meeting Attendance Route
 const MeetingAttendanceRoute = () => {
-  return <MeetingAttendance />;
+  const navigate = useNavigate();
+
+  return <MeetingAttendance onNavigate={(key) => {
+    const routeMap: Record<string, string> = {
+      dashboard: "/user/dashboard",
+      notifications: "/user/dashboard",
+    };
+
+    navigate(routeMap[key] ?? "/user/dashboard");
+  }} />;
+}
+
+const DashboardRoute = () => {
+  const navigate = useNavigate();
+
+  return <Dashboard onNavigate={(key) => {
+    const routeMap: Record<string, string> = {
+      reports: "/user/reports",
+      dtr: "/user/dtr",
+      attendance: "/user/meetings",
+      meetings: "/user/meetings",
+      notifications: "/user/dashboard",
+      dashboard: "/user/dashboard",
+    };
+
+    navigate(routeMap[key] ?? "/user/dashboard");
+  }} />;
 }
 
 const ReportsRoute = () => {
@@ -229,10 +270,13 @@ const ReportsRoute = () => {
 
 function App() {
   const initialize = useAuthStore((s) => s.initialize);
+  const initialized = useAuthStore((s) => s.initialized);
 
   useEffect(() => {
-    initialize();
-  }, [initialize]);
+    if (!initialized) {
+      initialize();
+    }
+  }, [initialized, initialize]);
 
   return (
     <ThemeProvider>
@@ -251,7 +295,7 @@ function App() {
           </Route>
 
           <Route path="/user" element={<ProtectedRoute><AppLayoutRoute /></ProtectedRoute>}>
-            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="dashboard" element={<DashboardRoute />} />
             <Route path="profile" element={<ProfileRoute />} />
             <Route path="dtr" element={<MyDTR />} />
             <Route path="meetings" element={<MeetingAttendanceRoute />} />

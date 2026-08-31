@@ -397,11 +397,11 @@ const AccomplishmentReports: React.FC = () => {
 
               <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
                 <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Approval Flow</p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="mt-3 space-y-2">
                   {selectedReport.approvalFlow.map((stage, index) => (
-                    <React.Fragment key={stage.name}>
+                    <div key={stage.name} className="flex items-center gap-2">
                       <div
-                        className={`min-w-[110px] rounded-xl border px-2.5 py-2 text-center text-[11px] ${
+                        className={`flex flex-1 items-center justify-between rounded-xl border px-3 py-2 text-left ${
                           stage.status === 'Approved'
                             ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300'
                             : stage.status === 'Rejected'
@@ -409,13 +409,16 @@ const AccomplishmentReports: React.FC = () => {
                               : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300'
                         }`}
                       >
-                        <div className="font-semibold">{stage.name}</div>
-                        <div className="mt-1 text-[10px] opacity-80">{stage.status}</div>
+                        <div>
+                          <div className="text-sm font-semibold">{stage.name}</div>
+                          <div className="text-[10px] opacity-80">{stage.status}</div>
+                        </div>
+                        <ChevronRight size={14} className="opacity-80" />
                       </div>
                       {index < selectedReport.approvalFlow.length - 1 && (
                         <span className="text-slate-400 dark:text-slate-500">→</span>
                       )}
-                    </React.Fragment>
+                    </div>
                   ))}
                 </div>
               </div>

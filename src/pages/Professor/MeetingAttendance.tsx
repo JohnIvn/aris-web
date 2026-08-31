@@ -100,6 +100,9 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [searchValue, setSearchValue] = useState('');
     const [startingMeetingId, setStartingMeetingId] = useState<string | undefined>(undefined);
+    const [activeMeetingUrl, setActiveMeetingUrl] = useState<string | null>(null);
+    const [meetingStatusMessage, setMeetingStatusMessage] = useState<string | null>(null);
+    const [showHistory, setShowHistory] = useState(false);
     const [selectedMeeting, setSelectedMeeting] = useState<MeetingAttendanceData['meetingHistory'][number] | null>(null);
 
     const loadData = useCallback(() => {
@@ -141,13 +144,28 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
     }, [data, searchValue]);
 
     const handleStartMeeting = async (meetingId?: string) => {
-        setStartingMeetingId(meetingId ?? 'new');
+        const requestKey = meetingId ?? 'new';
+        setStartingMeetingId(requestKey);
         try {
-            await startMeetingRequest(meetingId);
-            onStartMeeting?.(meetingId);
+            const result = await startMeetingRequest(meetingId);
+            if (result.meetingUrl) {
+                setActiveMeetingUrl(result.meetingUrl);
+                setMeetingStatusMessage(result.message ?? "Meeting room is ready.");
+                window.open(result.meetingUrl, '_blank', 'noopener,noreferrer');
+            }
+            onStartMeeting?.(result.meetingId ?? meetingId);
         } finally {
             setStartingMeetingId(undefined);
         }
+    };
+
+    const handleViewHistory = () => {
+        if (onViewHistory) {
+            onViewHistory();
+            return;
+        }
+
+        setShowHistory((current) => !current);
     };
 
     return (
@@ -192,6 +210,25 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
 
                 {!isLoading && !error && data && (
                     <>
+                        {(activeMeetingUrl || meetingStatusMessage) && (
+                            <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300">
+                                {meetingStatusMessage && <p className="mb-1 font-medium">{meetingStatusMessage}</p>}
+                                {activeMeetingUrl && (
+                                    <>
+                                        Open the meeting room here: {' '}
+                                        <a
+                                            href={activeMeetingUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="font-semibold underline break-all"
+                                        >
+                                            {activeMeetingUrl}
+                                        </a>
+                                    </>
+                                )}
+                            </div>
+                        )}
+
                         {/* Today's meeting + quick actions */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm p-6">
@@ -244,7 +281,7 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={onViewHistory}
+                                        onClick={handleViewHistory}
                                         className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-left border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
                                     >
                                         <History size={18} className="text-slate-500 dark:text-slate-400 shrink-0" />
@@ -262,121 +299,123 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
                         </div>
 
                         {/* Meeting history */}
-                        <Card title="Meeting History" accentColor={accentColor}>
-                            <div className="flex flex-wrap items-center gap-3 mb-4">
-                                <FilterDropdown
-                                    icon={Calendar}
-                                    value={data.monthFilterValue}
-                                    onClick={onMonthFilterClick}
-                                />
-                                <FilterDropdown value={data.statusFilterValue} onClick={onStatusFilterClick} />
-                                <SearchInput
-                                    value={searchValue}
-                                    onChange={setSearchValue}
-                                    placeholder="Search meeting..."
-                                    className="ml-auto w-full sm:w-64"
-                                />
-                            </div>
-
-                            {filteredHistory.length === 0 ? (
-                                <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-10">
-                                    No meetings match your search.
-                                </p>
-                            ) : (
-                                <div className="overflow-x-auto -mx-6">
-                                    <table className="w-full text-sm min-w-[820px]">
-                                        <thead>
-                                            <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                                                <th className="px-6 py-3 font-semibold">Date &amp; Time</th>
-                                                <th className="px-3 py-3 font-semibold">Meeting Title / Purpose</th>
-                                                <th className="px-3 py-3 font-semibold">Duration</th>
-                                                <th className="px-3 py-3 font-semibold">Status</th>
-                                                <th className="px-6 py-3 font-semibold text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                            {filteredHistory.map((row) => (
-                                                <tr key={row.id}>
-                                                    <td className="px-6 py-3.5 align-top">
-                                                        <div className="flex items-start gap-2.5">
-                                                            <span className="w-7 h-7 rounded-md bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                                                                <Calendar
-                                                                    size={13}
-                                                                    className="text-emerald-600 dark:text-emerald-400"
-                                                                />
-                                                            </span>
-                                                            <span>
-                                                                <span className="block font-medium text-slate-900 dark:text-slate-100">
-                                                                    {row.dateLabel}
-                                                                </span>
-                                                                <span className="block text-xs text-slate-400 dark:text-slate-500">
-                                                                    {row.timeLabel}
-                                                                </span>
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-3.5 align-top">
-                                                        <span className="block font-semibold text-slate-900 dark:text-slate-100">
-                                                            {row.title}
-                                                        </span>
-                                                        <span className="block text-xs text-slate-400 dark:text-slate-500">
-                                                            {row.purpose}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-3 py-3.5 align-top">
-                                                        <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
-                                                            <Clock size={13} className="text-slate-400 dark:text-slate-500" />
-                                                            {row.durationLabel}
-                                                        </div>
-                                                        <span className="block text-xs text-slate-400 dark:text-slate-500">
-                                                            {row.durationTimeRange}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-3 py-3.5 align-top">
-                                                        {row.isRecorded ? (
-                                                            <StatusBadge label="Recorded" tone="success" />
-                                                        ) : (
-                                                            <StatusBadge label="No Record" tone="neutral" />
-                                                        )}
-                                                    </td>
-                                                    <td className="px-6 py-3.5 align-top text-right">
-                                                        {row.isRecorded ? (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    onViewDetails?.(row.id);
-                                                                    setSelectedMeeting(row);
-                                                                }}
-                                                                className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline transition-transform duration-200 hover:-translate-y-0.5"
-                                                                style={{ color: accentColor }}
-                                                            >
-                                                                <Eye size={14} />
-                                                                View Details
-                                                            </button>
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleStartMeeting(row.id)}
-                                                                disabled={startingMeetingId === row.id}
-                                                                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-white shrink-0 disabled:opacity-60 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-                                                                style={{ backgroundColor: accentColor }}
-                                                            >
-                                                                {startingMeetingId === row.id ? (
-                                                                    <Loader2 size={13} className="animate-spin" />
-                                                                ) : (
-                                                                    <Video size={13} />
-                                                                )}
-                                                                Start Meeting
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                        {showHistory && (
+                            <Card title="Meeting History" accentColor={accentColor}>
+                                <div className="flex flex-wrap items-center gap-3 mb-4">
+                                    <FilterDropdown
+                                        icon={Calendar}
+                                        value={data.monthFilterValue}
+                                        onClick={onMonthFilterClick}
+                                    />
+                                    <FilterDropdown value={data.statusFilterValue} onClick={onStatusFilterClick} />
+                                    <SearchInput
+                                        value={searchValue}
+                                        onChange={setSearchValue}
+                                        placeholder="Search meeting..."
+                                        className="ml-auto w-full sm:w-64"
+                                    />
                                 </div>
-                            )}
-                        </Card>
+
+                                {filteredHistory.length === 0 ? (
+                                    <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-10">
+                                        No meetings match your search.
+                                    </p>
+                                ) : (
+                                    <div className="overflow-x-auto -mx-6">
+                                        <table className="w-full text-sm min-w-[820px]">
+                                            <thead>
+                                                <tr className="bg-slate-50 dark:bg-slate-800/60 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                                                    <th className="px-6 py-3 font-semibold">Date &amp; Time</th>
+                                                    <th className="px-3 py-3 font-semibold">Meeting Title / Purpose</th>
+                                                    <th className="px-3 py-3 font-semibold">Duration</th>
+                                                    <th className="px-3 py-3 font-semibold">Status</th>
+                                                    <th className="px-6 py-3 font-semibold text-right">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                {filteredHistory.map((row) => (
+                                                    <tr key={row.id}>
+                                                        <td className="px-6 py-3.5 align-top">
+                                                            <div className="flex items-start gap-2.5">
+                                                                <span className="w-7 h-7 rounded-md bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                                                                    <Calendar
+                                                                        size={13}
+                                                                        className="text-emerald-600 dark:text-emerald-400"
+                                                                    />
+                                                                </span>
+                                                                <span>
+                                                                    <span className="block font-medium text-slate-900 dark:text-slate-100">
+                                                                        {row.dateLabel}
+                                                                    </span>
+                                                                    <span className="block text-xs text-slate-400 dark:text-slate-500">
+                                                                        {row.timeLabel}
+                                                                    </span>
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-3 py-3.5 align-top">
+                                                            <span className="block font-semibold text-slate-900 dark:text-slate-100">
+                                                                {row.title}
+                                                            </span>
+                                                            <span className="block text-xs text-slate-400 dark:text-slate-500">
+                                                                {row.purpose}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-3 py-3.5 align-top">
+                                                            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                                                                <Clock size={13} className="text-slate-400 dark:text-slate-500" />
+                                                                {row.durationLabel}
+                                                            </div>
+                                                            <span className="block text-xs text-slate-400 dark:text-slate-500">
+                                                                {row.durationTimeRange}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-3 py-3.5 align-top">
+                                                            {row.isRecorded ? (
+                                                                <StatusBadge label="Recorded" tone="success" />
+                                                            ) : (
+                                                                <StatusBadge label="No Record" tone="neutral" />
+                                                            )}
+                                                        </td>
+                                                        <td className="px-6 py-3.5 align-top text-right">
+                                                            {row.isRecorded ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        onViewDetails?.(row.id);
+                                                                        setSelectedMeeting(row);
+                                                                    }}
+                                                                    className="inline-flex items-center gap-1.5 text-sm font-semibold hover:underline transition-transform duration-200 hover:-translate-y-0.5"
+                                                                    style={{ color: accentColor }}
+                                                                >
+                                                                    <Eye size={14} />
+                                                                    View Details
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleStartMeeting(row.id)}
+                                                                    disabled={startingMeetingId === row.id}
+                                                                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg text-white shrink-0 disabled:opacity-60 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                                                                    style={{ backgroundColor: accentColor }}
+                                                                >
+                                                                    {startingMeetingId === row.id ? (
+                                                                        <Loader2 size={13} className="animate-spin" />
+                                                                    ) : (
+                                                                        <Video size={13} />
+                                                                    )}
+                                                                    Start Meeting
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </Card>
+                        )}
 
                         <div className="mt-6">
                             <InfoBanner variant="success" icon={Info}>

@@ -112,7 +112,7 @@ function DetailRow({ label, value }: ProfileDetailField) {
 
 function EmploymentRow({ label, value, badge, accentColor }: ProfileEmploymentField & { accentColor: string }) {
     return (
-        <div className="flex items-center gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-b-0">
             <p className="text-sm text-slate-500 dark:text-slate-400 sm:w-60">{label}</p>
             {badge ? (
                 <span
@@ -122,7 +122,7 @@ function EmploymentRow({ label, value, badge, accentColor }: ProfileEmploymentFi
                     {value}
                 </span>
             ) : (
-                <p className="text-sm text-slate-900 dark:text-slate-100 text-right">{value}</p>
+                <p className="text-sm text-slate-900 dark:text-slate-100">{value}</p>
             )}
         </div>
     );
