@@ -46,6 +46,7 @@ const professorNavItems: SidebarNavItemData[] = [
     { key: 'dtr', label: 'My DTR', icon: CalendarCheck },
     { key: 'meetings', label: 'Meeting Attendance', icon: Video },
     { key: 'reports', label: 'My Accomplishment Reports', icon: FileText },
+    { key: 'payroll', label: 'Payroll', icon: FileText },
 ];
 
 const secondaryNavItems = (notificationCount?: number): SidebarNavItemData[] => [
@@ -131,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ))}
             </nav>
 
-            <div className="h-px bg-white/10 my-4" />
+            <div className="h-px bg-white/10 mt-5 mb-4" />
 
             <nav className="flex flex-col gap-1" aria-label="Secondary">
                 {secondaryNavItems(notificationCount).map((item) => (
@@ -144,10 +145,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ))}
             </nav>
 
-            <div className="flex-1" />
+            <div className="flex-1 mt-8" />
 
             {/* User card */}
-            <div className="flex items-center gap-3 px-2 py-3 rounded-xl bg-white/5">
+            <div className="flex items-center gap-3 px-2 py-3 rounded-xl bg-white/5 mt-2">
                 <div className="w-10 h-10 rounded-full bg-white/15 overflow-hidden shrink-0 flex items-center justify-center">
                     {user.avatarUrl ? (
                         <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />

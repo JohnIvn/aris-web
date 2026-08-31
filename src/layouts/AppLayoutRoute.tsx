@@ -2,12 +2,14 @@ import React from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import AppLayout from "./AppLayout";
 import { useAuthStore } from "../lib/stores/auth.store";
+import { useUIStore } from "../lib/stores/ui.store";
 import { SidebarUser } from "../components/Sidebar";
 
 const AppLayoutRoute: React.FC = () => {
     const user = useAuthStore((s) => s.user);
     const isLoading = useAuthStore((s) => s.loading);
     const signOut = useAuthStore((s) => s.signOut);
+    const notificationCount = useUIStore((s) => s.unreadCount);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -41,8 +43,9 @@ const AppLayoutRoute: React.FC = () => {
             dtr: "/user/dtr",
             meetings: "/user/meetings",
             reports: "/user/reports",
-            notifications: "/user/dashboard",
-            help: "/user/dashboard",
+            payroll: "/user/payroll",
+            notifications: "/user/notifications",
+            help: "/user/help",
         };
 
         const target = routeMap[key] ?? "/user/dashboard";
@@ -58,7 +61,7 @@ const AppLayoutRoute: React.FC = () => {
         <AppLayout
             user={sidebarUser}
             activeKey={activeKey}
-            notificationCount={0}
+            notificationCount={notificationCount}
             onNavigate={handleNavigate}
             onSignOut={handleSignOut}
         />

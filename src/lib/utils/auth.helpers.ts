@@ -1,4 +1,26 @@
 export const AUTH_SESSION_COOKIE = 'aris_auth_session';
+export const AUTH_STATE_CHANGE_KEY = 'aris_auth_state_change';
+
+export type AuthStateChangeType = 'signed-in' | 'signed-out';
+
+export function notifyAuthStateChange(type: AuthStateChangeType, user?: { email?: string | null; role?: string | null }) {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+
+  const payload = JSON.stringify({
+    type,
+    email: user?.email ?? null,
+    role: user?.role ?? null,
+    timestamp: Date.now(),
+  });
+
+  localStorage.setItem(AUTH_STATE_CHANGE_KEY, payload);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('aris-auth-state-change', { detail: { type, email: user?.email ?? null, role: user?.role ?? null } }));
+  }
+}
 
 export async function persistRefreshToken(
   lastUserKey: string,
@@ -76,4 +98,31 @@ export function getDashboardRouteForUser(user?: { role?: string | null }) {
   }
 
   return user.role.toLowerCase().includes('professor') ? '/user/dashboard' : '/staff';
+}
+
+export function hasActiveSession() {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  const session = getSessionCookie();
+  if (session?.email) {
+    return true;
+  }
+
+  if (typeof localStorage === 'undefined') {
+    return false;
+  }
+
+  const rawState = localStorage.getItem(AUTH_STATE_CHANGE_KEY);
+  if (!rawState) {
+    return false;
+  }
+
+  try {
+    const parsed = JSON.parse(rawState) as { type?: string; email?: string | null };
+    return parsed.type === 'signed-in' && !!parsed.email;
+  } catch {
+    return false;
+  }
 }

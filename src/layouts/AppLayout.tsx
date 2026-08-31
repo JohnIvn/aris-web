@@ -1,9 +1,12 @@
 import React, { useState } from "react";
-import { Bell, Menu, X } from "lucide-react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Bell, ChevronRight, Menu, X } from "lucide-react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar, { SidebarNavItemData, SidebarUser } from "../components/Sidebar";
 import Modal from "../components/ui/Modal";
 import ThemeToggle from "../components/ui/ThemeToggle";
+import Topbar from "../components/Topbar";
+
+import { getTodayFormatted } from "../lib/utils/date";
 
 interface AppLayoutProps {
     user: SidebarUser;
@@ -13,6 +16,107 @@ interface AppLayoutProps {
     onNavigate?: (key: string) => void;
     onSignOut?: () => void;
 }
+export type UserTopbarKey =
+    | "profile"
+    | "dtr"
+    | "meetings"
+    | "reports"
+    | "payroll"
+    | "notifications"
+    | "help";
+
+export type StaffTopbarKey =
+    | "dashboard"
+    | "pendingReports"
+    | "approvalHistory"
+    | "auditTrail"
+    | "notifications"
+    | "help";
+
+export interface TopbarItem {
+    title: string;
+    subtitleType?: "breadcrumb" | "greeting";
+    breadcrumb?: string;
+}
+
+export const userTopbarSeed: Record<string, TopbarItem> = {
+    dashboard: {
+        title: "Dashboard",
+        subtitleType: "greeting",
+    },
+
+    profile: {
+        title: "My Profile",
+        subtitleType: "breadcrumb",
+        breadcrumb: "My Profile",
+    },
+
+    dtr: {
+        title: "DTR / Attendance",
+        subtitleType: "breadcrumb",
+        breadcrumb: "DTR / Attendance",
+    },
+
+    meetings: {
+        title: "Meetings",
+        subtitleType: "breadcrumb",
+        breadcrumb: "Meetings",
+    },
+
+    reports: {
+        title: "My Accomplishment Reports",
+        subtitleType: "breadcrumb",
+        breadcrumb: "Reports",
+    },
+
+    payroll: {
+        title: "Payroll",
+        subtitleType: "breadcrumb",
+        breadcrumb: "Payroll",
+    },
+    
+    notifications: {
+        title: "Notifications",
+    },
+    
+    help: {
+        title: "Help & Support",
+    },
+};
+
+export const staffTopbarSeed: Record<StaffTopbarKey, TopbarItem> = {
+    dashboard: {
+        title: "Dashboard",
+        subtitleType: "greeting",
+    },
+
+    pendingReports: {
+        title: "Pending Reports",
+        subtitleType: "breadcrumb",
+        breadcrumb: "Pending Reports",
+    },
+
+    approvalHistory: {
+        title: "Approval History",
+        subtitleType: "breadcrumb",
+        breadcrumb: "Approval History",
+    },
+
+    auditTrail: {
+        title: "Audit Trail",
+        subtitleType: "breadcrumb",
+        breadcrumb: "Audit Trail",
+    },
+    
+    notifications: {
+        title: "Notifications",
+    },
+    
+    help: {
+        title: "Help & Support",
+    },
+};
+
 
 const AppLayout: React.FC<AppLayoutProps> = ({
     user,
@@ -25,43 +129,52 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     const [mobileOpen, setMobileOpen] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
 
+    const isStaffLayout = location.pathname.startsWith("/staff");
+    const routeKey = location.pathname.split("/")[2] || "dashboard";
+    const topbar = isStaffLayout
+        ? staffTopbarSeed[routeKey as StaffTopbarKey]
+        : userTopbarSeed[routeKey as UserTopbarKey];
+
+    const renderSubtitle = () => {
+        if (topbar.subtitleType === "greeting") {
+            return (
+                <p className="text-slate-500 dark:text-slate-400">
+                    Good morning, {user.name}! 👋
+                </p>
+            );
+        }
+
+        return (
+            <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+                <button
+                    type="button"
+                    onClick={() => onNavigate?.("dashboard")}
+                    className="hover:underline"
+                >
+                    Dashboard
+                </button>
+
+                <ChevronRight size={14} />
+
+                <span className="font-medium text-slate-700 dark:text-slate-300">
+                    {topbar.breadcrumb}
+                </span>
+            </div>
+        );
+    };
     const handleSidebarNavigate = (key: string) => {
         onNavigate?.(key);
-
-        if (key === "dashboard") {
-            navigate("/user/dashboard");
-            return;
-        }
-
-        if (key === "profile") {
-            navigate("/user/profile");
-            return;
-        }
-
-        if (key === "dtr") {
-            navigate("/user/dtr");
-            return;
-        }
-
-        if (key === "meetings") {
-            navigate("/user/meetings");
-            return;
-        }
-
-        if (key === "reports") {
-            navigate("/user/reports");
-            return;
-        }
+        setMobileOpen(false);
     };
 
     return (
         <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950">
             <div className="relative flex min-h-screen">
                 <div
-                    className={`fixed inset-y-0 left-0 z-40 transition-transform duration-200 lg:static lg:translate-x-0 ${
-                        mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-                    }`}
+                    className={`fixed inset-y-0 left-0 z-40 transition-transform duration-200 lg:static lg:translate-x-0 ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+                        }`}
                 >
                     <Sidebar
                         user={user}
@@ -135,6 +248,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                                 <button
                                     type="button"
                                     aria-label="Notifications"
+                                    onClick={() => navigate(isStaffLayout ? '/staff/notifications' : '/user/notifications')}
                                     className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                                 >
                                     <Bell size={16} />
@@ -148,7 +262,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                         </div>
                     </div>
 
-                    <div className="flex-1 min-w-0 overflow-y-auto">
+                    <div className="flex-1 p-6 md:p-8 min-w-0 overflow-y-auto">
+                        <Topbar
+                            title={topbar.title}
+                            subtitle={renderSubtitle()}
+                            dateLabel={getTodayFormatted()}
+                            dayTimeLabel={topbar.title}
+                            unreadCount={notificationCount ?? 0}
+                            accentColor="#047857"
+                            textColor="#1e293b"
+                            onNotificationClick={() => onNavigate?.("notifications")}
+                        />
                         <Outlet />
                     </div>
                 </div>

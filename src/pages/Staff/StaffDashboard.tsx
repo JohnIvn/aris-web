@@ -43,6 +43,7 @@ const StaffDashboard: React.FC = () => {
           unreadCount={5}
           accentColor="#34d399"
           textColor="#0f172a"
+          onNotificationClick={() => navigate('/staff/notifications')}
         />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 mb-6">
@@ -56,7 +57,7 @@ const StaffDashboard: React.FC = () => {
             subLabel="Due this week"
             actionLabel="Review all"
             accentColor="#047857"
-            onAction={() => undefined}
+            onAction={() => navigate('/staff/reports')}
           />
           <StatCard
             icon={Clock3}
@@ -68,7 +69,7 @@ const StaffDashboard: React.FC = () => {
             subLabel="Below target"
             actionLabel="See timeline"
             accentColor="#047857"
-            onAction={() => undefined}
+            onAction={() => navigate('/staff/history')}
           />
           <StatCard
             icon={TrendingUp}
@@ -80,7 +81,7 @@ const StaffDashboard: React.FC = () => {
             subLabel="Monthly average"
             actionLabel="View insights"
             accentColor="#047857"
-            onAction={() => undefined}
+            onAction={() => navigate('/staff/audit')}
           />
           <StatCard
             icon={BriefcaseBusiness}
@@ -92,7 +93,7 @@ const StaffDashboard: React.FC = () => {
             subLabel="Faculty groups"
             actionLabel="Open queue"
             accentColor="#047857"
-            onAction={() => undefined}
+            onAction={() => navigate('/staff/reports')}
           />
         </div>
 

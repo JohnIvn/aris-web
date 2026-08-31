@@ -20,7 +20,6 @@ import type { TimelineStep } from '../../components/ui/ReportTimeline';
 import NotificationItem from '../../components/ui/NotificationItem';
 import QuickActionButton from '../../components/ui/QuickActionButton';
 import InfoBanner from '../../components/ui/InfoBanner';
-import Topbar from '../../components/Topbar';
 import type { DashboardData, DashboardNotification } from '../../lib/data/dashboard.types';
 
 export interface DashboardProps extends Partial<DashboardData> {
@@ -75,9 +74,6 @@ const notificationVisuals: Record<
 };
 
 const DashboardContent: React.FC<DashboardProps> = ({
-    username = "Test",
-    dateLabel = 'May 28, 2026',
-    dayTimeLabel = 'Thursday, 8:30 AM',
     unreadCount = 3,
 
     arStatus = {
@@ -122,9 +118,7 @@ const DashboardContent: React.FC<DashboardProps> = ({
         'Check your DTR regularly.',
     ],
 
-    textColor = '#1e293b', // Tailwind slate-800
     accentColor = '#047857', // Tailwind emerald-700
-    secondAccentColor = '#64748b', // Tailwind slate-500
 
     onNavigate,
     onCreateReport,
@@ -141,21 +135,7 @@ const DashboardContent: React.FC<DashboardProps> = ({
         <div className="min-h-screen w-full flex bg-slate-100 dark:bg-slate-950 transition-colors">
 
             <main className="flex-1 min-w-0 p-6 md:p-8">
-                <Topbar
-                    title="Professor Dashboard"
-                    subtitle={
-                        <p style={{ color: secondAccentColor }} className="dark:text-slate-400">
-                            Good morning, {username}! 👋
-                        </p>
-                    }
-                    showThemeToggle
-                    dateLabel={dateLabel}
-                    dayTimeLabel={dayTimeLabel}
-                    unreadCount={unreadCount}
-                    textColor={textColor}
-                    accentColor={accentColor}
-                    onNotificationClick={() => onNavigate?.('notifications')}
-                />
+                
 
                 {/* Stat cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
@@ -227,11 +207,7 @@ const DashboardContent: React.FC<DashboardProps> = ({
                                     {reportSubmittedLabel}
                                 </p>
 
-                                <div className="overflow-x-auto max-w-full pb-1">
-                                    <div className="min-w-[480px] sm:min-w-0">
-                                        <ReportTimeline steps={reportSteps} accentColor={accentColor} />
-                                    </div>
-                                </div>
+                                <ReportTimeline steps={reportSteps} accentColor={accentColor} />
 
                                 <div className="mt-6">
                                     <InfoBanner variant="warning">{reportStatusMessage}</InfoBanner>

@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  BadgeCheck,
   CalendarRange,
   CheckCircle2,
   ChevronRight,
@@ -10,10 +9,13 @@ import {
   Search,
 } from 'lucide-react';
 
-import Topbar from '../../components/Topbar';
 import Modal from '../../components/ui/Modal';
 
 export type ReportStatus = 'Submitted' | 'Pending Review' | 'Approved' | 'Returned / Revised';
+
+export interface AccomplishmentReportsProps {
+  onNavigate?: (key: string) => void;
+}
 
 export interface ApprovalStage {
   name: string;
@@ -224,22 +226,7 @@ const AccomplishmentReports: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 transition-colors">
-      <main className="flex-1 min-w-0 p-6 md:p-8">
-        <Topbar
-          title="My Accomplishment Reports"
-          subtitle={
-            <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
-              <button type="button" className="hover:underline">Dashboard</button>
-              <ChevronRight size={14} />
-              <span className="font-medium text-slate-700 dark:text-slate-300">Reports</span>
-            </div>
-          }
-          dateLabel="August 2026"
-          dayTimeLabel="Accomplishment Report"
-          unreadCount={2}
-          accentColor="#047857"
-        />
-
+      <main className="flex-1 min-w-0">
         <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           {summaryCards.map((card) => (
             <div
@@ -251,9 +238,7 @@ const AccomplishmentReports: React.FC = () => {
                   <p className="text-sm text-slate-500 dark:text-slate-400">{card.label}</p>
                   <p className={`mt-3 text-2xl font-bold ${card.tone}`}>{card.value}</p>
                 </div>
-                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${card.accent}`}>
-                  <BadgeCheck size={18} />
-                </span>
+                 
               </div>
             </div>
           ))}

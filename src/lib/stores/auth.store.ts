@@ -7,6 +7,7 @@ import {
   clearSessionCookie,
   getPersistedRefreshToken,
   getSessionCookie,
+  notifyAuthStateChange,
   persistRefreshToken,
   setSessionCookie,
 } from "../utils/auth.helpers";
@@ -209,6 +210,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
           initialized: true,
         });
 
+        notifyAuthStateChange('signed-in', {
+          email: matchedDemoAccount.email,
+          role: matchedDemoAccount.role,
+        });
+
         useUIStore.getState().addToast({
           type: "success",
           message: "Demo sign in successful",
@@ -241,6 +247,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         user: responseData.user,
         token: responseData.token,
         loading: false,
+      });
+      notifyAuthStateChange('signed-in', {
+        email: responseData.user.email,
+        role: responseData.user.role,
       });
       useUIStore.getState().addToast({
         type: "success",
@@ -278,6 +288,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         currentUser?.email ?? null,
       );
       clearSessionCookie();
+      notifyAuthStateChange('signed-out', {
+        email: currentUser?.email ?? null,
+        role: currentUser?.role ?? null,
+      });
       set({ ...authStateInit, initialized: true });
     }
   },

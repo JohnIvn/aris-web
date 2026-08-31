@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   CalendarClock,
-  ChevronRight,
   FileClock,
   Filter,
   Plus,
@@ -9,10 +8,10 @@ import {
   UserRoundCheck,
 } from 'lucide-react';
 
-import Topbar from '../../components/Topbar';
 import Modal from '../../components/ui/Modal';
 import { fetchDtrData, submitDtrRecord } from '../../lib/services/dtr.service';
 import type { DtrData, DtrRecord } from '../../lib/data/dtr.types';
+
 
 const statusStyles: Record<DtrRecord['status'], string> = {
   Present: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
@@ -118,22 +117,7 @@ const MyDTR: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 transition-colors">
-      <main className="flex-1 min-w-0 p-6 md:p-8">
-        <Topbar
-          title="My DTR"
-          subtitle={
-            <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
-              <button type="button" className="hover:underline">Dashboard</button>
-              <ChevronRight size={14} />
-              <span className="text-slate-700 dark:text-slate-300 font-medium">My DTR</span>
-            </div>
-          }
-          dateLabel="August 2026"
-          dayTimeLabel="Daily Time Record"
-          unreadCount={2}
-          accentColor="#047857"
-        />
-
+      <main className="flex-1 min-w-0">
         {isLoading ? (
           <div className="rounded-2xl bg-white p-8 text-center text-slate-500 shadow-sm dark:bg-slate-900 dark:text-slate-400">
             Loading DTR record...

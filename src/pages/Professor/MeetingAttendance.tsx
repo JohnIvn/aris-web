@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-    ChevronRight,
     Calendar,
     Clock,
     CheckCircle2,
@@ -15,7 +14,6 @@ import {
 import Card from '../../components/ui/Card';
 import Modal from '../../components/ui/Modal';
 import InfoBanner from '../../components/ui/InfoBanner';
-import Topbar from '../../components/Topbar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import FilterDropdown from '../../components/ui/FilterDropdown';
 import SearchInput from '../../components/ui/SearchInput';
@@ -78,17 +76,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
-    dateLabel = 'May 28, 2026',
-    dayTimeLabel = 'Thursday, 8:30 AM',
-    unreadCount = 3,
-
-    textColor = '#1e293b', // Tailwind slate-800
     accentColor = '#047857', // Tailwind emerald-700
-    secondAccentColor = '#64748b', // Tailwind slate-500
 
     fetchData = fetchMeetingAttendanceData,
-
-    onNavigate,
     onStartMeeting,
     onViewHistory,
     onViewDetails,
@@ -170,32 +160,7 @@ const MeetingAttendanceContent: React.FC<MeetingAttendanceProps> = ({
 
     return (
         <div className="min-h-screen w-full flex bg-slate-100 dark:bg-slate-950 transition-colors">
-            <main className="flex-1 min-w-0 p-6 md:p-8">
-                <Topbar
-                    title="Meeting Attendance"
-                    subtitle={
-                        <div className="flex items-center gap-1.5 text-sm" style={{ color: secondAccentColor }}>
-                            <button
-                                type="button"
-                                onClick={() => onNavigate?.('dashboard')}
-                                className="hover:underline dark:text-slate-400"
-                            >
-                                Dashboard
-                            </button>
-                            <ChevronRight size={14} className="dark:text-slate-500" />
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">
-                                Meeting Attendance
-                            </span>
-                        </div>
-                    }
-                    dateLabel={dateLabel}
-                    dayTimeLabel={dayTimeLabel}
-                    unreadCount={unreadCount}
-                    textColor={textColor}
-                    accentColor={accentColor}
-                    onNotificationClick={() => onNavigate?.('notifications')}
-                />
-
+            <main className="flex-1 min-w-0">
                 {isLoading && (
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
                         <LoadingState />

@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
 
 import Card from '../../components/ui/Card';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Topbar from '../../components/Topbar';
 
-const report = {
+const DEMO_APPROVAL_STORAGE_KEY = 'aris_demo_approval_flow';
+
+const defaultReport = {
   id: 'AR-0826-01',
-  professor: 'Prof. Amelia Torres',
+  professor: 'Amelia Torres',
   department: 'Computer Science',
   period: 'August 2026',
   status: 'Pending Review',
@@ -21,47 +23,95 @@ const report = {
   rejections: [
     {
       date: 'May 29, 2026',
-      by: 'Ms. Grace Navarro',
+      by: 'Grace Navarro',
       role: 'Secretary',
       remarks: 'The mentoring log is incomplete. Please attach the section attendance sheet.',
     },
     {
       date: 'May 30, 2026',
-      by: 'Ms. Patricia Gomez',
+      by: 'Patricia Gomez',
       role: 'HR',
       remarks: 'Supporting file was not signed by the department chair.',
     },
     {
       date: 'May 31, 2026',
-      by: 'Mr. Daniel Cruz',
+      by: 'Daniel Cruz',
       role: 'Accounting',
       remarks: 'Budget evidence is missing the official approval stamp.',
     },
   ],
 };
 
-const approvalFlow = [
-  { name: 'Checker', owner: 'Ms. Karen Reyes', status: 'Approved', date: 'May 28, 2026', approvedBy: 'Ms. Karen Reyes' },
-  { name: 'Secretary', owner: 'Ms. Grace Navarro', status: 'Waiting for approval', date: 'Pending', approvedBy: '—' },
-  { name: 'Human Resources', owner: 'Ms. Patricia Gomez', status: 'Waiting for approval', date: 'Pending', approvedBy: '—' },
-  { name: 'Accounting', owner: 'Mr. Daniel Cruz', status: 'Waiting for approval', date: 'Pending', approvedBy: '—' },
+const defaultApprovalFlow = [
+  { name: 'Checker', owner: 'Karen Reyes', status: 'Approved', date: 'May 28, 2026', approvedBy: 'Karen Reyes' },
+  { name: 'Secretary', owner: 'Grace Navarro', status: 'Waiting for approval', date: 'Pending', approvedBy: '—' },
+  { name: 'Human Resources', owner: 'Patricia Gomez', status: 'Waiting for approval', date: 'Pending', approvedBy: '—' },
+  { name: 'Accounting', owner: 'Daniel Cruz', status: 'Waiting for approval', date: 'Pending', approvedBy: '—' },
 ];
 
-const reviewerRole: string = 'Checker';
+const reviewerRole = 'Checker';
+
+const getStoredApprovals = () => {
+  if (typeof window === 'undefined') {
+    return defaultApprovalFlow;
+  }
+
+  const raw = window.localStorage.getItem(DEMO_APPROVAL_STORAGE_KEY);
+  if (!raw) {
+    return defaultApprovalFlow;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Array<{ name: string; owner: string; status: string; date: string; approvedBy: string }>;
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return defaultApprovalFlow;
+    }
+    return parsed;
+  } catch {
+    return defaultApprovalFlow;
+  }
+};
 
 const ReportDetailsReview: React.FC = () => {
   const [decision, setDecision] = useState<'approve' | 'reject' | null>(null);
   const [remarks, setRemarks] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [approvalFlow, setApprovalFlow] = useState(getStoredApprovals());
+  const [currentReviewerRole, setCurrentReviewerRole] = useState(() => {
+    if (typeof window === 'undefined') return reviewerRole;
+    return window.localStorage.getItem('aris_demo_current_staff_role') ?? reviewerRole;
+  });
+
+  const report = defaultReport;
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(DEMO_APPROVAL_STORAGE_KEY, JSON.stringify(approvalFlow));
+      window.localStorage.setItem('aris_demo_current_staff_role', currentReviewerRole);
+    }
+  }, [approvalFlow, currentReviewerRole]);
 
   const roleAlreadyApproved = approvalFlow.some(
-    (step) => step.name === reviewerRole && step.status === 'Approved',
+    (step) => step.name === currentReviewerRole && step.status === 'Approved',
   );
   const isActionDisabled = roleAlreadyApproved;
 
   const handleDecision = () => {
     if (!decision || isActionDisabled) return;
 
+    const nextFlow = approvalFlow.map((step) => {
+      if (step.name === currentReviewerRole) {
+        return {
+          ...step,
+          status: decision === 'approve' ? 'Approved' : 'Rejected',
+          date: 'Today',
+          approvedBy: 'Current reviewer',
+        };
+      }
+      return step;
+    });
+
+    setApprovalFlow(nextFlow);
     setShowModal(false);
     setRemarks('');
     setDecision(null);
@@ -79,6 +129,28 @@ const ReportDetailsReview: React.FC = () => {
           accentColor="#34d399"
           textColor="#0f172a"
         />
+
+        <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Demo reviewer role</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Use this to simulate checker, secretary, HR, and accounting approval flow.</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+              <span>Role</span>
+              <select
+                value={currentReviewerRole}
+                onChange={(event) => setCurrentReviewerRole(event.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+              >
+                <option value="Checker">Checker</option>
+                <option value="Secretary">Secretary</option>
+                <option value="Human Resources">Human Resources</option>
+                <option value="Accounting">Accounting</option>
+              </select>
+            </label>
+          </div>
+        </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.7fr_0.9fr]">
           <Card title="Accomplishment report details" accentColor="#047857">
