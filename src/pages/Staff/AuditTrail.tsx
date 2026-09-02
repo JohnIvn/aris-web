@@ -2,7 +2,6 @@ import React from 'react';
 import { Activity, ShieldAlert } from 'lucide-react';
 
 import Card from '../../components/ui/Card';
-import Topbar from '../../components/Topbar';
 
 const auditEntries = [
   {
@@ -36,18 +35,8 @@ const auditEntries = [
 
 const AuditTrail: React.FC = () => {
   return (
-    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 p-6 md:p-8">
+    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950">
       <main className="mx-auto max-w-5xl">
-        <Topbar
-          title="Audit Trail"
-          subtitle={<p className="text-sm text-slate-600 dark:text-slate-300">System changes and approval actions</p>}
-          dateLabel="May 28, 2026"
-          dayTimeLabel="Thursday, 8:30 AM"
-          unreadCount={2}
-          accentColor="#34d399"
-          textColor="#0f172a"
-        />
-
         <Card title="Recent audit log" accentColor="#047857">
           <div className="space-y-4">
             {auditEntries.map((entry) => (

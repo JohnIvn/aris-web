@@ -300,21 +300,6 @@ const ProfileRoute = () => {
   />;
 }
 
-// My DTR Route
-
-const DtrRoute = () => {
-  const navigate = useNavigate();
-
-  return <MyDTR onNavigate={(key) => {
-    const routeMap: Record<string, string> = {
-      dashboard: "/user/dashboard",
-      notifications: "/user/notifications",
-    };
-
-    navigate(routeMap[key] ?? "/user/dashboard");
-  }} />;
-}
-
 // Meeting Attendance Route
 const MeetingAttendanceRoute = () => {
   const navigate = useNavigate();
@@ -440,7 +425,7 @@ function App() {
           <Route path="/user" element={<ProtectedRoute><AppLayoutRoute /></ProtectedRoute>}>
             <Route path="dashboard" element={<DashboardRoute />} />
             <Route path="profile" element={<ProfileRoute />} />
-            <Route path="dtr" element={<DtrRoute />} />
+            <Route path="dtr" element={<MyDTR />} />
             <Route path="meetings" element={<MeetingAttendanceRoute />} />
             <Route path="reports" element={<AccomplishmentReports />} />
             <Route path="payroll" element={<PayrollRoute />} />

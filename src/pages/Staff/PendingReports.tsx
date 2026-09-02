@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 
 import Card from '../../components/ui/Card';
 import StatusBadge from '../../components/ui/StatusBadge';
-import Topbar from '../../components/Topbar';
 
 interface ReviewItem {
   id: string;
@@ -39,18 +38,8 @@ const PendingReports: React.FC = () => {
   }, [keyword, statusFilter]);
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 p-6 md:p-8">
+    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950">
       <main className="mx-auto max-w-7xl">
-        <Topbar
-          title="Pending Reports"
-          subtitle={<p className="text-sm text-slate-600 dark:text-slate-300">Academic records review queue</p>}
-          dateLabel="May 28, 2026"
-          dayTimeLabel="Thursday, 8:30 AM"
-          unreadCount={3}
-          accentColor="#34d399"
-          textColor="#0f172a"
-        />
-
         <Card title="Report review queue" accentColor="#047857">
           <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="relative w-full max-w-md">

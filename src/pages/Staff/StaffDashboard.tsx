@@ -14,7 +14,6 @@ import {
 import Card from '../../components/ui/Card';
 import StatCard from '../../components/ui/StatCard';
 import StatusBadge from '../../components/ui/StatusBadge';
-import Topbar from '../../components/Topbar';
 
 const pendingQueue = [
   { name: 'Prof. Amelia Torres', period: 'August 2026', status: 'Pending Review', id: 'AR-0826-01', approvedBy: ['Checker'] },
@@ -33,18 +32,8 @@ const StaffDashboard: React.FC = () => {
   const currentRole = 'Checker';
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 p-6 md:p-8">
+    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950">
       <main className="mx-auto max-w-7xl">
-        <Topbar
-          title="Staff Dashboard"
-          subtitle={<p className="text-sm text-slate-600 dark:text-slate-300">Good morning, Ms. Karen Reyes 👋</p>}
-          dateLabel="May 28, 2026"
-          dayTimeLabel="Thursday, 8:30 AM"
-          unreadCount={5}
-          accentColor="#34d399"
-          textColor="#0f172a"
-          onNotificationClick={() => navigate('/staff/notifications')}
-        />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 mb-6">
           <StatCard

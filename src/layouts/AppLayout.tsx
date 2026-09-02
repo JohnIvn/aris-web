@@ -27,9 +27,9 @@ export type UserTopbarKey =
 
 export type StaffTopbarKey =
     | "dashboard"
-    | "pendingReports"
-    | "approvalHistory"
-    | "auditTrail"
+    | "reports"
+    | "history"
+    | "audit"
     | "notifications"
     | "help";
 
@@ -90,19 +90,19 @@ export const staffTopbarSeed: Record<StaffTopbarKey, TopbarItem> = {
         subtitleType: "greeting",
     },
 
-    pendingReports: {
+    reports: {
         title: "Pending Reports",
         subtitleType: "breadcrumb",
         breadcrumb: "Pending Reports",
     },
 
-    approvalHistory: {
+    history: {
         title: "Approval History",
         subtitleType: "breadcrumb",
         breadcrumb: "Approval History",
     },
 
-    auditTrail: {
+    audit: {
         title: "Audit Trail",
         subtitleType: "breadcrumb",
         breadcrumb: "Audit Trail",
@@ -151,7 +151,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                 <button
                     type="button"
                     onClick={() => onNavigate?.("dashboard")}
-                    className="hover:underline"
+                    className="hover:underline hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
                 >
                     Dashboard
                 </button>
