@@ -3,7 +3,9 @@ import { Bell, Search, SlidersHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Card from '../../components/ui/Card';
+import Modal from '../../components/ui/Modal';
 import StatusBadge from '../../components/ui/StatusBadge';
+import { useUIStore } from '../../lib/stores/ui.store';
 
 interface ReviewItem {
   id: string;
@@ -26,8 +28,19 @@ const seedItems: ReviewItem[] = [
 
 const PendingReports: React.FC = () => {
   const navigate = useNavigate();
+  const addToast = useUIStore((state) => state.addToast);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | ReviewItem['status']>('All');
+  const [showNotifyModal, setShowNotifyModal] = useState(false);
+
+  const handleNotifyQueue = () => {
+    addToast({
+      type: 'success',
+      message: 'Review queue notification sent.',
+      description: `${filteredItems.length} report${filteredItems.length === 1 ? '' : 's'} matched the current filters.`,
+    });
+    setShowNotifyModal(false);
+  };
 
   const filteredItems = useMemo(() => {
     return seedItems.filter((item) => {
@@ -66,7 +79,11 @@ const PendingReports: React.FC = () => {
                   <option className="dark:text-slate-600" value="For Revision">For Revision</option>
                 </select>
               </div>
-              <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-emerald-500">
+              <button
+                type="button"
+                onClick={() => setShowNotifyModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+              >
                 <Bell size={14} />
                 Notify queue
               </button>
@@ -121,6 +138,38 @@ const PendingReports: React.FC = () => {
             </div>
           )}
         </Card>
+
+        <Modal
+          isOpen={showNotifyModal}
+          title="Notify review queue"
+          description="Send a reminder about the reports currently shown in this queue."
+          onClose={() => setShowNotifyModal(false)}
+          size="sm"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={() => setShowNotifyModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleNotifyQueue}
+                className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500"
+              >
+                Send notification
+              </button>
+            </>
+          }
+        >
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-200">
+            {filteredItems.length > 0
+              ? `${filteredItems.length} report${filteredItems.length === 1 ? '' : 's'} will be included in the reminder.`
+              : 'No reports match the current filters. Adjust the filters before notifying the queue.'}
+          </div>
+        </Modal>
       </main>
     </div>
   );

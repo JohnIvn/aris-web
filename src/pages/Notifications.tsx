@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Bell, CheckCheck, CircleDot, Search, Sparkles } from 'lucide-react';
 import Card from '../components/ui/Card';
 import { useUIStore } from '../lib/stores/ui.store';
@@ -20,6 +20,8 @@ const staffNotifications = [
 ];
 
 const NotificationsPage: React.FC<NotificationsPageProps> = ({ role = 'professor' }) => {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const notifications = useUIStore((state) => state.notifications);
   const markNotificationAsRead = useUIStore((state) => state.markNotificationAsRead);
   const unreadCount = useUIStore((state) => state.unreadCount);
@@ -31,8 +33,13 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ role = 'professor
   );
 
   const sortedNotifications = useMemo(
-    () => [...roleNotifications].sort((a, b) => Number(a.read ?? false) - Number(b.read ?? false)),
-    [roleNotifications],
+    () => [...roleNotifications]
+      .filter((notification) => {
+        const query = searchQuery.trim().toLowerCase();
+        return !query || `${notification.title} ${notification.message} ${notification.category}`.toLowerCase().includes(query);
+      })
+      .sort((a, b) => Number(a.read ?? false) - Number(b.read ?? false)),
+    [roleNotifications, searchQuery],
   );
 
   return (
@@ -51,6 +58,8 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ role = 'professor
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setIsSearchOpen((value) => !value)}
+              aria-pressed={isSearchOpen}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
               <Search size={14} />
@@ -65,6 +74,17 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ role = 'professor
               Mark all read
             </button>
           </div>
+
+          {isSearchOpen && (
+            <input
+              autoFocus
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search notifications"
+              aria-label="Search notifications"
+              className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 md:ml-auto md:max-w-sm"
+            />
+          )}
         </div>
 
         <Card title="Inbox" accentColor="#047857">

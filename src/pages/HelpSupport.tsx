@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BookOpen, ChevronRight, Headphones, Mail, MessageSquareText, ShieldCheck, Ticket } from 'lucide-react';
 import Card from '../components/ui/Card';
+import Modal from '../components/ui/Modal';
 import Spacer from '../components/ui/Spacer';
+import { useUIStore } from '../lib/stores/ui.store';
 
 interface HelpSupportProps {
     role?: 'professor' | 'staff';
 }
 
 const HelpSupport: React.FC<HelpSupportProps> = ({ role = 'professor' }) => {
+    const addToast = useUIStore((state) => state.addToast);
+    const [openCard, setOpenCard] = useState<string | null>(null);
+    const [ticketSubject, setTicketSubject] = useState('');
+    const [ticketMessage, setTicketMessage] = useState('');
     const helpCards = [
         {
             title: 'Submit a support ticket',
@@ -50,6 +56,26 @@ const HelpSupport: React.FC<HelpSupportProps> = ({ role = 'professor' }) => {
             answer: 'Meeting proof and attendance records are stored in the system and can be reviewed from your dashboard.',
         },
     ];
+
+    const selectedCard = helpCards.find((card) => card.title === openCard);
+    const handleTicketSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        addToast({
+            type: 'success',
+            message: 'Support ticket submitted.',
+            description: 'The admin team will follow up through your account.',
+        });
+        setTicketSubject('');
+        setTicketMessage('');
+        setOpenCard(null);
+    };
+
+    const closeHelpModal = () => {
+        setOpenCard(null);
+        setTicketSubject('');
+        setTicketMessage('');
+    };
+
     return (
         <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950">
             <main className="mx-auto max-w-6xl">
@@ -65,6 +91,7 @@ const HelpSupport: React.FC<HelpSupportProps> = ({ role = 'professor' }) => {
                             <Spacer size={15} />
                             <button
                                 type="button"
+                                onClick={() => setOpenCard(title)}
                                 className="mt-auto inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 transition hover:text-emerald-500 dark:text-emerald-400"
                             >
                                 Open <ChevronRight size={14} />
@@ -113,6 +140,76 @@ const HelpSupport: React.FC<HelpSupportProps> = ({ role = 'professor' }) => {
                         </div>
                     </Card>
                 </div>
+
+                <Modal
+                    isOpen={Boolean(selectedCard)}
+                    title={selectedCard?.title ?? 'Help and support'}
+                    description={selectedCard?.description}
+                    onClose={closeHelpModal}
+                    size="md"
+                >
+                    {selectedCard?.title === 'Submit a support ticket' && (
+                        <form className="space-y-4" onSubmit={handleTicketSubmit}>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                                Subject
+                                <input
+                                    required
+                                    value={ticketSubject}
+                                    onChange={(event) => setTicketSubject(event.target.value)}
+                                    className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                    placeholder="What do you need help with?"
+                                />
+                            </label>
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+                                Details
+                                <textarea
+                                    required
+                                    value={ticketMessage}
+                                    onChange={(event) => setTicketMessage(event.target.value)}
+                                    className="mt-1.5 min-h-28 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                                    placeholder="Describe the issue or question."
+                                />
+                            </label>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={closeHelpModal}
+                                    className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                                >
+                                    Submit ticket
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {selectedCard?.title === 'Contact HR / Admin' && (
+                        <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                            <p>Choose the support channel that best fits your request.</p>
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                                <p className="font-semibold text-slate-900 dark:text-white">HR / Admin Office</p>
+                                <p className="mt-1">+63 912 345 6789</p>
+                                <p>Monday to Friday, 8:00 AM - 5:00 PM</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {selectedCard?.title === 'Quick FAQ' && (
+                        <div className="space-y-3">
+                            {supportItems.map((item) => (
+                                <details key={item.title} className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                                    <summary className="cursor-pointer font-semibold text-slate-900 dark:text-white">{item.title}</summary>
+                                    <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{item.answer}</p>
+                                </details>
+                            ))}
+                        </div>
+                    )}
+                </Modal>
             </main>
         </div>
     );
