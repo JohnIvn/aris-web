@@ -31,7 +31,7 @@ function TabToggle<T extends string>({ options, value, onChange }: TabToggleProp
             role="radio"
             aria-checked={active}
             onClick={() => onChange(option.value)}
-            className={`relative rounded-xl border text-left p-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+            className={`relative cursor-pointer rounded-xl border text-left p-3 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
               active
                 ? 'border-emerald-500 dark:border-emerald-400 ring-2 ring-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40'
                 : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600'

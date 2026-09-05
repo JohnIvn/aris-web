@@ -20,8 +20,8 @@ import MeetingAttendance from "./pages/Professor/MeetingAttendance";
 import MyDTR from "./pages/Professor/Dtr";
 import AccomplishmentReports from "./pages/Professor/AccomplishmentReports";
 import Payroll from "./pages/Professor/Payroll";
-import NotificationsPage from "./pages/Professor/Notifications";
-import HelpSupport from "./pages/Professor/HelpSupport";
+import NotificationsPage from "./pages/Notifications";
+import HelpSupport from "./pages/HelpSupport";
 import { ThemeProvider } from "./components/context/ThemeContext";
 
 import StaffDashboard from "./pages/Staff/StaffDashboard";

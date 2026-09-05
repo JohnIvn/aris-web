@@ -28,6 +28,7 @@ export type UserTopbarKey =
 export type StaffTopbarKey =
     | "dashboard"
     | "reports"
+    | "reportDetails"
     | "history"
     | "audit"
     | "notifications"
@@ -37,6 +38,7 @@ export interface TopbarItem {
     title: string;
     subtitleType?: "breadcrumb" | "greeting";
     breadcrumb?: string;
+    breadcrumbItems?: string[];
 }
 
 export const userTopbarSeed: Record<string, TopbarItem> = {
@@ -96,6 +98,12 @@ export const staffTopbarSeed: Record<StaffTopbarKey, TopbarItem> = {
         breadcrumb: "Pending Reports",
     },
 
+    reportDetails: {
+        title: "Report Details",
+        subtitleType: "breadcrumb",
+        breadcrumbItems: ["Pending Reports", "Report Details"],
+    },
+
     history: {
         title: "Approval History",
         subtitleType: "breadcrumb",
@@ -133,8 +141,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({
 
     const isStaffLayout = location.pathname.startsWith("/staff");
     const routeKey = location.pathname.split("/")[2] || "dashboard";
+    const isStaffReportDetail = isStaffLayout && location.pathname.startsWith("/staff/reports/");
     const topbar = isStaffLayout
-        ? staffTopbarSeed[routeKey as StaffTopbarKey]
+        ? staffTopbarSeed[isStaffReportDetail ? "reportDetails" : routeKey as StaffTopbarKey]
         : userTopbarSeed[routeKey as UserTopbarKey];
 
     const renderSubtitle = () => {
@@ -146,21 +155,41 @@ const AppLayout: React.FC<AppLayoutProps> = ({
             );
         }
 
+        const breadcrumbItems = topbar.breadcrumbItems;
+
         return (
             <div className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
                 <button
                     type="button"
                     onClick={() => onNavigate?.("dashboard")}
-                    className="hover:underline hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    className="hover:underline hover:text-slate-600 flex items-center gap-2 dark:hover:text-slate-200 cursor-pointer"
                 >
-                    Dashboard
+                    Dashboard <ChevronRight size={14} />
                 </button>
 
-                <ChevronRight size={14} />
-
-                <span className="font-medium text-slate-700 dark:text-slate-300">
-                    {topbar.breadcrumb}
-                </span>
+                {breadcrumbItems ? (
+                    breadcrumbItems.map((item, index) => (
+                        <React.Fragment key={item}>
+                            {index === breadcrumbItems.length - 1 ? (
+                                <span className="font-medium text-slate-700 dark:text-slate-100">
+                                    {item}
+                                </span>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => onNavigate?.("reports")}
+                                    className="text-slate-500 flex items-center gap-2 hover:text-slate-600 hover:underline dark:text-slate-300 dark:hover:text-slate-100"
+                                >
+                                    {item} <ChevronRight size={14} />
+                                </button>
+                            )}
+                        </React.Fragment>
+                    ))
+                ) : (
+                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                        {topbar.breadcrumb}
+                    </span>
+                )}
             </div>
         );
     };

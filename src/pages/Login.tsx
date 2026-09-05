@@ -31,7 +31,7 @@ export type Role = 'professor' | 'staff';
 
 const roleOptions: [TabOption<Role>, TabOption<Role>] = [
     { value: 'professor', label: 'Professor', badge: 'Google Account', icon: GraduationCap },
-    { value: 'staff', label: 'Staff / Admin', badge: 'Email & Password', icon: Users },
+    { value: 'staff', label: 'Staff', badge: 'Email & Password', icon: Users },
 ];
 
 const LoginForm: React.FC<LoginProps> = ({
@@ -108,7 +108,7 @@ const LoginForm: React.FC<LoginProps> = ({
                             <div>
                                 <Spacer size={30} />
 
-                                <p style={accentStyle} className="font-semibold text-sm text-center dark:text-emerald-400">
+                                <p style={accentStyle} className="font-semibold  text-sm text-center dark:text-emerald-400">
                                     For Professors
                                 </p>
                                 <Spacer size={4} />
@@ -179,7 +179,13 @@ const LoginForm: React.FC<LoginProps> = ({
                                         onMouseLeave={() => setBtnState('idle')}
                                         onMouseDown={() => setBtnState('active')}
                                         onMouseUp={() => setBtnState('hover')}
-                                        className="w-full dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-semibold py-3 rounded-xl transition-all duration-200 shadow-sm hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                                        className="w-full dark:bg-emerald-600 
+                                            dark:hover:bg-emerald-500 text-white 
+                                            font-semibold py-3 rounded-xl transition-all 
+                                            duration-200 shadow-sm hover:-translate-y-0.5 
+                                            hover:shadow-md focus:outline-none focus-visible:ring-2 
+                                            focus-visible:ring-emerald-500 focus-visible:ring-offset-2 
+                                            dark:focus-visible:ring-offset-slate-900"
                                     >
                                         Sign In
                                     </button>

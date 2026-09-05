@@ -28,7 +28,7 @@ const StatCard: React.FC<StatCardProps> = ({
     subLabel,
     actionLabel,
     onAction,
-    accentColor = '#047857',
+    accentColor = '#    ',
 }) => {
     const { theme } = useTheme();
     const isLight = theme === 'light';

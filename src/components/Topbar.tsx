@@ -47,7 +47,7 @@ const Topbar: React.FC<TopbarProps> = ({
 
             <div className="hidden items-center gap-4 sm:flex">
                 {showThemeToggle && <ThemeToggle />}
-
+        
                 <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <Calendar size={18} style={{ color: accentColor }} className="dark:text-emerald-400" />
                     <div className="leading-tight text-right">

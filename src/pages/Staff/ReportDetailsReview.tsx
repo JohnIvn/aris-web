@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle } from 'lucide-react';
 
 import Card from '../../components/ui/Card';
 import StatusBadge from '../../components/ui/StatusBadge';
-import Topbar from '../../components/Topbar';
 
 const DEMO_APPROVAL_STORAGE_KEY = 'aris_demo_approval_flow';
 
@@ -118,17 +117,8 @@ const ReportDetailsReview: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 p-6 md:p-8">
+    <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950">
       <main className="mx-auto max-w-6xl">
-        <Topbar
-          title="Report Review"
-          subtitle={<button type="button" className="inline-flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300"><ArrowLeft size={14} /> Back to queue</button>}
-          dateLabel="May 28, 2026"
-          dayTimeLabel="Thursday, 8:30 AM"
-          unreadCount={2}
-          accentColor="#34d399"
-          textColor="#0f172a"
-        />
 
         <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

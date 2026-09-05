@@ -1,7 +1,7 @@
 import React from 'react';
 import { BookOpen, ChevronRight, Headphones, Mail, MessageSquareText, ShieldCheck, Ticket } from 'lucide-react';
-import Card from '../../components/ui/Card';
-import Spacer from '../../components/ui/Spacer';
+import Card from '../components/ui/Card';
+import Spacer from '../components/ui/Spacer';
 
 interface HelpSupportProps {
     role?: 'professor' | 'staff';
@@ -57,7 +57,7 @@ const HelpSupport: React.FC<HelpSupportProps> = ({ role = 'professor' }) => {
                     {helpCards.map(({ title, description, icon: Icon }) => (
                         <Card className="sm:flex sm:flex-col sm:h-full" key={title} title={title} accentColor="#047857">
                             <div className="flex items-start gap-3">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                                <div className="flex w-12 h-12 aspect-square items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
                                     <Icon size={22} />
                                 </div>
                                 <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>

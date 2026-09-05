@@ -100,7 +100,7 @@ const ApprovalHistory: React.FC = () => {
 
                     {item.rejections.length > 0 && (
                       <div className="mt-4 overflow-hidden rounded-xl border border-rose-200 dark:border-rose-900/70">
-                        <div className="bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">Rejection timeline ({item.rejections.length})</div>
+                        <div className="bg-rose-50 px-3 py-2 text- font-semibold text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">Rejection timeline ({item.rejections.length})</div>
                         <table className="min-w-full divide-y divide-rose-200 text-left text-sm dark:divide-rose-900/70">
                           <thead className="bg-rose-50 dark:bg-rose-950/25">
                             <tr>

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Bell, CheckCheck, CircleDot, Search, Sparkles } from 'lucide-react';
-import Card from '../../components/ui/Card';
-import { useUIStore } from '../../lib/stores/ui.store';
+import Card from '../components/ui/Card';
+import { useUIStore } from '../lib/stores/ui.store';
 
 interface NotificationsPageProps {
   role?: 'professor' | 'staff';

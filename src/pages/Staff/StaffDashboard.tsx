@@ -96,8 +96,12 @@ const StaffDashboard: React.FC = () => {
                   return (
                     <div key={item.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <p className="font-semibold text-slate-900 dark:text-white">{item.name}</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{item.period} • {item.id}</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">
+                          {item.name}
+                        </p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {item.period} • {item.id}
+                        </p>
                       </div>
                       <div className="flex items-center gap-3">
                         <StatusBadge label={item.status} tone={item.status === 'Pending Review' ? 'warning' : 'neutral'} />

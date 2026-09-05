@@ -54,7 +54,7 @@ const PendingReports: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
-                <SlidersHorizontal size={16} className="text-slate-500" />
+                <SlidersHorizontal size={16} className="text-slate- " />
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value as 'All' | ReviewItem['status'])}
