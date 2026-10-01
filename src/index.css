@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+@theme inline {
+  --color-sidebar: #0d1a10;
+  --color-sidebar-hover: #1a3320;
+  --color-sidebar-active: #243d2a;
+  --color-brand: #3a7d4e;
+  --color-brand-light: #4a9d62;
+  --color-surface: #f4f6f5;
+  --color-card: #ffffff;
+  --color-border: #e2e8e4;
+  --color-text-primary: #111c14;
+  --color-text-secondary: #5a6b5e;
+  --color-text-muted: #8fa394;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c8d6cb transparent;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c8d6cb;
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
