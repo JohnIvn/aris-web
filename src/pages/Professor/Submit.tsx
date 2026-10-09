@@ -373,7 +373,7 @@ export default function ProfSubmit() {
             title="Record Information"
             subtitle="Choose the type of record and the submission period."
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <FieldLabel>Record Type</FieldLabel>
               <select
@@ -409,7 +409,7 @@ export default function ProfSubmit() {
             title="Faculty Information"
             subtitle="Shared information applied to all course entries below."
           />
-          <div className="grid grid-cols-[1.6fr_0.55fr_2fr] gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1.6fr_0.55fr_2fr]">
             <div>
               <FieldLabel>Name</FieldLabel>
               <input
@@ -774,7 +774,7 @@ export default function ProfSubmit() {
         </div>
 
         {/* ── SECTIONS 04 & 05: Topics & Tasks ── */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <SectionCard>
             <SectionHeader
               num="04"
@@ -819,7 +819,7 @@ export default function ProfSubmit() {
         </div>
 
         {/* ── SECTIONS 06 & 07: Attachment & Notes ── */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <SectionCard>
             <SectionHeader
               num="06"

@@ -85,7 +85,7 @@ export default function NewReminder() {
 
           <div>
             <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Category</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {categories.map((c) => {
                 const on = category === c.key;
                 return (

@@ -73,7 +73,7 @@ export default function AddStaff() {
           </div>
           <div>
             <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Role</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {roles.map((r) => {
                 const on = role === r.key;
                 return (
@@ -88,7 +88,7 @@ export default function AddStaff() {
               })}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Department</label>
               <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. Attendance" className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />

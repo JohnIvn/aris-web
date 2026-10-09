@@ -457,7 +457,7 @@ export default function Audit() {
         ))}
       </StatGrid>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-x-auto">
         <div
           className="flex items-center justify-between p-4 border-b"
           style={{ borderColor: "#eef1ef" }}
@@ -481,7 +481,7 @@ export default function Audit() {
           </div>
         </div>
         <div
-          className="grid grid-cols-[1.6fr_0.7fr_1.7fr_1.8fr_0.8fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+          className="grid min-w-[920px] grid-cols-[1.6fr_0.7fr_1.7fr_1.8fr_0.8fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
           style={{ color: "#b6c3ba", background: "#fafbfa" }}
         >
           <span>Actor</span>
@@ -497,7 +497,7 @@ export default function Audit() {
             type="button"
             onClick={() => setSelected({ log: l, idx: i })}
             title="View submission detail"
-            className="grid w-full text-left grid-cols-[1.6fr_0.7fr_1.7fr_1.8fr_0.8fr_1fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
+            className="grid min-w-[920px] w-full text-left grid-cols-[1.6fr_0.7fr_1.7fr_1.8fr_0.8fr_1fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
             style={{ borderColor: "#f2f4f2" }}
           >
             <span className="flex items-center gap-2.5 min-w-0">

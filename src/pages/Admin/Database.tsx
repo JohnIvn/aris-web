@@ -472,7 +472,7 @@ export default function Database() {
       </StatGrid>
 
       {/* Main Tabs Container */}
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-x-auto">
         <div
           className="flex items-center justify-between p-4 border-b flex-wrap gap-3"
           style={{ borderColor: "#eef1ef" }}
@@ -508,7 +508,7 @@ export default function Database() {
         {activeTab === "Backups & Snapshots" && (
           <div>
             <div
-              className="grid grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+              className="grid min-w-[900px] grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
               style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
               <span>Backup ID</span>
@@ -529,7 +529,7 @@ export default function Database() {
               filteredBackups.map((b) => (
                 <div
                   key={b.id}
-                  className="grid grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
+                  className="grid min-w-[900px] grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
                   style={{ borderColor: "#f2f4f2" }}
                 >
                   <span
@@ -646,7 +646,7 @@ export default function Database() {
           <div>
             {/* Table Header */}
             <div
-              className="grid grid-cols-[2.2fr_3fr_1.4fr_0.8fr_1.1fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+              className="grid min-w-[980px] grid-cols-[2.2fr_3fr_1.4fr_0.8fr_1.1fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
               style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
               <span>Check Name</span>
@@ -661,7 +661,7 @@ export default function Database() {
             {healthChecks.map((chk) => (
               <div
                 key={chk.id}
-                className="grid grid-cols-[2.2fr_3fr_1.4fr_0.8fr_1.1fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
+                className="grid min-w-[980px] grid-cols-[2.2fr_3fr_1.4fr_0.8fr_1.1fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
                 style={{ borderColor: "#f2f4f2" }}
               >
                 <span
@@ -705,7 +705,7 @@ export default function Database() {
         {activeTab === "Restore Logs" && (
           <div>
             <div
-              className="grid grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+              className="grid min-w-[900px] grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
               style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
               <span>Log ID</span>
@@ -718,7 +718,7 @@ export default function Database() {
             {restoreLogData.map((log) => (
               <div
                 key={log.id}
-                className="grid grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
+                className="grid min-w-[900px] grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
                 style={{ borderColor: "#f2f4f2" }}
               >
                 <span
@@ -842,7 +842,7 @@ export default function Database() {
               >
                 Retention & Archival Policy
               </h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div
                   className="p-3.5 rounded-2xl border"
                   style={{ borderColor: "#e2e8e4", background: "#fafbfa" }}

@@ -648,7 +648,7 @@ export default function Approvals() {
       )}
 
       {/* Pipeline board — one column per stage */}
-      <div className="grid grid-cols-4 gap-3 items-start">
+      <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 2xl:grid-cols-4">
         {STAGES.map((s) => {
           const cards = column(s);
           const isMine = s === role;

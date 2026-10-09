@@ -98,7 +98,7 @@ export default function AIML() {
               </div>
               <Badge tone="green" dot>Model confidence 88%</Badge>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {insights.map((ins) => (
                 <div key={ins.label} className="rounded-2xl p-3.5" style={{ background: "#fff", border: "1px solid #eef1ef" }}>
                   <div className="flex items-center gap-2 mb-1.5">

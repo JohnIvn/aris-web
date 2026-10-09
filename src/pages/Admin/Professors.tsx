@@ -48,19 +48,19 @@ export default function Professors() {
         ))}
       </StatGrid>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "#eef1ef" }}>
+      <Card className="p-0 overflow-x-auto">
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
           <Tabs tabs={tabs} value={tab} onChange={setTab} />
           <div className="flex gap-2">
             <SearchInput placeholder="Search faculty" />
             <GhostButton><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z" /></svg>Filter</GhostButton>
           </div>
         </div>
-        <div className="grid grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
+        <div className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
           <span>Name</span><span>Department</span><span>Rank</span><span>Courses</span><span>Status</span><span className="text-right">Action</span>
         </div>
         {rows.map((p, i) => (
-          <div key={p.email} className="grid grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
+          <div key={p.email} className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
             <div className="flex items-center gap-3 min-w-0">
               <Avatar initials={p.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} color={initialsColor(i)} />
               <div className="min-w-0">

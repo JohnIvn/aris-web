@@ -220,7 +220,7 @@ export default function SystemLogs() {
         ))}
       </StatGrid>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-x-auto">
         <div
           className="flex items-center justify-between p-4 border-b"
           style={{ borderColor: "#eef1ef" }}
@@ -244,7 +244,7 @@ export default function SystemLogs() {
           </div>
         </div>
         <div
-          className="grid grid-cols-[1.6fr_1.6fr_1.9fr_1fr_0.8fr_0.9fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+          className="grid min-w-[900px] grid-cols-[1.6fr_1.6fr_1.9fr_1fr_0.8fr_0.9fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
           style={{ color: "#b6c3ba", background: "#fafbfa" }}
         >
           <span>User</span>
@@ -257,7 +257,7 @@ export default function SystemLogs() {
         {rows.map((l, i) => (
           <div
             key={i}
-            className="grid grid-cols-[1.6fr_1.6fr_1.9fr_1fr_0.8fr_0.9fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]"
+            className="grid min-w-[900px] grid-cols-[1.6fr_1.6fr_1.9fr_1fr_0.8fr_0.9fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]"
             style={{ borderColor: "#f2f4f2" }}
           >
             <div className="flex items-center gap-2.5 min-w-0">

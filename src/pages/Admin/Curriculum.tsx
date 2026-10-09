@@ -153,7 +153,7 @@ export default function Curriculum() {
     <div className="pb-8 space-y-4">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-[22px] font-bold tracking-tight" style={{ color: "#111c14" }}>Curriculum Tracker</h1>
           <p className="text-[13.5px] mt-0.5" style={{ color: "#8fa394" }}>Monitor AR topic reports against the standard curriculum across departments.</p>
@@ -165,7 +165,7 @@ export default function Curriculum() {
       </div>
 
       {/* ── Department selector tabs ── */}
-      <div className="flex gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {DEPARTMENTS.map((d) => {
           const isActive = dept === d;
           const dc = d === "All Departments" ? "#5a6b5e" : DEPT_COLORS[d];
@@ -174,7 +174,7 @@ export default function Curriculum() {
             <button
               key={d}
               onClick={() => setDept(d)}
-              className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl border text-left transition-all flex-1"
+              className="flex min-w-0 items-center gap-2.5 px-4 py-2.5 rounded-2xl border text-left transition-all"
               style={{
                 background: isActive ? dc + "12" : "#fff",
                 borderColor: isActive ? dc : "#e2e8e4",
@@ -220,7 +220,7 @@ export default function Curriculum() {
       </StatGrid>
 
       {/* ── Charts row ── */}
-      <div className="grid grid-cols-3 gap-4" style={{ minHeight: 220 }}>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3" style={{ minHeight: 220 }}>
 
         {/* Donut */}
         <Card className="flex flex-col">
@@ -296,7 +296,7 @@ export default function Curriculum() {
       </div>
 
       {/* ── Second row: radar + teacher scores ── */}
-      <div className="grid grid-cols-[1fr_2fr] gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <Card className="flex flex-col">
           <CardHead title="Subject Health Radar" sub="Alignment score per course" />
           <div className="flex-1 min-h-[160px]">
@@ -369,8 +369,8 @@ export default function Curriculum() {
       )}
 
       {/* ── Reports table ── */}
-      <Card className="p-0 overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: "#eef1ef" }}>
+      <Card className="p-0 overflow-x-auto">
+        <div className="flex flex-col gap-3 border-b px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ borderColor: "#eef1ef" }}>
           <div className="flex gap-1 p-0.5 rounded-xl" style={{ background: "#f0f2f0" }}>
             {ALIGNMENT_TABS.map((t) => (
               <button
@@ -400,7 +400,7 @@ export default function Curriculum() {
         </div>
 
         <div
-          className="grid px-5 py-2.5 text-[10.5px] uppercase tracking-wider font-semibold"
+          className="grid min-w-[900px] px-5 py-2.5 text-[10.5px] uppercase tracking-wider font-semibold"
           style={{ color: "#b6c3ba", background: "#fafbfa", gridTemplateColumns: "1.5fr 0.9fr 1.3fr 1.5fr 2fr 1fr" }}
         >
           <span>Teacher</span>
@@ -421,7 +421,7 @@ export default function Curriculum() {
           return (
             <div
               key={r.id}
-              className="grid items-start px-5 py-4 border-t transition-colors hover:bg-[#fafbfa]"
+              className="grid min-w-[900px] items-start px-5 py-4 border-t transition-colors hover:bg-[#fafbfa]"
               style={{ borderColor: "#f2f4f2", gridTemplateColumns: "1.5fr 0.9fr 1.3fr 1.5fr 2fr 1fr" }}
             >
               <div className="flex items-center gap-2.5 min-w-0 pt-0.5">

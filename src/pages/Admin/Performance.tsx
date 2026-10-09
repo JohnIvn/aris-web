@@ -761,7 +761,7 @@ function ProfDetail({ p, idx }: { p: (typeof withScores)[0]; idx: number }) {
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {/* Radar */}
         <Card className="flex flex-col">
           <p
@@ -861,7 +861,7 @@ function ProfDetail({ p, idx }: { p: (typeof withScores)[0]; idx: number }) {
         >
           Metric Breakdown
         </p>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
           <MetricBar
             label="AR Submission Rate"
             value={p.arSubmissionRate}
@@ -896,7 +896,7 @@ function ProfDetail({ p, idx }: { p: (typeof withScores)[0]; idx: number }) {
       </Card>
 
       {/* AR History */}
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-x-auto">
         <div
           className="px-5 py-3.5 border-b"
           style={{ borderColor: "#eef1ef" }}
@@ -906,7 +906,7 @@ function ProfDetail({ p, idx }: { p: (typeof withScores)[0]; idx: number }) {
           </p>
         </div>
         <div
-          className="grid px-5 py-2 text-[10.5px] uppercase tracking-wide font-semibold"
+          className="grid min-w-[720px] px-5 py-2 text-[10.5px] uppercase tracking-wide font-semibold"
           style={{
             color: "#b6c3ba",
             background: "#fafbfa",
@@ -929,7 +929,7 @@ function ProfDetail({ p, idx }: { p: (typeof withScores)[0]; idx: number }) {
           return (
             <div
               key={h.period}
-              className="grid items-center px-5 py-3 border-t"
+              className="grid min-w-[720px] items-center px-5 py-3 border-t"
               style={{
                 borderColor: "#f2f4f2",
                 gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 1fr",
@@ -1195,7 +1195,7 @@ export default function Performance() {
       </Card>
 
       {/* ── Main 2-panel layout ── */}
-      <div className="grid grid-cols-[320px_1fr] gap-4 items-start">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
         {/* Left — professor list */}
         <div className="space-y-2">
           {/* filters */}

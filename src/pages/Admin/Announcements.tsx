@@ -32,7 +32,7 @@ export default function Announcements() {
     <div className="pb-2">
       <PageTitle title="Announcements" subtitle="AR / DTR, system, and AI/ML reminders — targeted to the right staff group." action={<PrimaryButton onClick={() => navigate("/announcements/new")}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>New Reminder</PrimaryButton>} />
 
-      <div className="grid grid-cols-[1fr_280px] gap-4 items-start">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div>
           <div className="mb-4"><Tabs tabs={tabs} value={tab} onChange={setTab} /></div>
           <div className="space-y-3">

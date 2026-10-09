@@ -84,7 +84,7 @@ export default function SoftwareMonitoring() {
       </StatGrid>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-1 gap-3 mb-4 xl:grid-cols-2">
         {/* Request Rate & Errors Chart */}
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
@@ -243,7 +243,7 @@ export default function SoftwareMonitoring() {
       </div>
 
       {/* Bottom Dual Cards Section */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {/* Service Health List */}
         <Card className="p-4">
           <h3 className="text-[14.5px] font-bold mb-3" style={{ color: "#111c14" }}>

@@ -36,8 +36,8 @@ export default function Payroll() {
 
       {/* Computation hero */}
       <Card className="mb-4" style={{ background: BRAND_DARK, boxShadow: "0 8px 24px rgba(13,26,16,0.18)" }}>
-        <div className="flex items-start justify-between gap-8">
-          <div className="flex-shrink-0">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: "#5f8c6c" }}>Payable Now · Accepted</p>
             <p className="text-[40px] font-bold leading-none tracking-tight mt-2" style={{ color: "#fff" }}>₱2.15M</p>
             <p className="text-[12.5px] mt-2" style={{ color: "#7aaa86" }}>312 approved records · September Cycle 1</p>
@@ -48,7 +48,7 @@ export default function Payroll() {
             </div>
           </div>
 
-          <div className="flex gap-8 flex-shrink-0">
+          <div className="grid grid-cols-2 gap-4 sm:flex sm:gap-8">
             {classes.map((c) => (
               <div key={c.label}>
                 <div className="flex items-center gap-1.5">
@@ -68,7 +68,7 @@ export default function Payroll() {
       </Card>
 
       {/* Per-record computation, full width */}
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-x-auto">
         <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "#eef1ef" }}>
           <div>
             <p className="text-[15px] font-semibold" style={{ color: "#111c14" }}>Computed Records</p>
@@ -76,11 +76,11 @@ export default function Payroll() {
           </div>
           <button className="text-[12.5px] font-medium" style={{ color: BRAND }}>View all 372</button>
         </div>
-        <div className="grid grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
+        <div className="grid min-w-[960px] grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
           <span>Employee</span><span>Type</span><span>Period</span><span>Units</span><span className="text-right">Rate</span><span className="text-right">Amount</span><span className="text-right">Class</span>
         </div>
         {records.map((r, i) => (
-          <div key={i} className="grid grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
+          <div key={i} className="grid min-w-[960px] grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
             <span className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{r.name}</span>
             <span className="text-[12px] font-semibold" style={{ color: r.type === "DTR" ? BRAND : "#3f8ecc" }}>{r.type}</span>
             <span className="text-[13px]" style={{ color: "#3d4a41" }}>{r.period}</span>

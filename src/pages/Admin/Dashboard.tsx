@@ -46,7 +46,7 @@ export default function Dashboard() {
   const { data } = useResource("/dashboard", demoDashboard);
   const { enrollTrend: enrollmentData, payrollArea: payrollData, radarData: activityData, programs: programData, departments: departmentData } = data;
   return (
-    <div className="h-full min-h-[560px] grid grid-cols-3 grid-rows-2 gap-3">
+    <div className="grid auto-rows-[minmax(16rem,auto)] grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
       {/* Enrollment */}
       <Card className="flex flex-col min-h-0">
         <CardHead title="Total Enrollment" action="Report" />

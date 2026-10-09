@@ -37,7 +37,7 @@ export default function ProfOverview() {
         ))}
       </StatGrid>
 
-      <div className="grid grid-cols-[1.4fr_1fr] gap-4 items-start">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Card>
           <div className="flex items-center justify-between mb-3">
             <div>

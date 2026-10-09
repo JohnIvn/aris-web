@@ -55,19 +55,19 @@ export default function Staff() {
         ))}
       </StatGrid>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "#eef1ef" }}>
+      <Card className="p-0 overflow-x-auto">
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
           <Tabs tabs={tabs} value={tab} onChange={setTab} />
           <div className="flex gap-2">
             <SearchInput placeholder="Search staff or ID" />
             <GhostButton><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z" /></svg>Filter</GhostButton>
           </div>
         </div>
-        <div className="grid grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr] gap-4 px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
+        <div className="grid min-w-[760px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr] gap-4 px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
           <span>Name</span><span>Staff ID</span><span>Role</span><span>Department</span><span className="text-right">Status</span>
         </div>
         {rows.map((s) => (
-          <div key={s.id} className="grid grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
+          <div key={s.id} className="grid min-w-[760px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
             <div className="flex items-center gap-3 min-w-0">
               <Avatar initials={s.name.split(" ").map((w) => w[0]).join("").slice(0, 2)} color={roleColor[s.role]} />
               <div className="min-w-0">

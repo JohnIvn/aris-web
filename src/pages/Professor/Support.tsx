@@ -20,7 +20,7 @@ export default function ProfSupport() {
     <div className="pb-2">
       <PageTitle title="Support" subtitle="Answers to common AR / DTR questions and how to reach a person." />
 
-      <div className="grid grid-cols-[1fr_300px] gap-4 items-start">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <Card>
           <p className="text-[15px] font-semibold mb-1" style={{ color: "#111c14" }}>Frequently asked</p>
           <p className="text-[12.5px] mb-4" style={{ color: "#8fa394" }}>Quick answers about submissions and verification.</p>

@@ -375,7 +375,7 @@ function SummaryView({ m }: { m: MeetingSummary }) {
         {m.actions.map((a) => (
           <div
             key={a.task}
-            className="grid grid-cols-[1.1fr_2.4fr_0.9fr] gap-3 items-center px-4 py-3 border-t"
+            className="grid grid-cols-1 gap-2 border-t px-4 py-3 sm:grid-cols-[1.1fr_2.4fr_0.9fr] sm:items-center sm:gap-3"
             style={{ borderColor: "#f2f4f2" }}
           >
             <span
@@ -521,8 +521,8 @@ export default function ProfSummaries() {
               {m.overview}
             </p>
 
-            <div className="flex items-center justify-between gap-3 mt-3">
-              <div className="flex items-center gap-2 text-[11.5px]">
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-2 text-[11.5px]">
                 <span
                   className="px-2 py-0.5 rounded-full font-semibold"
                   style={{ background: "#f0f2f0", color: "#5a6b5e" }}
@@ -533,7 +533,7 @@ export default function ProfSummaries() {
                   {m.participants.length} participants
                 </span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <GhostButton
                   onClick={() => setOpen({ id: m.id, tab: "Full Transcript" })}
                 >
@@ -581,7 +581,7 @@ export default function ProfSummaries() {
       >
         {active && (
           <div className="space-y-3.5">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <InfoField label="Date" value={active.date} />
               <InfoField label="Time" value={active.time} />
               <InfoField label="Duration" value={active.duration} />

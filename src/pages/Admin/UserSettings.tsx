@@ -81,7 +81,7 @@ export default function UserSettings() {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="pb-4">
       <PageTitle
         title="User Settings"
         subtitle="Manage your profile and preferences."
@@ -150,7 +150,7 @@ export default function UserSettings() {
         Your changes have been saved successfully.
       </Modal>
 
-      <div className="grid grid-cols-[1fr_1.6fr] gap-4 flex-1 min-h-0">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
         {/* Profile summary */}
         <Card className="flex flex-col items-center text-center overflow-hidden">
           <div
@@ -215,7 +215,7 @@ export default function UserSettings() {
             >
               Profile
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="First name" value={user.name.split(" ")[0] ?? ""} />
               <Field label="Last name" value={user.name.split(" ").slice(1).join(" ")} />
               <Field label="Email" value={user.email} />
@@ -230,7 +230,7 @@ export default function UserSettings() {
             >
               Password
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <p
                   className="text-[12.5px] font-medium mb-1.5"

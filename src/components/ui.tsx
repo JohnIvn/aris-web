@@ -160,7 +160,7 @@ export function PageTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between mb-4">
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1
           className="text-[22px] font-bold tracking-tight"
@@ -174,7 +174,7 @@ export function PageTitle({
           </p>
         )}
       </div>
-      {action}
+      {action && <div className="flex flex-wrap items-center gap-2">{action}</div>}
     </div>
   );
 }

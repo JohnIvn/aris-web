@@ -24,9 +24,9 @@ export default function ProfRoot({ onSignOut, user }: { onSignOut: () => void; u
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden px-4 pb-4 pt-6 gap-4" style={{ fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif", background: "#eef1ef" }}>
+    <div className="flex h-svh w-full overflow-hidden px-2 py-2 gap-2 lg:h-screen lg:w-screen lg:px-4 lg:pb-4 lg:pt-6 lg:gap-4" style={{ fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif", background: "#eef1ef" }}>
       {/* Sidebar */}
-      <aside className="flex flex-col w-56 h-full flex-shrink-0 select-none rounded-3xl bg-white" style={{ boxShadow: "0 1px 2px rgba(16,32,20,0.05)" }}>
+      <aside className="hidden lg:flex lg:flex-col lg:w-56 lg:h-full lg:flex-shrink-0 select-none rounded-3xl bg-white" style={{ boxShadow: "0 1px 2px rgba(16,32,20,0.05)" }}>
         <div className="flex items-center gap-3 px-4 pt-5 pb-4">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#f0f7f2" }}>
             <img src={arisLogo} alt="ARIS" className="w-6 h-6 object-contain" />
@@ -60,8 +60,26 @@ export default function ProfRoot({ onSignOut, user }: { onSignOut: () => void; u
 
       {/* Main */}
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        <nav aria-label="Mobile navigation" className="lg:hidden flex flex-shrink-0 gap-1 overflow-x-auto pb-2">
+          {[...profMainNav, ...profSettingsNav].map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              aria-current={location.pathname === item.path ? "page" : undefined}
+              className="flex h-9 flex-shrink-0 items-center gap-2 rounded-lg px-3 text-[12px] font-medium"
+              style={{ background: location.pathname === item.path ? "#e6f1e9" : "#fff", color: location.pathname === item.path ? BRAND : "#5a6b5e" }}
+            >
+              {item.icon}<span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="lg:hidden mb-2 flex min-w-0 flex-shrink-0 items-center gap-2 border-b border-[#e2e8e4] px-1 pb-2">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ background: BRAND }}>{user.name.slice(0, 2).toUpperCase()}</span>
+          <span className="min-w-0 flex-1 truncate text-[12px] font-medium" style={{ color: "#3d4a41" }}>{user.name}</span>
+          <button onClick={onSignOut} className="flex-shrink-0 px-2 py-1 text-[12px] font-semibold" style={{ color: BRAND }}>Sign out</button>
+        </div>
         {location.pathname === "/prof" && (
-          <header className="flex items-center justify-between flex-shrink-0 pb-3 pl-1 pr-1">
+          <header className="flex flex-col gap-2 flex-shrink-0 pb-2 pl-1 pr-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold" style={{ background: BRAND_DARK }}>{user.name.slice(0, 2).toUpperCase()}</div>
               <div>

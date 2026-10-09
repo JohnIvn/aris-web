@@ -21,7 +21,7 @@ export default function ProfAnnouncements() {
     <div className="pb-2">
       <PageTitle title="Announcements" subtitle="Reminders for AR / DTR submissions, the system, and AI/ML." />
 
-      <div className="grid grid-cols-[1fr_280px] gap-4 items-start">
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div>
           <div className="mb-4"><Tabs tabs={tabs} value={tab} onChange={setTab} /></div>
           <div className="space-y-3">
