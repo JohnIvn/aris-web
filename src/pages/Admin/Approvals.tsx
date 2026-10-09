@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { BRAND } from "@/config/navigation";
+import { useResource } from "@/hooks/useResource";
+import { saveResource } from "@/services/dataSource";
 import {
   Card,
   PageTitle,
@@ -69,7 +71,7 @@ const initialsOf = (name: string) =>
     .join("")
     .slice(0, 2);
 
-const approvalQueue: ApprovalItem[] = [
+const demoApprovalQueue: ApprovalItem[] = [
   {
     id: "a1",
     faculty: "Marco Dela Cruz",
@@ -460,10 +462,10 @@ function QueueCard({
 }
 
 export default function Approvals() {
+  const { data: queue, setData: setQueue } = useResource("/approvals", demoApprovalQueue);
   const [role, setRole] = useState<StageRole>("Secretary");
   const [query, setQuery] = useState("");
   const [showDecided, setShowDecided] = useState(true);
-  const [queue, setQueue] = useState<ApprovalItem[]>(approvalQueue);
   const [openId, setOpenId] = useState<string | null>(null);
   const [remark, setRemark] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
@@ -490,7 +492,7 @@ export default function Approvals() {
   ).length;
   const inPipeline = queue.filter((it) => it.status === "Pending").length;
 
-  const decide = (item: ApprovalItem, action: "Approve" | "Disapprove") => {
+  const decide = async (item: ApprovalItem, action: "Approve" | "Disapprove") => {
     const reviewer = `${STAGE_OWNER[role]} (${role})`;
     const target = nextStageOf(item.stage);
     setFlash(
@@ -500,8 +502,7 @@ export default function Approvals() {
           ? `Approved · ${item.type} forwarded to ${target}`
           : `Approved · ${item.type} cleared for payroll`,
     );
-    setQueue((prev) =>
-      prev.map((it) => {
+    const updatedQueue = queue.map((it) => {
         if (it.id !== item.id) return it;
         if (action === "Disapprove") {
           return {
@@ -532,8 +533,14 @@ export default function Approvals() {
                 : "Approved at the final stage and cleared for payroll."),
           },
         };
-      }),
-    );
+      });
+    try {
+      await saveResource("/approvals", updatedQueue, "PUT");
+      setQueue(updatedQueue);
+    } catch (reason) {
+      setFlash(reason instanceof Error ? reason.message : "Unable to save the decision.");
+      return;
+    }
     setOpenId(null);
     setRemark("");
   };

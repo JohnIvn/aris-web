@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { BRAND } from "@/config/navigation";
 import { Card, PageTitle, Badge, Tabs, initialsColor } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
 
 // Reminders a professor receives (Everyone / Faculty-facing).
-const posts = [
+const demoPosts = [
   { title: "AR submission closes Friday 5 PM", body: "All Accomplishment Reports for September Cycle 1 must be submitted before the Friday 5:00 PM cut-off. Late entries roll to the next cycle.", tag: "AR / DTR", tone: "green" as const, initials: "AR", date: "1 hour ago", pinned: true },
   { title: "System maintenance: Sept 10, 2–4 AM", body: "ARIS will be briefly unavailable during scheduled maintenance. Submit any pending AR / DTR records before the window opens.", tag: "System", tone: "amber" as const, initials: "SY", date: "2 days ago", pinned: true },
   { title: "AI/ML anomaly: late-submission spike", body: "The analytics engine detected a rise in after-hours DTR submissions. A reminder will auto-send Thursday 3 PM to reduce the Friday backlog.", tag: "AI / ML", tone: "blue" as const, initials: "AI", date: "2 days ago", pinned: false },
@@ -12,6 +13,7 @@ const posts = [
 
 export default function ProfAnnouncements() {
   const [tab, setTab] = useState("All");
+  const { data: posts } = useResource("/announcements", demoPosts);
   const tabs = ["All", "AR / DTR", "System", "AI / ML"];
   const visible = posts.filter((p) => tab === "All" || p.tag === tab);
 

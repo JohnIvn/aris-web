@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Card, PageTitle, PrimaryButton, GhostButton, SearchInput, Badge, Avatar, Tabs, initialsColor } from "@/components/ui";
+import { Card, PageTitle, PrimaryButton, GhostButton, SearchInput, Badge, Avatar, Tabs, StatCard, StatGrid, initialsColor } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
+import { saveResource } from "@/services/dataSource";
 
 const people = [
   { name: "Dr. Maria Santos", email: "m.santos@aris.edu.ph", dept: "Engineering", rank: "Professor", courses: 4, active: true },
@@ -16,10 +18,20 @@ const people = [
 export default function Professors() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("All");
-  const [items, setItems] = useState(people);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { data: items, setData: setItems } = useResource("/professors", people);
   const tabs = ["All", "Active", "Deactivated"];
 
-  const toggle = (email: string) => setItems((list) => list.map((p) => (p.email === email ? { ...p, active: !p.active } : p)));
+  const toggle = async (email: string) => {
+    const updatedItems = items.map((person) => person.email === email ? { ...person, active: !person.active } : person);
+    setItems(updatedItems);
+    try {
+      await saveResource("/professors", updatedItems, "PUT");
+      setSaveError(null);
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Unable to update professor.");
+    }
+  };
   const rows = items.filter((p) => tab === "All" || (tab === "Active" ? p.active : !p.active));
 
   const activeCount = items.filter((p) => p.active).length;
@@ -28,15 +40,13 @@ export default function Professors() {
   return (
     <div className="pb-2">
       <PageTitle title="Professor Management" subtitle="312 faculty across 6 colleges." action={<PrimaryButton onClick={() => navigate("/professors/new")}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>Add Professor</PrimaryButton>} />
+      {saveError && <p role="alert" className="mb-3 text-[12px] text-red-700">{saveError}</p>}
 
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <StatGrid className="mb-4">
         {stats.map(([l, v]) => (
-          <Card key={l} className="py-4">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>{l}</p>
-            <p className="text-[24px] font-bold mt-1 tracking-tight" style={{ color: "#111c14" }}>{v}</p>
-          </Card>
+          <StatCard key={l} label={l} value={v} />
         ))}
-      </div>
+      </StatGrid>
 
       <Card className="p-0 overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "#eef1ef" }}>

@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { BRAND } from "@/config/navigation"
+import { useResource } from "@/hooks/useResource"
 import {
   Card,
   PageTitle,
@@ -15,6 +16,8 @@ import {
   dtrTable,
   statusTone,
   SubmissionDetail,
+  StatCard,
+  StatGrid,
   type RecordKind,
   type RecordPayload,
   type StatusKind,
@@ -32,7 +35,7 @@ type AuditLog = {
   record: RecordPayload
 }
 
-const logs: AuditLog[] = [
+const demoAuditLogs: AuditLog[] = [
   {
     actor: "Dr. Maria Santos",
     init: "MS",
@@ -307,6 +310,7 @@ const logs: AuditLog[] = [
 ]
 
 export default function Audit() {
+  const { data: logs } = useResource("/audit", demoAuditLogs)
   const [tab, setTab] = useState("All")
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [showExportSuccess, setShowExportSuccess] = useState(false)
@@ -447,21 +451,11 @@ export default function Audit() {
         )}
       </Modal>
 
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <StatGrid className="mb-4">
         {stats.map(([l, v]) => (
-          <Card key={l} className="py-4">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>
-              {l}
-            </p>
-            <p
-              className="text-[24px] font-bold mt-1 tracking-tight"
-              style={{ color: "#111c14" }}
-            >
-              {v}
-            </p>
-          </Card>
+          <StatCard key={l} label={l} value={v} />
         ))}
-      </div>
+      </StatGrid>
 
       <Card className="p-0 overflow-hidden">
         <div

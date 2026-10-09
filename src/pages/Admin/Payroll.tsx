@@ -1,9 +1,10 @@
 import { BRAND, BRAND_DARK } from "@/config/navigation";
 import { Card, PageTitle, GhostButton, Badge } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
 
 // Each submitted AR / DTR record carries a computed amount (units × rate).
 // The system classifies that amount by the record's approval outcome.
-const records = [
+const demoRecords = [
   { name: "Dr. Maria Santos", type: "DTR", period: "Sep 1–15", units: "22 days", rate: "₱2,150", amount: "₱47,300", status: "Approved" as const },
   { name: "Prof. Lito Cruz", type: "AR", period: "Sep 1–15", units: "18 outputs", rate: "₱1,800", amount: "₱32,400", status: "Approved" as const },
   { name: "James Reyes", type: "DTR", period: "Sep 1–15", units: "22 days", rate: "₱1,420", amount: "₱31,240", status: "Approved" as const },
@@ -16,13 +17,15 @@ const records = [
 
 const statusTone = { Approved: "green", Pending: "amber", Rejected: "red" } as const;
 
-const classes = [
+const demoClasses = [
   { label: "Accepted", note: "312 records", value: "₱2.15M", pct: 84, color: "#4a9d62" },
   { label: "Pending", note: "48 records", value: "₱0.33M", pct: 13, color: "#e0a63a" },
   { label: "Rejected", note: "12 records", value: "₱0.08M", pct: 3, color: "#d0674a" },
 ];
 
 export default function Payroll() {
+  const { data } = useResource("/payroll", { records: demoRecords, classes: demoClasses });
+  const { records, classes } = data;
   return (
     <div className="pb-2">
       <PageTitle

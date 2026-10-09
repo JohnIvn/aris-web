@@ -1,7 +1,8 @@
 import { BRAND } from "@/config/navigation";
 import { Card, PageTitle, PrimaryButton, GhostButton } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
 
-const faqs = [
+const demoFaqs = [
   { q: "When are AR / DTR submissions due?", a: "Each cycle closes Friday at 5:00 PM. Late entries roll to the next cycle and may affect your on-time rate." },
   { q: "Why was my DTR flagged?", a: "The most common reason is a name that does not match the official roster. Re-check spelling and resubmit." },
   { q: "How long does HR verification take?", a: "Most records are reviewed within one business day. Pending items appear in your History with an amber badge." },
@@ -14,6 +15,7 @@ const channels = [
 ];
 
 export default function ProfSupport() {
+  const { data: faqs } = useResource("/support/faqs", demoFaqs);
   return (
     <div className="pb-2">
       <PageTitle title="Support" subtitle="Answers to common AR / DTR questions and how to reach a person." />

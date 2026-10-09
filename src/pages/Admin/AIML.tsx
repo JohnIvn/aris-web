@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { BRAND } from "@/config/navigation";
-import { Card, PageTitle, Toggle, Badge } from "@/components/ui";
+import { Card, PageTitle, Toggle, Badge, StatCard, StatGrid } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
 
 // Computed by the model from the 372 analyzed records
-const insights = [
+const demoInsights = [
   {
     label: "Forecast",
     tone: "green" as const,
@@ -31,6 +32,7 @@ const toneColor = { green: BRAND, amber: "#d99a2b", blue: "#3f8ecc" } as const;
 
 export default function AIML() {
   const [enabled, setEnabled] = useState(true);
+  const { data: insights } = useResource("/analytics/insights", demoInsights);
 
   return (
     <div className="pb-2">
@@ -71,22 +73,16 @@ export default function AIML() {
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-3 mb-4">
+          <StatGrid className="mb-4">
             {[
               ["Records Submitted", "372", "green", "+8.4%"],
               ["On-time Rate", "86%", "green", "+3.1%"],
               ["Approved", "312", "green", "+5.2%"],
               ["Pending Review", "48", "amber", "-1.6%"],
             ].map(([l, v, tone, d]) => (
-              <Card key={l} className="py-4">
-                <p className="text-[12px]" style={{ color: "#8fa394" }}>{l}</p>
-                <div className="flex items-end gap-2 mt-1">
-                  <p className="text-[24px] font-bold tracking-tight" style={{ color: "#111c14" }}>{v}</p>
-                  <Badge tone={tone as "green" | "amber"}>{d}</Badge>
-                </div>
-              </Card>
+              <StatCard key={l} label={l} value={v} badge={<Badge tone={tone as "green" | "amber"}>{d}</Badge>} />
             ))}
-          </div>
+          </StatGrid>
 
           {/* AI computed analysis */}
           <Card style={{ background: "linear-gradient(180deg,#f4faf6,#ffffff)", border: "1px solid #dcebe1" }}>

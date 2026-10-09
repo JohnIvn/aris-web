@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { BRAND } from "@/config/navigation";
 import { PrimaryButton, GhostButton, Toggle } from "@/components/ui";
+import { saveResource } from "@/services/dataSource";
 
 const categories = [
   { key: "AR / DTR", desc: "Submission & verification", tone: "#3a7d4e" },
@@ -26,6 +27,30 @@ export default function NewReminder() {
   const [category, setCategory] = useState("AR / DTR");
   const [audience, setAudience] = useState("Everyone");
   const [pinned, setPinned] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (!title.trim() || !body.trim()) {
+      setError("A title and message are required.");
+      return;
+    }
+    try {
+      await saveResource("/announcements", {
+        id: `announcement-${Date.now()}`,
+        title: title.trim(),
+        body: body.trim(),
+        tag: category,
+        tone: category === "System" ? "amber" : category === "AI / ML" ? "blue" : "green",
+        audience,
+        initials: title.trim().slice(0, 2).toUpperCase(),
+        date: "Just now",
+        pinned,
+      });
+      close();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to send reminder.");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(13,26,16,0.45)", backdropFilter: "blur(2px)", fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif" }} onClick={close}>
@@ -98,12 +123,13 @@ export default function NewReminder() {
             </div>
             <Toggle on={pinned} onChange={setPinned} />
           </div>
+          {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t" style={{ borderColor: "#eef1ef", background: "#fafbfa" }}>
           <GhostButton onClick={close}>Cancel</GhostButton>
-          <PrimaryButton onClick={close}>
+          <PrimaryButton onClick={submit}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
             Send Reminder
           </PrimaryButton>

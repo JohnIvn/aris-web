@@ -2,8 +2,10 @@ import { Outlet, useLocation, useNavigate } from "react-router"
 import { useState, useEffect } from "react"
 import arisLogo from "@/assets/brand/image.png"
 import { BRAND, BRAND_DARK, mainNav, settingsNav, type NavItem } from "@/config/navigation"
+import type { UserAccount } from "@/data/demoAccounts"
+import DataModeNotice from "@/components/DataModeNotice"
 
-export default function Root({ onSignOut }: { onSignOut: () => void }) {
+export default function Root({ onSignOut, user }: { onSignOut: () => void; user: UserAccount }) {
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -104,17 +106,17 @@ export default function Root({ onSignOut }: { onSignOut: () => void }) {
               className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
               style={{ background: BRAND }}
             >
-              AD
+              {user.name.slice(0, 2).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p
                 className="text-[12.5px] font-semibold truncate"
                 style={{ color: "#111c14" }}
               >
-                Administrator
+                {user.name}
               </p>
               <p className="text-[11px] truncate" style={{ color: "#8fa394" }}>
-                admin@aris.edu.ph
+                {user.email}
               </p>
             </div>
             <button
@@ -146,14 +148,14 @@ export default function Root({ onSignOut }: { onSignOut: () => void }) {
                 className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold"
                 style={{ background: BRAND_DARK }}
               >
-                AD
+                {user.name.slice(0, 2).toUpperCase()}
               </div>
               <div>
                 <p
                   className="text-[16px] font-semibold leading-none tracking-tight"
                   style={{ color: "#111c14" }}
                 >
-                  Administrator
+                  {user.name}
                 </p>
                 <p className="text-[12.5px] mt-1" style={{ color: "#8fa394" }}>
                   Welcome back to ARIS 👋
@@ -226,6 +228,7 @@ export default function Root({ onSignOut }: { onSignOut: () => void }) {
         )}
 
         <main className="flex-1 overflow-y-auto min-h-0 pr-1">
+          <DataModeNotice />
           <Outlet />
         </main>
       </div>

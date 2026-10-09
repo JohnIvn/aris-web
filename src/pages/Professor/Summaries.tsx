@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BRAND } from "@/config/navigation";
+import { useResource } from "@/hooks/useResource";
 import {
   Card,
   PageTitle,
@@ -9,6 +10,8 @@ import {
   Modal,
   Avatar,
   initialsColor,
+  StatCard,
+  StatGrid,
 } from "@/components/ui";
 
 /* ─── Types ────────────────────────────────────────────────────────────────── */
@@ -41,7 +44,7 @@ type MeetingSummary = {
 
 /* ─── Sample data ──────────────────────────────────────────────────────────── */
 
-const meetings: MeetingSummary[] = [
+const demoMeetings: MeetingSummary[] = [
   {
     id: "m01",
     title: "INFORMATION MANAGEMENT — Week 4 Consultation",
@@ -257,6 +260,12 @@ const meetings: MeetingSummary[] = [
   },
 ];
 
+function durationInHours(duration: string) {
+  const hours = Number(duration.match(/(\d+)h/)?.[1] ?? 0);
+  const minutes = Number(duration.match(/(\d+)m/)?.[1] ?? 0);
+  return hours + minutes / 60;
+}
+
 /* ─── Detail modal ─────────────────────────────────────────────────────────── */
 
 function InfoField({ label, value }: { label: string; value: string }) {
@@ -439,6 +448,7 @@ function TranscriptView({ m }: { m: MeetingSummary }) {
 /* ─── Page ─────────────────────────────────────────────────────────────────── */
 
 export default function ProfSummaries() {
+  const { data: meetings } = useResource("/professor/meeting-summaries", demoMeetings)
   const [open, setOpen] = useState<{
     id: string;
     tab: "Summary" | "Full Transcript";
@@ -467,26 +477,16 @@ export default function ProfSummaries() {
         }
       />
 
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <StatGrid className="mb-4">
         {[
-          ["Recordings", "12"],
-          ["Transcribed", "12"],
-          ["Summarized", "11"],
-          ["Hours Recorded", "14.5"],
+          ["Recordings", String(meetings.length)],
+          ["Transcribed", String(meetings.length)],
+          ["Summarized", String(meetings.filter((meeting) => meeting.status === "Summarized").length)],
+          ["Hours Recorded", meetings.reduce((hours, meeting) => hours + durationInHours(meeting.duration), 0).toFixed(1)],
         ].map(([l, v]) => (
-          <Card key={l} className="py-4">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>
-              {l}
-            </p>
-            <p
-              className="text-[24px] font-bold mt-1 tracking-tight"
-              style={{ color: "#111c14" }}
-            >
-              {v}
-            </p>
-          </Card>
+          <StatCard key={l} label={l} value={v} />
         ))}
-      </div>
+      </StatGrid>
 
       <div className="space-y-3">
         {meetings.map((m, i) => (

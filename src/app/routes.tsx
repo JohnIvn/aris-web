@@ -1,45 +1,49 @@
 import { createContext, useContext } from "react";
-import { createHashRouter } from "react-router";
+import { createHashRouter, Navigate } from "react-router";
 import Root from "@/layouts/AdminLayout";
-import Dashboard from "@/pages/Dashboard";
-import Announcements from "@/pages/Announcements";
-import NewReminder from "@/pages/NewReminder";
-import Professors from "@/pages/Professors";
-import AddProfessor from "@/pages/AddProfessor";
-import Staff from "@/pages/Staff";
-import AddStaff from "@/pages/AddStaff";
-import Payroll from "@/pages/Payroll";
-import AIML from "@/pages/AIML";
-import Approvals from "@/pages/Approvals";
-import Performance from "@/pages/Performance";
-import Audit from "@/pages/Audit";
-import SystemLogs from "@/pages/SystemLogs";
-import Database from "@/pages/Database";
-import Curriculum from "@/pages/Curriculum";
-import SoftwareMonitoring from "@/pages/SoftwareMonitoring";
-import SystemSettings from "@/pages/SystemSettings";
-import UserSettings from "@/pages/UserSettings";
+import Dashboard from "@/pages/Admin/Dashboard";
+import Announcements from "@/pages/Admin/Announcements";
+import NewReminder from "@/pages/Admin/NewReminder";
+import Professors from "@/pages/Admin/Professors";
+import AddProfessor from "@/pages/Admin/AddProfessor";
+import Staff from "@/pages/Admin/Staff";
+import AddStaff from "@/pages/Admin/AddStaff";
+import Payroll from "@/pages/Admin/Payroll";
+import AIML from "@/pages/Admin/AIML";
+import Approvals from "@/pages/Admin/Approvals";
+import Performance from "@/pages/Admin/Performance";
+import Audit from "@/pages/Admin/Audit";
+import SystemLogs from "@/pages/Admin/SystemLogs";
+import Database from "@/pages/Admin/Database";
+import Curriculum from "@/pages/Admin/Curriculum";
+import SoftwareMonitoring from "@/pages/Admin/SoftwareMonitoring";
+import SystemSettings from "@/pages/Admin/SystemSettings";
+import UserSettings from "@/pages/Admin/UserSettings";
 import ProfRoot from "@/layouts/ProfessorLayout";
-import ProfOverview from "@/pages/prof/Overview";
-import ProfAnnouncements from "@/pages/prof/Announcements";
-import ProfSubmit from "@/pages/prof/Submit";
-import ProfHistory from "@/pages/prof/History";
-import ProfSummaries from "@/pages/prof/Summaries";
-import ProfSupport from "@/pages/prof/Support";
+import ProfOverview from "@/pages/Professor/Overview";
+import ProfAnnouncements from "@/pages/Professor/Announcements";
+import ProfSubmit from "@/pages/Professor/Submit";
+import ProfHistory from "@/pages/Professor/History";
+import ProfSummaries from "@/pages/Professor/Summaries";
+import ProfSupport from "@/pages/Professor/Support";
+import type { UserAccount } from "@/data/demoAccounts";
 
-export const AuthContext = createContext<{ signOut: () => void }>({
+export const AuthContext = createContext<{ signOut: () => void; user: UserAccount }>({
   signOut: () => {},
+  user: { id: "", email: "", name: "", role: "administrator" },
 });
 export const useAuth = () => useContext(AuthContext);
 
 function RootWithAuth() {
-  const { signOut } = useAuth();
-  return <Root onSignOut={signOut} />;
+  const { signOut, user } = useAuth();
+  if (user.role !== "administrator") return <Navigate to="/prof" replace />;
+  return <Root onSignOut={signOut} user={user} />;
 }
 
 function ProfRootWithAuth() {
-  const { signOut } = useAuth();
-  return <ProfRoot onSignOut={signOut} />;
+  const { signOut, user } = useAuth();
+  if (user.role !== "professor") return <Navigate to="/" replace />;
+  return <ProfRoot onSignOut={signOut} user={user} />;
 }
 
 export const router = createHashRouter([

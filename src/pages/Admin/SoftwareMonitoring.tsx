@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Card, Badge } from "@/components/ui";
+import { Card, Badge, StatCard, StatGrid } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
 
 // Mock data for services
 const services = [
@@ -28,9 +29,12 @@ const topEndpoints = [
   { method: "DELETE", methodColor: "#fbecec", methodTextColor: "#c0392b", path: "/api/v1/enrollments/:id", reqSec: 8, p95: "52 ms", err: "0.0%", highP95: false, highErr: false },
   { method: "PATCH", methodColor: "#f0f2f0", methodTextColor: "#5a6b5e", path: "/api/v1/students/:id", reqSec: 6, p95: "40 ms", err: "0.0%", highP95: false, highErr: false },
 ];
+const demoMonitoring = { services, topEndpoints };
 
 export default function SoftwareMonitoring() {
   const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("24h");
+  const { data } = useResource("/system/monitoring", demoMonitoring);
+  const { services: serviceData, topEndpoints: endpointData } = data;
 
   return (
     <div className="pb-6">
@@ -72,31 +76,12 @@ export default function SoftwareMonitoring() {
       </div>
 
       {/* 4 Summary Cards */}
-      <div className="grid grid-cols-4 gap-3 mb-4">
-        <Card className="py-4">
-          <p className="text-[12px]" style={{ color: "#8fa394" }}>Avg req / s</p>
-          <p className="text-[26px] font-bold mt-1 tracking-tight" style={{ color: "#111c14" }}>186</p>
-          <p className="text-[11.5px] mt-1" style={{ color: "#8fa394" }}>peak 241 at 11:00</p>
-        </Card>
-
-        <Card className="py-4">
-          <p className="text-[12px]" style={{ color: "#8fa394" }}>Error rate</p>
-          <p className="text-[26px] font-bold mt-1 tracking-tight" style={{ color: "#c0392b" }}>1.4%</p>
-          <p className="text-[11.5px] mt-1" style={{ color: "#8fa394" }}>34 errors today</p>
-        </Card>
-
-        <Card className="py-4">
-          <p className="text-[12px]" style={{ color: "#8fa394" }}>p95 latency</p>
-          <p className="text-[26px] font-bold mt-1 tracking-tight" style={{ color: "#111c14" }}>84 ms</p>
-          <p className="text-[11.5px] mt-1" style={{ color: "#8fa394" }}>p99 at 210 ms</p>
-        </Card>
-
-        <Card className="py-4">
-          <p className="text-[12px]" style={{ color: "#8fa394" }}>Services up</p>
-          <p className="text-[26px] font-bold mt-1 tracking-tight" style={{ color: "#111c14" }}>5 / 7</p>
-          <p className="text-[11.5px] mt-1" style={{ color: "#8fa394" }}>1 down, 1 degraded</p>
-        </Card>
-      </div>
+      <StatGrid className="mb-4">
+        <StatCard label="Avg req / s" value="186" detail="peak 241 at 11:00" />
+        <StatCard label="Error rate" value="1.4%" valueColor="#c0392b" detail="34 errors today" />
+        <StatCard label="p95 latency" value="84 ms" detail="p99 at 210 ms" />
+        <StatCard label="Services up" value="5 / 7" detail="1 down, 1 degraded" />
+      </StatGrid>
 
       {/* Charts Section */}
       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -265,7 +250,7 @@ export default function SoftwareMonitoring() {
             Service Health
           </h3>
           <div className="divide-y" style={{ borderColor: "#f2f4f2" }}>
-            {services.map((s) => (
+            {serviceData.map((s) => (
               <div key={s.name} className="py-2.5 flex items-center justify-between first:pt-0 last:pb-0">
                 <div className="flex items-center gap-2.5">
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.dot }} />
@@ -317,7 +302,7 @@ export default function SoftwareMonitoring() {
 
             {/* Table Body */}
             <div className="divide-y" style={{ borderColor: "#f2f4f2" }}>
-              {topEndpoints.map((e) => (
+              {endpointData.map((e) => (
                 <div key={e.path} className="grid grid-cols-[3fr_1fr_1fr_1fr] items-center py-2.5 text-[12.5px] text-right">
                   <div className="flex items-center gap-2 min-w-0 pr-2 text-left">
                     <span

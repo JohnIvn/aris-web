@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { BRAND } from "@/config/navigation";
+import { useAuth } from "@/app/routes";
+import { useResource } from "@/hooks/useResource";
+import { saveResource } from "@/services/dataSource";
 import {
   Card,
   PageTitle,
@@ -55,16 +58,27 @@ function Row({
   );
 }
 
+const defaultPreferences = { desktop: true, weekly: true, mentions: false };
+
 export default function UserSettings() {
-  const [prefs, setPrefs] = useState({
-    desktop: true,
-    weekly: true,
-    mentions: false,
-  });
+  const { user } = useAuth();
+  const { data: prefs, setData: setPrefs } = useResource("/users/me/preferences", defaultPreferences);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const set = (k: keyof typeof prefs) =>
     setPrefs((p) => ({ ...p, [k]: !p[k] }));
+
+  const savePreferences = async () => {
+    try {
+      await saveResource("/users/me/preferences", prefs, "PUT");
+      setShowConfirm(false);
+      setShowSaved(true);
+      setSaveError(null);
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Unable to save preferences.");
+    }
+  };
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -99,18 +113,13 @@ export default function UserSettings() {
             <GhostButton onClick={() => setShowConfirm(false)}>
               No, Cancel
             </GhostButton>
-            <PrimaryButton
-              onClick={() => {
-                setShowConfirm(false);
-                setShowSaved(true);
-              }}
-            >
+            <PrimaryButton onClick={savePreferences}>
               Yes, Save
             </PrimaryButton>
           </>
         }
       >
-        Are you sure you want to save these changes?
+        {saveError ?? "Are you sure you want to save these changes?"}
       </Modal>
 
       <Modal
@@ -148,20 +157,20 @@ export default function UserSettings() {
             className="w-20 h-20 rounded-full flex items-center justify-center text-white text-[26px] font-semibold"
             style={{ background: BRAND }}
           >
-            AD
+            {user.name.slice(0, 2).toUpperCase()}
           </div>
           <p
             className="text-[16px] font-semibold mt-3"
             style={{ color: "#111c14" }}
           >
-            Administrator
+            {user.name}
           </p>
           <p className="text-[13px]" style={{ color: "#8fa394" }}>
-            admin@aris.edu.ph
+            {user.email}
           </p>
           <div className="mt-2">
             <Badge tone="green" dot>
-              Super Admin
+              {user.role === "administrator" ? "Administrator" : "Professor"}
             </Badge>
           </div>
           <div className="mt-4">
@@ -207,9 +216,9 @@ export default function UserSettings() {
               Profile
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="First name" value="System" />
-              <Field label="Last name" value="Administrator" />
-              <Field label="Email" value="admin@aris.edu.ph" />
+              <Field label="First name" value={user.name.split(" ")[0] ?? ""} />
+              <Field label="Last name" value={user.name.split(" ").slice(1).join(" ")} />
+              <Field label="Email" value={user.email} />
               <Field label="Phone" value="+63 917 555 0142" />
             </div>
           </Card>

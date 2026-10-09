@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useResource } from "@/hooks/useResource";
+import { saveResource } from "@/services/dataSource";
 import {
   Card,
   PageTitle,
@@ -9,6 +11,8 @@ import {
   Tabs,
   Toggle,
   Modal,
+  StatCard,
+  StatGrid,
 } from "@/components/ui";
 
 // Mock data for Backups & Snapshots
@@ -221,8 +225,9 @@ export default function Database() {
   // Interactive action feedback
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [backupsList, setBackupsList] = useState(initialBackups);
-  const [healthChecks, setHealthChecks] = useState(initialHealthChecks);
+  const { data: backupsList, setData: setBackupsList } = useResource("/system/database/backups", initialBackups);
+  const { data: healthChecks, setData: setHealthChecks } = useResource("/system/database/health-checks", initialHealthChecks);
+  const { data: restoreLogData } = useResource("/system/database/restore-logs", restoreLogs);
 
   const tabs = [
     "Backups & Snapshots",
@@ -246,7 +251,11 @@ export default function Database() {
         status: "Verified",
         checksum: "sha256:a9f23c...11e",
       };
-      setBackupsList([newBackup, ...backupsList]);
+      const updatedBackups = [newBackup, ...backupsList];
+      setBackupsList(updatedBackups);
+      void saveResource("/system/database/backups", updatedBackups, "PUT").catch((reason: unknown) => {
+        setBannerMessage(reason instanceof Error ? reason.message : "Unable to save backup.");
+      });
       setIsProcessing(false);
       setBannerMessage(null);
       setShowBackupSuccess(true);
@@ -260,12 +269,11 @@ export default function Database() {
       "Running full database integrity and backup diagnostic suite...",
     );
     setTimeout(() => {
-      setHealthChecks((prev) =>
-        prev.map((c) => ({
-          ...c,
-          lastRun: "Just now",
-        })),
-      );
+      const updatedChecks = healthChecks.map((check) => ({ ...check, lastRun: "Just now" }));
+      setHealthChecks(updatedChecks);
+      void saveResource("/system/database/health-checks", updatedChecks, "PUT").catch((reason: unknown) => {
+        setBannerMessage(reason instanceof Error ? reason.message : "Unable to save diagnostics.");
+      });
       setIsProcessing(false);
       setBannerMessage(null);
       setShowDiagSuccess(true);
@@ -456,89 +464,12 @@ export default function Database() {
       )}
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-4 gap-3 mb-4">
-        <Card className="py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>
-              Cluster Status
-            </p>
-            <Badge tone="green" dot>
-              Healthy
-            </Badge>
-          </div>
-          <p
-            className="text-[22px] font-bold mt-1.5 tracking-tight"
-            style={{ color: "#111c14" }}
-          >
-            99.99% Uptime
-          </p>
-          <p className="text-[11.5px] mt-1" style={{ color: "#8fa394" }}>
-            Primary / Standby WAL Sync
-          </p>
-        </Card>
-
-        <Card className="py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>
-              Database Size
-            </p>
-            <span
-              className="text-[11.5px] font-semibold"
-              style={{ color: "#2f7043" }}
-            >
-              42.8% used
-            </span>
-          </div>
-          <p
-            className="text-[22px] font-bold mt-1.5 tracking-tight"
-            style={{ color: "#111c14" }}
-          >
-            42.8 GB / 100 GB
-          </p>
-          <div className="w-full bg-[#f0f2f0] h-1.5 rounded-full mt-2 overflow-hidden">
-            <div
-              className="bg-[#3a7d4e] h-full rounded-full"
-              style={{ width: "42.8%" }}
-            />
-          </div>
-        </Card>
-
-        <Card className="py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>
-              Latest Snapshot
-            </p>
-            <Badge tone="blue">1.42 GB</Badge>
-          </div>
-          <p
-            className="text-[22px] font-bold mt-1.5 tracking-tight"
-            style={{ color: "#111c14" }}
-          >
-            18 mins ago
-          </p>
-          <p className="text-[11.5px] mt-1" style={{ color: "#8fa394" }}>
-            Automated Daily · Verified
-          </p>
-        </Card>
-
-        <Card className="py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>
-              Connections & IOPS
-            </p>
-            <Badge tone="gray">48 / 200</Badge>
-          </div>
-          <p
-            className="text-[22px] font-bold mt-1.5 tracking-tight"
-            style={{ color: "#111c14" }}
-          >
-            1,240 IOPS
-          </p>
-          <p className="text-[11.5px] mt-1" style={{ color: "#8fa394" }}>
-            Avg Latency: 2.1 ms
-          </p>
-        </Card>
-      </div>
+      <StatGrid className="mb-4">
+        <StatCard label="Cluster Status" value="99.99% Uptime" detail="Primary / Standby WAL Sync" badge={<Badge tone="green" dot>Healthy</Badge>} />
+        <StatCard label="Database Size" value="42.8 GB / 100 GB" detail="42.8% used" footer={<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#f0f2f0]"><div className="h-full rounded-full bg-[#3a7d4e]" style={{ width: "42.8%" }} /></div>} />
+        <StatCard label="Latest Snapshot" value="18 mins ago" detail="Automated Daily · Verified" badge={<Badge tone="blue">1.42 GB</Badge>} />
+        <StatCard label="Connections & IOPS" value="1,240 IOPS" detail="Avg Latency: 2.1 ms" badge={<Badge tone="gray">48 / 200</Badge>} />
+      </StatGrid>
 
       {/* Main Tabs Container */}
       <Card className="p-0 overflow-hidden">
@@ -568,7 +499,7 @@ export default function Database() {
                   </button>
                 ))}
               </div>
-              <SearchInput placeholder="Search snapshots" />
+              <SearchInput placeholder="Search snapshots" value={searchQuery} onChange={setSearchQuery} />
             </div>
           )}
         </div>
@@ -784,7 +715,7 @@ export default function Database() {
               <span>Duration</span>
               <span className="text-right">Result</span>
             </div>
-            {restoreLogs.map((log) => (
+            {restoreLogData.map((log) => (
               <div
                 key={log.id}
                 className="grid grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"

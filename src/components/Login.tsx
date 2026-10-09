@@ -1,18 +1,30 @@
 import { useState } from "react"
 import arisLogo from "@/assets/brand/image.png"
+import { demoAccounts } from "@/data/demoAccounts"
+import { isDemoMode } from "@/services/dataSource"
 
 const BRAND = "#3a7d4e"
 const BRAND_DARK = "#0d1a10"
 
-export default function Login({ onSignIn }: { onSignIn: () => void }) {
+export default function Login({ onSignIn }: { onSignIn: (email: string, password: string) => Promise<void> }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [show, setShow] = useState(false)
   const [remember, setRemember] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onSignIn()
+    setSubmitting(true)
+    setError(null)
+    try {
+      await onSignIn(email, password)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to sign in.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -248,17 +260,39 @@ export default function Login({ onSignIn }: { onSignIn: () => void }) {
 
             <button
               type="submit"
+              disabled={submitting}
               className="w-full h-11 rounded-xl text-[14px] font-semibold text-white transition-transform active:scale-[0.99]"
               style={{
                 background: BRAND,
                 boxShadow: "0 4px 14px rgba(58,125,78,0.28)",
               }}
             >
-              Sign in
+              {submitting ? "Signing in..." : "Sign in"}
             </button>
+            {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
           </form>
 
-          <div className="flex items-center gap-3 my-6">
+          {isDemoMode && (
+            <div className="mt-4 rounded-xl border p-3" style={{ borderColor: "#e2e8e4" }}>
+              <p className="text-[12px] font-semibold" style={{ color: "#111c14" }}>Demo accounts</p>
+              {demoAccounts.map((account) => (
+                <button
+                  key={account.id}
+                  type="button"
+                  onClick={() => {
+                    setEmail(account.email)
+                    setPassword(account.password)
+                  }}
+                  className="mt-2 block text-left text-[11px]"
+                  style={{ color: "#5a6b5e" }}
+                >
+                  {account.role === "administrator" ? "Administrator" : "Professor"}: {account.email} / {account.password}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {isDemoMode && <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px" style={{ background: "#e2e8e4" }} />
             <span
               className="text-[11px] uppercase tracking-widest"
@@ -267,11 +301,15 @@ export default function Login({ onSignIn }: { onSignIn: () => void }) {
               or
             </span>
             <div className="flex-1 h-px" style={{ background: "#e2e8e4" }} />
-          </div>
+          </div>}
 
-          <button
+          {isDemoMode && <button
             type="button"
-            onClick={onSignIn}
+            onClick={() => {
+              const admin = demoAccounts[0]
+              setEmail(admin.email)
+              setPassword(admin.password)
+            }}
             className="w-full h-11 rounded-xl text-[14px] font-medium bg-white border flex items-center justify-center gap-2.5 transition-colors hover:bg-[#f7f9f8]"
             style={{ borderColor: "#e2e8e4", color: "#3d4a41" }}
           >
@@ -287,8 +325,8 @@ export default function Login({ onSignIn }: { onSignIn: () => void }) {
               <rect x="3" y="4" width="18" height="16" rx="2" />
               <path d="M3 8l9 6 9-6" />
             </svg>
-            Continue with campus SSO
-          </button>
+            Fill administrator demo credentials
+          </button>}
 
           <p
             className="text-[12.5px] text-center mt-8"

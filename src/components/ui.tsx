@@ -20,6 +20,77 @@ export function Card({
   );
 }
 
+export function StatCard({
+  label,
+  value,
+  valueColor = "#111c14",
+  detail,
+  badge,
+  footer,
+  className = "",
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  valueColor?: string;
+  detail?: ReactNode;
+  badge?: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Card className={`py-4 ${className}`}>
+      <p className="text-[12px]" style={{ color: "#8fa394" }}>{label}</p>
+      <div className="flex flex-wrap items-end justify-between gap-2 mt-1">
+        <p className="text-[24px] font-bold tracking-tight tabular-nums" style={{ color: valueColor }}>{value}</p>
+        {badge}
+      </div>
+      {detail && <div className="text-[11.5px] mt-1" style={{ color: "#8fa394" }}>{detail}</div>}
+      {footer}
+    </Card>
+  );
+}
+
+export function StatGrid({
+  children,
+  columns = 4,
+  className = "",
+}: {
+  children: ReactNode;
+  columns?: 2 | 3 | 4 | 5;
+  className?: string;
+}) {
+  const columnClass = {
+    2: "grid-cols-2",
+    3: "grid-cols-2 md:grid-cols-3",
+    4: "grid-cols-2 lg:grid-cols-4",
+    5: "grid-cols-2 lg:grid-cols-5",
+  }[columns];
+
+  return <div className={`grid ${columnClass} gap-3 ${className}`}>{children}</div>;
+}
+
+export function CardHeader({
+  title,
+  description,
+  action,
+  className = "",
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`flex items-start justify-between gap-3 ${className}`}>
+      <div className="min-w-0">
+        <h2 className="text-[13px] font-semibold" style={{ color: "#111c14" }}>{title}</h2>
+        {description && <p className="text-[12px] mt-0.5" style={{ color: "#8fa394" }}>{description}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
 const toneMap: Record<string, { bg: string; c: string }> = {
   green: { bg: "#eaf4ee", c: "#2f7043" },
   amber: { bg: "#fbf1de", c: "#996515" },
@@ -273,8 +344,12 @@ export function Modal({
   if (!isOpen) return null;
   const isWide = size === "lg";
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(event) => event.stopPropagation()}
         className={`bg-white rounded-3xl w-full ${
           isWide ? "max-w-3xl" : "max-w-sm"
         } shadow-2xl p-6 flex flex-col ${

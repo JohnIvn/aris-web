@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { BRAND } from "@/config/navigation";
 import { PrimaryButton, GhostButton, Toggle } from "@/components/ui";
+import { saveResource } from "@/services/dataSource";
 
 const depts = ["Engineering", "Computer Science", "Business", "Sciences", "Arts & Humanities"];
 const ranks = ["Professor", "Associate Prof.", "Assistant Prof.", "Lecturer", "Adjunct"];
@@ -16,6 +17,28 @@ export default function AddProfessor() {
   const [rank, setRank] = useState(ranks[0]);
   const [courses, setCourses] = useState("");
   const [active, setActive] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    if (!name.trim() || !email.trim()) {
+      setError("Name and email are required.");
+      return;
+    }
+    try {
+      await saveResource("/professors", {
+        id: `prof-${Date.now()}`,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        dept,
+        rank,
+        courses: Number(courses) || 0,
+        active,
+      });
+      close();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to add professor.");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(13,26,16,0.45)", backdropFilter: "blur(2px)", fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif" }} onClick={close}>
@@ -69,11 +92,12 @@ export default function AddProfessor() {
             </div>
             <Toggle on={active} onChange={setActive} />
           </div>
+          {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t" style={{ borderColor: "#eef1ef", background: "#fafbfa" }}>
           <GhostButton onClick={close}>Cancel</GhostButton>
-          <PrimaryButton onClick={close}>
+          <PrimaryButton onClick={submit}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>
             Add Professor
           </PrimaryButton>

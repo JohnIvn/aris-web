@@ -2,13 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { BRAND } from "@/config/navigation";
 import { Card, PageTitle, PrimaryButton, Badge, Tabs, initialsColor } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
 
 // Reminders broadcast to specific staff groups.
 const audienceColor: Record<string, string> = {
   Everyone: "#3a7d4e", HR: "#8a63c4", Checker: "#3f8ecc", Accounting: "#d99a2b", Secretary: "#c0653f",
 };
 
-const posts = [
+const demoPosts = [
   { title: "AR submission closes Friday 5 PM", body: "All Accomplishment Reports for September Cycle 1 must be submitted before the Friday 5:00 PM cut-off. Late entries roll to the next cycle.", tag: "AR / DTR", tone: "green" as const, audience: "Everyone", initials: "AR", date: "1 hour ago", pinned: true },
   { title: "DTR verification pending for 14 records", body: "Checkers: 14 Daily Time Records are awaiting verification. Please review name matches and flag any invalid entries before end of day.", tag: "AR / DTR", tone: "green" as const, audience: "Checker", initials: "DT", date: "3 hours ago", pinned: true },
   { title: "HR review queue — 6 rejected ARs", body: "6 Accomplishment Reports were rejected for missing attachments and need re-review. Confirm outcomes so payroll can be recomputed.", tag: "AR / DTR", tone: "green" as const, audience: "HR", initials: "HR", date: "Yesterday", pinned: false },
@@ -21,6 +22,7 @@ const posts = [
 export default function Announcements() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("All");
+  const { data: posts } = useResource("/announcements", demoPosts);
   const tabs = ["All", "AR / DTR", "System", "AI / ML"];
   const visible = posts.filter((p) => tab === "All" || p.tag === tab);
 

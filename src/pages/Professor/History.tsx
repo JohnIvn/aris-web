@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react"
 import { BRAND } from "@/config/navigation"
+import { useResource } from "@/hooks/useResource"
 import {
   Card,
   PageTitle,
@@ -12,6 +13,8 @@ import {
   dtrTable,
   statusTone,
   SubmissionDetail,
+  StatCard,
+  StatGrid,
   type RecordKind,
   type RecordPayload,
   type StatusKind,
@@ -35,7 +38,7 @@ type HistoryRecord = {
   record: RecordPayload
 }
 
-const records: HistoryRecord[] = [
+const demoRecords: HistoryRecord[] = [
   {
     type: "AR",
     period: "Sep Cycle 1",
@@ -239,7 +242,7 @@ const stageIcon = (path: ReactNode) => (
   </svg>
 )
 
-const latestSubmission = {
+const demoLatestSubmission = {
   type: "DTR" as const,
   period: "September Cycle 1",
   units: "22 days",
@@ -379,7 +382,7 @@ function StageNode({ s }: { s: RoutingStage }) {
   )
 }
 
-function LatestSubmissionCard() {
+function LatestSubmissionCard({ submission }: { submission: typeof demoLatestSubmission }) {
   return (
     <Card className="mb-4">
       <div className="flex items-start justify-between gap-4">
@@ -388,19 +391,19 @@ function LatestSubmissionCard() {
             Latest Submission
           </p>
           <p className="text-[12px] mt-0.5" style={{ color: "#8fa394" }}>
-            {latestSubmission.type} · {latestSubmission.period} ·{" "}
-            {latestSubmission.units} · filed {latestSubmission.filed}
+            {submission.type} · {submission.period} ·{" "}
+            {submission.units} · filed {submission.filed}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Badge tone={statusTone[latestSubmission.status]} dot>
-            {latestSubmission.status}
+          <Badge tone={statusTone[submission.status]} dot>
+            {submission.status}
           </Badge>
           <span
             className="text-[11.5px] px-2 py-0.5 rounded-full font-semibold"
             style={{ background: "#f0f2f0", color: "#5a6b5e" }}
           >
-            Ref {latestSubmission.reference}
+            Ref {submission.reference}
           </span>
         </div>
       </div>
@@ -420,8 +423,8 @@ function LatestSubmissionCard() {
           <circle cx="12" cy="12" r="9" />
           <path d="M12 7v5l3 2" />
         </svg>
-        Currently with the {latestSubmission.currentStage} since{" "}
-        {latestSubmission.currentSince} — next stop: Human Resources.
+        Currently with the {submission.currentStage} since{" "}
+        {submission.currentSince} — next stop: Human Resources.
       </div>
 
       <div className="mt-5 overflow-x-auto">
@@ -460,6 +463,8 @@ function LatestSubmissionCard() {
 }
 
 export default function ProfHistory() {
+  const { data: records } = useResource("/professor/submissions", demoRecords)
+  const { data: latestSubmission } = useResource("/professor/submissions/latest", demoLatestSubmission)
   const [tab, setTab] = useState("All")
   const [selected, setSelected] = useState<{
     row: HistoryRecord
@@ -467,6 +472,9 @@ export default function ProfHistory() {
   } | null>(null)
   const tabs = ["All", "AR", "DTR"]
   const rows = records.filter((r) => tab === "All" || r.type === tab)
+  const approvedCount = records.filter((record) => record.status === "Approved").length
+  const pendingCount = records.filter((record) => record.status === "Pending").length
+  const rejectedCount = records.filter((record) => record.status === "Rejected" || record.status === "Disapproved").length
 
   return (
     <div className="pb-2">
@@ -489,28 +497,18 @@ export default function ProfHistory() {
         }
       />
 
-      <LatestSubmissionCard />
+      <LatestSubmissionCard submission={latestSubmission} />
 
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <StatGrid className="mb-4">
         {[
-          ["Total Filed", "39"],
-          ["Approved", "34"],
-          ["Pending", "2"],
-          ["Rejected", "3"],
+          ["Total Filed", String(records.length)],
+          ["Approved", String(approvedCount)],
+          ["Pending", String(pendingCount)],
+          ["Rejected", String(rejectedCount)],
         ].map(([l, v]) => (
-          <Card key={l} className="py-4">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>
-              {l}
-            </p>
-            <p
-              className="text-[24px] font-bold mt-1 tracking-tight"
-              style={{ color: "#111c14" }}
-            >
-              {v}
-            </p>
-          </Card>
+          <StatCard key={l} label={l} value={v} />
         ))}
-      </div>
+      </StatGrid>
 
       <Card className="p-0 overflow-hidden">
         <div

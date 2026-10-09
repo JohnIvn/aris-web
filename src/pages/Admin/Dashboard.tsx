@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { LineChart, Line, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
 import { BRAND } from "@/config/navigation";
-import { Card } from "@/components/ui";
+import { Card, CardHeader } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
 
 const enrollTrend = [22, 30, 26, 38, 33, 45, 40, 52, 48, 58, 54, 63].map((v, i) => ({ i, v }));
 const payrollArea = [
@@ -23,6 +24,7 @@ const departments = [
   { name: "Business", pct: "23%", total: "96", dot: "#d99a2b" },
   { name: "Sciences", pct: "32%", total: "142", dot: "#3f8ecc" },
 ];
+const demoDashboard = { enrollTrend, payrollArea, radarData, programs, departments };
 
 function Delta({ v, up }: { v: string; up: boolean }) {
   return (
@@ -31,15 +33,18 @@ function Delta({ v, up }: { v: string; up: boolean }) {
 }
 function CardHead({ title, action }: { title: string; action: string }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <p className="text-[13px] font-medium" style={{ color: "#6b7a6f" }}>{title}</p>
-      <button className="text-[12px] font-medium px-2.5 py-1 rounded-lg border transition-colors hover:bg-[#f4f6f5]" style={{ color: "#3d4a41", borderColor: "#e2e8e4" }}>{action}</button>
-    </div>
+    <CardHeader
+      title={title}
+      className="mb-3 items-center"
+      action={<button className="text-[12px] font-medium px-2.5 py-1 rounded-lg border transition-colors hover:bg-[#f4f6f5]" style={{ color: "#3d4a41", borderColor: "#e2e8e4" }}>{action}</button>}
+    />
   );
 }
 
 export default function Dashboard() {
   const [range, setRange] = useState("1M");
+  const { data } = useResource("/dashboard", demoDashboard);
+  const { enrollTrend: enrollmentData, payrollArea: payrollData, radarData: activityData, programs: programData, departments: departmentData } = data;
   return (
     <div className="h-full min-h-[560px] grid grid-cols-3 grid-rows-2 gap-3">
       {/* Enrollment */}
@@ -56,13 +61,13 @@ export default function Dashboard() {
         </div>
         <div className="flex-1 min-h-0 my-2 -mx-1">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={enrollTrend} margin={{ top: 6, right: 6, bottom: 0, left: 6 }}>
+            <LineChart data={enrollmentData} margin={{ top: 6, right: 6, bottom: 0, left: 6 }}>
               <Line type="monotone" dataKey="v" stroke={BRAND} strokeWidth={2.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
         <div className="space-y-1.5">
-          {programs.map((p) => (
+          {programData.map((p) => (
             <div key={p.name} className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: BRAND }} />
               <span className="text-[12.5px] flex-1 truncate" style={{ color: "#3d4a41" }}>{p.name}</span>
@@ -118,7 +123,7 @@ export default function Dashboard() {
         </div>
         <div className="flex-1 min-h-0 mt-2 -mx-1">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={payrollArea} margin={{ top: 8, right: 6, bottom: 0, left: 6 }}>
+            <AreaChart data={payrollData} margin={{ top: 8, right: 6, bottom: 0, left: 6 }}>
               <defs>
                 <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={BRAND} stopOpacity={0.28} />
@@ -130,7 +135,7 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
         <div className="flex justify-between text-[10px] font-medium mt-1" style={{ color: "#b6c3ba" }}>
-          {payrollArea.map((p) => <span key={p.m}>{p.m}</span>)}
+          {payrollData.map((p) => <span key={p.m}>{p.m}</span>)}
         </div>
       </Card>
 
@@ -155,7 +160,7 @@ export default function Dashboard() {
           <div className="flex text-[10px] uppercase tracking-wide font-semibold pb-2" style={{ color: "#b6c3ba" }}>
             <span className="flex-1">Department</span><span className="w-14 text-right">Share</span><span className="w-16 text-right">Faculty</span>
           </div>
-          {departments.map((d) => (
+          {departmentData.map((d) => (
             <div key={d.name} className="flex items-center py-1.5 text-[12.5px]">
               <span className="flex-1 flex items-center gap-2" style={{ color: "#3d4a41" }}><span className="w-2 h-2 rounded-full" style={{ background: d.dot }} />{d.name}</span>
               <span className="w-14 text-right" style={{ color: "#8fa394" }}>{d.pct}</span>
@@ -201,7 +206,7 @@ export default function Dashboard() {
         </div>
         <div className="flex-1 min-h-0 -my-1">
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={radarData} outerRadius="72%">
+            <RadarChart data={activityData} outerRadius="72%">
               <PolarGrid stroke="#e2e8e4" />
               <PolarAngleAxis dataKey="axis" tick={{ fill: "#8fa394", fontSize: 10 }} />
               <Radar dataKey="b" stroke="#c9b04a" fill="#c9b04a" fillOpacity={0.12} strokeWidth={2} />

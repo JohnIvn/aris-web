@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { PageTitle } from "@/components/ui"
+import { useAuth } from "@/app/routes"
+import { saveResource } from "@/services/dataSource"
 
 type ColumnDef = {
   id: string
@@ -108,10 +110,11 @@ const inputStyle = { borderColor: "#e8eeea", color: "#111c14" }
 
 export default function ProfSubmit() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [recordType, setRecordType] = useState("Accomplishment Report (AR)")
   const [period, setPeriod] = useState("September Cycle 1")
-  const [facultyName, setFacultyName] = useState("MARK LUIS S. GARROTE")
+  const [facultyName, setFacultyName] = useState(user.name.toUpperCase())
   const [facultyNumber, setFacultyNumber] = useState("289")
   const [college, setCollege] = useState("COLLEGE OF LIBERAL ARTS AND SCIENCES")
 
@@ -180,6 +183,7 @@ export default function ProfSubmit() {
   const [uploadedFile, setUploadedFile] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   /* ── Column actions ── */
   const handleAddColumn = (courseId: string) => {
@@ -303,13 +307,49 @@ export default function ProfSubmit() {
     setCourses(courses.filter((c) => c.id !== courseId))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSubmitting(true)
-    setTimeout(() => {
-      setIsSubmitting(false)
+    setSubmitError(null)
+    const kind = recordType.startsWith("Accomplishment") ? "AR" : "DTR"
+    const reference = `${kind}-${Date.now()}`
+    const now = new Date().toLocaleString()
+    const record = {
+      id: reference,
+      type: kind,
+      period,
+      units: `${courses.length} course${courses.length === 1 ? "" : "s"}`,
+      submitted: now,
+      status: "Pending",
+      event: `${kind} submitted · ${period}`,
+      record: {
+        period,
+        reference,
+        facultyName,
+        facultyNumber,
+        college,
+        tables: courses.map((course) => ({
+          title: course.title,
+          meta: course.datesHeld,
+          columns: course.columns.map((column) => column.label),
+          rows: course.rows.map((row) => course.columns.map((column) => row[column.id] ?? "")),
+        })),
+        topics,
+        tasks,
+        notes,
+        attachment: uploadedFile ?? undefined,
+        reviewer: "System — Intake",
+        reviewedAt: now,
+        remark: "Received and queued for review.",
+      },
+    }
+    try {
+      await saveResource("/professor/submissions", record)
       navigate("/prof/history")
-    }, 1000)
+    } catch (reason) {
+      setSubmitError(reason instanceof Error ? reason.message : "Unable to submit this record.")
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -318,8 +358,10 @@ export default function ProfSubmit() {
         title="Submit Record"
         subtitle="File an AR or DTR for the current cycle."
       />
+      {submitError && <p role="alert" className="mb-4 text-[13px] text-red-700">{submitError}</p>}
 
       <form
+        id="submit-form"
         onSubmit={handleSubmit}
         className="space-y-5"
         style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
@@ -935,7 +977,6 @@ export default function ProfSubmit() {
             type="submit"
             form="submit-form"
             disabled={isSubmitting}
-            onClick={handleSubmit}
             className="px-6 py-2.5 rounded-xl text-[13px] font-bold text-white transition-all flex items-center gap-2 active:scale-[0.98] disabled:opacity-70"
             style={{
               background: isSubmitting

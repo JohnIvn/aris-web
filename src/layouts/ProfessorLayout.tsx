@@ -1,8 +1,10 @@
 import { Outlet, useLocation, useNavigate } from "react-router";
 import arisLogo from "@/assets/brand/image.png";
 import { BRAND, BRAND_DARK, profMainNav, profSettingsNav, type NavItem } from "@/config/navigation";
+import type { UserAccount } from "@/data/demoAccounts";
+import DataModeNotice from "@/components/DataModeNotice";
 
-export default function ProfRoot({ onSignOut }: { onSignOut: () => void }) {
+export default function ProfRoot({ onSignOut, user }: { onSignOut: () => void; user: UserAccount }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -44,10 +46,10 @@ export default function ProfRoot({ onSignOut }: { onSignOut: () => void }) {
 
         <div className="p-3">
           <div className="flex items-center gap-3 p-2 rounded-2xl" style={{ background: "#f4f6f5" }}>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" style={{ background: BRAND }}>AD</div>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" style={{ background: BRAND }}>{user.name.slice(0, 2).toUpperCase()}</div>
             <div className="flex-1 min-w-0">
-              <p className="text-[12.5px] font-semibold truncate" style={{ color: "#111c14" }}>Professor</p>
-              <p className="text-[11px] truncate" style={{ color: "#8fa394" }}>professor@aris.edu.ph</p>
+              <p className="text-[12.5px] font-semibold truncate" style={{ color: "#111c14" }}>{user.name}</p>
+              <p className="text-[11px] truncate" style={{ color: "#8fa394" }}>{user.email}</p>
             </div>
             <button onClick={onSignOut} aria-label="Sign out" className="transition-opacity hover:opacity-60" style={{ color: "#b6c3ba" }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" /></svg>
@@ -61,9 +63,9 @@ export default function ProfRoot({ onSignOut }: { onSignOut: () => void }) {
         {location.pathname === "/prof" && (
           <header className="flex items-center justify-between flex-shrink-0 pb-3 pl-1 pr-1">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold" style={{ background: BRAND_DARK }}>AD</div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold" style={{ background: BRAND_DARK }}>{user.name.slice(0, 2).toUpperCase()}</div>
               <div>
-                <p className="text-[16px] font-semibold leading-none tracking-tight" style={{ color: "#111c14" }}>Professor</p>
+                <p className="text-[16px] font-semibold leading-none tracking-tight" style={{ color: "#111c14" }}>{user.name}</p>
                 <p className="text-[12.5px] mt-1" style={{ color: "#8fa394" }}>Welcome back to ARIS 👋</p>
               </div>
             </div>
@@ -75,6 +77,7 @@ export default function ProfRoot({ onSignOut }: { onSignOut: () => void }) {
         )}
 
         <main className="flex-1 overflow-y-auto min-h-0 pr-1">
+          <DataModeNotice />
           <Outlet />
         </main>
       </div>

@@ -5,7 +5,8 @@ import {
   PolarGrid, PolarAngleAxis, CartesianGrid,
 } from "recharts";
 import { BRAND } from "@/config/navigation";
-import { Card, Badge, Avatar, initialsColor } from "@/components/ui";
+import { Card, CardHeader, Badge, Avatar, StatCard, StatGrid, initialsColor } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,7 @@ const deptMeta = [
   { dept: "College of Business",    short: "Business",    color: "#3f8ecc", reports: 4, aligned: 3, notAligned: 1, review: 0, score: 87 },
   { dept: "Arts & Sciences",        short: "Arts & Sci",  color: "#8a63c4", reports: 4, aligned: 3, notAligned: 0, review: 1, score: 82 },
 ];
+const demoCurriculum = { reports, weeklyByDept, deptMeta };
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -66,35 +68,35 @@ const ALIGNMENT_TABS = ["All", "Aligned", "Not Aligned", "Under Review"] as cons
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function ChartTip({ active, payload, label }: any) {
+type ChartTipEntry = { name?: string; color?: string; fill?: string; value?: string | number };
+type ChartTipProps = { active?: boolean; payload?: ChartTipEntry[]; label?: string | number };
+
+function ChartTip({ active, payload, label }: ChartTipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border rounded-xl shadow-lg px-3 py-2 text-[12px]" style={{ borderColor: "#e2e8e4" }}>
       {label && <p className="font-semibold mb-1" style={{ color: "#111c14" }}>{label}</p>}
-      {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.color ?? p.fill }}>{p.name}: <strong>{p.value}</strong></p>
+      {payload.map((p, index) => (
+        <p key={p.name ?? index} style={{ color: p.color ?? p.fill }}>{p.name}: <strong>{p.value}</strong></p>
       ))}
     </div>
   );
 }
 
 function CardHead({ title, sub }: { title: string; sub?: string }) {
-  return (
-    <div className="mb-3">
-      <p className="text-[13px] font-semibold" style={{ color: "#111c14" }}>{title}</p>
-      {sub && <p className="text-[11.5px] mt-0.5" style={{ color: "#8fa394" }}>{sub}</p>}
-    </div>
-  );
+  return <CardHeader title={title} description={sub} className="mb-3" />;
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Curriculum() {
+  const { data } = useResource("/curriculum", demoCurriculum);
+  const { reports: reportData, weeklyByDept: weeklyData, deptMeta: departmentData } = data;
   const [dept, setDept]       = useState<Dept>("All Departments");
   const [statusTab, setStatusTab] = useState<(typeof ALIGNMENT_TABS)[number]>("All");
   const [search, setSearch]   = useState("");
 
-  const deptReports = dept === "All Departments" ? reports : reports.filter((r) => r.dept === dept);
+  const deptReports = dept === "All Departments" ? reportData : reportData.filter((r) => r.dept === dept);
   const total    = deptReports.length;
   const aligned  = deptReports.filter((r) => r.status === "Aligned").length;
   const bad      = deptReports.filter((r) => r.status === "Not Aligned").length;
@@ -136,7 +138,7 @@ export default function Curriculum() {
       : 0,
   }));
 
-  const trend = weeklyByDept[dept];
+  const trend = weeklyData[dept];
 
   const filtered = deptReports.filter((r) => {
     const matchTab = statusTab === "All" || r.status === statusTab;
@@ -167,7 +169,7 @@ export default function Curriculum() {
         {DEPARTMENTS.map((d) => {
           const isActive = dept === d;
           const dc = d === "All Departments" ? "#5a6b5e" : DEPT_COLORS[d];
-          const meta = deptMeta.find((m) => m.dept === d);
+          const meta = departmentData.find((m) => m.dept === d);
           return (
             <button
               key={d}
@@ -190,7 +192,7 @@ export default function Curriculum() {
                   </p>
                 ) : (
                   <p className="text-[11px] mt-0.5" style={{ color: "#8fa394" }}>
-                    {reports.length} reports · {pct}% aligned
+                    {reportData.length} reports · {pct}% aligned
                   </p>
                 )}
               </div>
@@ -200,22 +202,22 @@ export default function Curriculum() {
       </div>
 
       {/* ── KPI row ── */}
-      <div className="grid grid-cols-4 gap-3">
+      <StatGrid>
         {[
           { label: "Total Reports", value: total, color: "#5a6b5e" },
           { label: "Aligned", value: aligned, color: C_ALIGNED },
           { label: "Not Aligned", value: bad, color: C_BAD },
           { label: "Under Review", value: review, color: C_REVIEW },
         ].map(({ label, value, color }) => (
-          <Card key={label} className="py-4">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>{label}</p>
-            <p className="text-[26px] font-bold mt-1 tracking-tight" style={{ color }}>{value}</p>
-            <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: "#f0f2f0" }}>
-              <div className="h-full rounded-full" style={{ width: `${total ? (value / total) * 100 : 0}%`, background: color }} />
-            </div>
-          </Card>
+          <StatCard
+            key={label}
+            label={label}
+            value={value}
+            valueColor={color}
+            footer={<div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: "#f0f2f0" }}><div className="h-full rounded-full" style={{ width: `${total ? (value / total) * 100 : 0}%`, background: color }} /></div>}
+          />
         ))}
-      </div>
+      </StatGrid>
 
       {/* ── Charts row ── */}
       <div className="grid grid-cols-3 gap-4" style={{ minHeight: 220 }}>
@@ -338,7 +340,7 @@ export default function Curriculum() {
       {/* ── Department summary strip (only when All Depts selected) ── */}
       {dept === "All Departments" && (
         <div className="grid grid-cols-3 gap-3">
-          {deptMeta.map((d) => (
+          {departmentData.map((d) => (
             <button
               key={d.dept}
               onClick={() => setDept(d.dept as Dept)}

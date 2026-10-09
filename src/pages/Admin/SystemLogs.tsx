@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState } from "react"
+import { useResource } from "@/hooks/useResource"
 import {
   Card,
   PageTitle,
@@ -10,10 +11,12 @@ import {
   Tabs,
   initialsColor,
   Modal,
-} from "@/components/ui";
+  StatCard,
+  StatGrid,
+} from "@/components/ui"
 
 // General system access & security events — sign-in, sign-out, MFA, password, sessions.
-const logs = [
+const demoSystemLogs = [
   {
     actor: "Administrator",
     init: "AD",
@@ -104,24 +107,25 @@ const logs = [
     time: "08:20 AM",
     kind: "Security" as const,
   },
-];
+]
 
-const kindTone = { Auth: "blue", Security: "green", Alert: "red" } as const;
+const kindTone = { Auth: "blue", Security: "green", Alert: "red" } as const
 
 export default function SystemLogs() {
-  const [tab, setTab] = useState("All");
-  const [showExportConfirm, setShowExportConfirm] = useState(false);
-  const [showExportSuccess, setShowExportSuccess] = useState(false);
-  const tabs = ["All", "Auth", "Security", "Alert"];
-  const rows = logs.filter((l) => tab === "All" || l.kind === tab);
+  const { data: logs } = useResource("/system/logs", demoSystemLogs)
+  const [tab, setTab] = useState("All")
+  const [showExportConfirm, setShowExportConfirm] = useState(false)
+  const [showExportSuccess, setShowExportSuccess] = useState(false)
+  const tabs = ["All", "Auth", "Security", "Alert"]
+  const rows = logs.filter((l) => tab === "All" || l.kind === tab)
 
-  const count = (k: string) => logs.filter((l) => l.kind === k).length;
+  const count = (k: string) => logs.filter((l) => l.kind === k).length
   const stats = [
     ["Events Today", String(logs.length)],
     ["Sign-ins", "842"],
     ["MFA Events", String(count("Security"))],
     ["Alerts", String(count("Alert"))],
-  ];
+  ]
 
   return (
     <div className="pb-2">
@@ -168,8 +172,8 @@ export default function SystemLogs() {
             </GhostButton>
             <PrimaryButton
               onClick={() => {
-                setShowExportConfirm(false);
-                setShowExportSuccess(true);
+                setShowExportConfirm(false)
+                setShowExportSuccess(true)
               }}
             >
               Yes, Export
@@ -210,21 +214,11 @@ export default function SystemLogs() {
         The system logs have been successfully exported.
       </Modal>
 
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <StatGrid className="mb-4">
         {stats.map(([l, v]) => (
-          <Card key={l} className="py-4">
-            <p className="text-[12px]" style={{ color: "#8fa394" }}>
-              {l}
-            </p>
-            <p
-              className="text-[24px] font-bold mt-1 tracking-tight"
-              style={{ color: "#111c14" }}
-            >
-              {v}
-            </p>
-          </Card>
+          <StatCard key={l} label={l} value={v} />
         ))}
-      </div>
+      </StatGrid>
 
       <Card className="p-0 overflow-hidden">
         <div
@@ -303,5 +297,5 @@ export default function SystemLogs() {
         ))}
       </Card>
     </div>
-  );
+  )
 }

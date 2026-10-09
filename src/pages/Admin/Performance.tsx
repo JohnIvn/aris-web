@@ -13,11 +13,9 @@ import {
   AreaChart,
   Area,
   CartesianGrid,
-  LineChart,
-  Line,
 } from "recharts"
-import { BRAND } from "@/config/navigation"
-import { Card, Badge, Avatar, initialsColor } from "@/components/ui"
+import { Card, Badge, Avatar, StatCard, StatGrid, initialsColor } from "@/components/ui"
+import { useResource } from "@/hooks/useResource"
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -25,7 +23,6 @@ const C_GREEN = "#3a7d4e"
 const C_AMBER = "#d99a2b"
 const C_RED = "#e05252"
 const C_BLUE = "#3f8ecc"
-const C_PURPLE = "#8a63c4"
 
 type GradeLevel = "Excellent" | "Good" | "Needs Improvement" | "Poor"
 const GRADE_META: Record<GradeLevel, {
@@ -591,7 +588,10 @@ const withScores = professors
 
 // ─── Helper components ────────────────────────────────────────────────────────
 
-function ChartTip({ active, payload, label }: any) {
+type ChartTipEntry = { name?: string; color?: string; fill?: string; value?: string | number };
+type ChartTipProps = { active?: boolean; payload?: ChartTipEntry[]; label?: string | number };
+
+function ChartTip({ active, payload, label }: ChartTipProps) {
   if (!active || !payload?.length) return null
   return (
     <div
@@ -603,8 +603,8 @@ function ChartTip({ active, payload, label }: any) {
           {label}
         </p>
       )}
-      {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.color ?? p.fill }}>
+      {payload.map((p, index) => (
+        <p key={p.name ?? index} style={{ color: p.color ?? p.fill }}>
           {p.name}: <strong>{p.value}</strong>
         </p>
       ))}
@@ -1039,11 +1039,13 @@ function ProfDetail({ p, idx }: { p: (typeof withScores)[0]; idx: number }) {
 const DEPT_FILTERS = ["All", ...DEPARTMENTS] as const
 
 export default function Performance() {
-  const [selected, setSelected] = useState<string | null>(withScores[0].id)
+  const { data: performanceData } = useResource("/performance", withScores)
+  const [selected, setSelected] = useState<string | null>(null)
   const [deptFilter, setDeptFilter] = useState<string>("All")
   const [search, setSearch] = useState("")
+  const selectedId = selected ?? performanceData[0]?.id ?? null
 
-  const filtered = withScores.filter((p) => {
+  const filtered = performanceData.filter((p) => {
     const matchDept = deptFilter === "All" || p.dept === deptFilter
     const q = search.toLowerCase()
     const matchSearch =
@@ -1051,19 +1053,18 @@ export default function Performance() {
     return matchDept && matchSearch
   })
 
-  const selectedProf =
-    withScores.find((p) => p.id === selected) ?? withScores[0]
-  const selIdx = withScores.findIndex((p) => p.id === selected)
+  const selectedProf = performanceData.find((p) => p.id === selectedId) ?? performanceData[0]
+  const selIdx = performanceData.findIndex((p) => p.id === selectedId)
 
   // summary for top row
   const avg = Math.round(
-    withScores.reduce((s, p) => s + p.score, 0) / withScores.length,
+    performanceData.reduce((s, p) => s + p.score, 0) / performanceData.length,
   )
-  const excellent = withScores.filter((p) => p.score >= 90).length
-  const needsAttention = withScores.filter((p) => p.score < 65).length
+  const excellent = performanceData.filter((p) => p.score >= 90).length
+  const needsAttention = performanceData.filter((p) => p.score < 65).length
 
   // overview bar chart data
-  const overviewData = withScores.slice(0, 7).map((p) => ({
+  const overviewData = performanceData.slice(0, 7).map((p) => ({
     name: p.init,
     score: p.score,
     fill: GRADE_META[gradeFromScore(p.score)].color,
@@ -1104,11 +1105,11 @@ export default function Performance() {
       </div>
 
       {/* ── KPI row ── */}
-      <div className="grid grid-cols-4 gap-3">
+      <StatGrid>
         {[
           {
             label: "Faculty Evaluated",
-            value: withScores.length,
+            value: performanceData.length,
             sub: "This semester",
             color: C_BLUE,
           },
@@ -1131,22 +1132,9 @@ export default function Performance() {
             color: C_RED,
           },
         ].map(({ label, value, sub, color }) => (
-          <Card key={label} className="py-3">
-            <p className="text-[11.5px]" style={{ color: "#8fa394" }}>
-              {label}
-            </p>
-            <p
-              className="text-[26px] font-black mt-0.5 tracking-tight"
-              style={{ color }}
-            >
-              {value}
-            </p>
-            <p className="text-[11px] mt-0.5" style={{ color: "#b6c3ba" }}>
-              {sub}
-            </p>
-          </Card>
+          <StatCard key={label} label={label} value={value} valueColor={color} detail={sub} />
         ))}
-      </div>
+      </StatGrid>
 
       {/* ── Overview bar chart ── */}
       <Card>
@@ -1259,7 +1247,7 @@ export default function Performance() {
             {filtered.map((p, i) => {
               const grade = gradeFromScore(p.score)
               const meta = GRADE_META[grade]
-              const isActive = p.id === selected
+              const isActive = p.id === selectedId
               return (
                 <button
                   key={p.id}

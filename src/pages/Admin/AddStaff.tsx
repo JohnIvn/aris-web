@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { BRAND } from "@/config/navigation";
 import { PrimaryButton, GhostButton } from "@/components/ui";
+import { saveResource } from "@/services/dataSource";
 
 // Role → Staff ID prefix, matching the Staff Management page.
 const roles = [
@@ -19,8 +20,29 @@ export default function AddStaff() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("Checker");
   const [dept, setDept] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const prefix = roles.find((r) => r.key === role)!.prefix;
+
+  const submit = async () => {
+    if (!name.trim() || !email.trim() || !dept.trim()) {
+      setError("Name, email, and department are required.");
+      return;
+    }
+    try {
+      await saveResource("/staff", {
+        id: `${prefix}-${Date.now()}`,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role,
+        dept: dept.trim(),
+        status: "Active",
+      });
+      close();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to add staff member.");
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(13,26,16,0.45)", backdropFilter: "blur(2px)", fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif" }} onClick={close}>
@@ -76,11 +98,12 @@ export default function AddStaff() {
               <div className="w-full h-10 px-3.5 rounded-xl border flex items-center text-[13.5px] font-semibold tabular-nums" style={{ borderColor: "#e2e8e4", background: "#f7f9f8", color: "#3d4a41" }}>{prefix}-0000 <span className="ml-1.5 text-[11px] font-normal" style={{ color: "#b6c3ba" }}>· auto</span></div>
             </div>
           </div>
+          {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t" style={{ borderColor: "#eef1ef", background: "#fafbfa" }}>
           <GhostButton onClick={close}>Cancel</GhostButton>
-          <PrimaryButton onClick={close}>
+          <PrimaryButton onClick={submit}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>
             Add Staff
           </PrimaryButton>
