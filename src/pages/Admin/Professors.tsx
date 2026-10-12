@@ -1,0 +1,91 @@
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { Card, PageTitle, PrimaryButton, GhostButton, SearchInput, Badge, Avatar, Tabs, StatCard, StatGrid, initialsColor } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
+import { saveResource } from "@/services/dataSource";
+
+const people = [
+  { name: "Dr. Maria Santos", email: "m.santos@aris.edu.ph", dept: "Engineering", rank: "Professor", courses: 4, active: true },
+  { name: "Prof. Lito Cruz", email: "l.cruz@aris.edu.ph", dept: "Computer Science", rank: "Associate Prof.", courses: 3, active: true },
+  { name: "Dr. Elena Reyes", email: "e.reyes@aris.edu.ph", dept: "Business", rank: "Professor", courses: 5, active: true },
+  { name: "Dr. Ramon Aquino", email: "r.aquino@aris.edu.ph", dept: "Sciences", rank: "Assistant Prof.", courses: 2, active: false },
+  { name: "Prof. Grace Lim", email: "g.lim@aris.edu.ph", dept: "Arts & Humanities", rank: "Lecturer", courses: 3, active: true },
+  { name: "Dr. Nestor Villar", email: "n.villar@aris.edu.ph", dept: "Engineering", rank: "Adjunct", courses: 1, active: false },
+  { name: "Dr. Sofia Mendoza", email: "s.mendoza@aris.edu.ph", dept: "Computer Science", rank: "Professor", courses: 4, active: true },
+  { name: "Prof. Daniel Ong", email: "d.ong@aris.edu.ph", dept: "Business", rank: "Associate Prof.", courses: 3, active: false },
+];
+
+export default function Professors() {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState("All");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { data: items, setData: setItems } = useResource("/professors", people);
+  const tabs = ["All", "Active", "Deactivated"];
+
+  const toggle = async (email: string) => {
+    const updatedItems = items.map((person) => person.email === email ? { ...person, active: !person.active } : person);
+    setItems(updatedItems);
+    try {
+      await saveResource("/professors", updatedItems, "PUT");
+      setSaveError(null);
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Unable to update professor.");
+    }
+  };
+  const rows = items.filter((p) => tab === "All" || (tab === "Active" ? p.active : !p.active));
+
+  const activeCount = items.filter((p) => p.active).length;
+  const stats = [["Total Faculty", String(items.length)], ["Active", String(activeCount)], ["Deactivated", String(items.length - activeCount)], ["Colleges", "6"]];
+
+  return (
+    <div className="pb-2">
+      <PageTitle title="Professor Management" subtitle="312 faculty across 6 colleges." action={<PrimaryButton onClick={() => navigate("/professors/new")}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>Add Professor</PrimaryButton>} />
+      {saveError && <p role="alert" className="mb-3 text-[12px] text-red-700">{saveError}</p>}
+
+      <StatGrid className="mb-4">
+        {stats.map(([l, v]) => (
+          <StatCard key={l} label={l} value={v} />
+        ))}
+      </StatGrid>
+
+      <Card className="p-0 overflow-x-auto">
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
+          <Tabs tabs={tabs} value={tab} onChange={setTab} />
+          <div className="flex gap-2">
+            <SearchInput placeholder="Search faculty" />
+            <GhostButton><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z" /></svg>Filter</GhostButton>
+          </div>
+        </div>
+        <div className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
+          <span>Name</span><span>Department</span><span>Rank</span><span>Courses</span><span>Status</span><span className="text-right">Action</span>
+        </div>
+        {rows.map((p, i) => (
+          <div key={p.email} className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar initials={p.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} color={initialsColor(i)} />
+              <div className="min-w-0">
+                <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{p.name}</p>
+                <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>{p.email}</p>
+              </div>
+            </div>
+            <span className="text-[13px]" style={{ color: "#3d4a41" }}>{p.dept}</span>
+            <span className="text-[13px]" style={{ color: "#3d4a41" }}>{p.rank}</span>
+            <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>{p.courses}</span>
+            <span><Badge tone={p.active ? "green" : "gray"} dot>{p.active ? "Active" : "Deactivated"}</Badge></span>
+            <span className="flex justify-end">
+              <button
+                onClick={() => toggle(p.email)}
+                className="h-8 px-3 rounded-lg text-[12.5px] font-semibold border transition-colors"
+                style={p.active
+                  ? { color: "#d0674a", borderColor: "#f0d9d2", background: "#fdf3f0" }
+                  : { color: "#3a7d4e", borderColor: "#cfe3d6", background: "#f0f7f2" }}
+              >
+                {p.active ? "Deactivate" : "Activate"}
+              </button>
+            </span>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
