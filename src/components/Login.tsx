@@ -1,12 +1,20 @@
 import { useState } from "react"
 import arisLogo from "@/assets/brand/image.png"
-import { demoAccounts } from "@/data/demoAccounts"
+import { demoAccounts, type UserRole } from "@/data/demoAccounts"
 import { isDemoMode } from "@/services/dataSource"
 
 const BRAND = "#3a7d4e"
 const BRAND_DARK = "#0d1a10"
 
-export default function Login({ onSignIn }: { onSignIn: (email: string, password: string) => Promise<void> }) {
+export default function Login({
+  onSignIn,
+  audience = "administrator",
+  allowedRoles = ["administrator"],
+}: {
+  onSignIn: (email: string, password: string) => Promise<void>;
+  audience?: string;
+  allowedRoles?: UserRole[];
+}) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [show, setShow] = useState(false)
@@ -143,7 +151,7 @@ export default function Login({ onSignIn }: { onSignIn: (email: string, password
             Welcome back
           </h2>
           <p className="text-[14px] mt-1.5" style={{ color: "#8fa394" }}>
-            Sign in to your administrator account.
+            Sign in to your {audience} account.
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
@@ -275,7 +283,7 @@ export default function Login({ onSignIn }: { onSignIn: (email: string, password
           {isDemoMode && (
             <div className="mt-4 rounded-xl border p-3" style={{ borderColor: "#e2e8e4" }}>
               <p className="text-[12px] font-semibold" style={{ color: "#111c14" }}>Demo accounts</p>
-              {demoAccounts.map((account) => (
+              {demoAccounts.filter((account) => allowedRoles.includes(account.role)).map((account) => (
                 <button
                   key={account.id}
                   type="button"
@@ -286,7 +294,7 @@ export default function Login({ onSignIn }: { onSignIn: (email: string, password
                   className="mt-2 block text-left text-[11px]"
                   style={{ color: "#5a6b5e" }}
                 >
-                  {account.role === "administrator" ? "Administrator" : "Professor"}: {account.email} / {account.password}
+                  {account.role === "administrator" ? "Administrator" : account.role === "professor" ? "Professor" : "Staff"}: {account.email} / {account.password}
                 </button>
               ))}
             </div>
@@ -306,9 +314,10 @@ export default function Login({ onSignIn }: { onSignIn: (email: string, password
           {isDemoMode && <button
             type="button"
             onClick={() => {
-              const admin = demoAccounts[0]
-              setEmail(admin.email)
-              setPassword(admin.password)
+              const account = demoAccounts.find((candidate) => allowedRoles.includes(candidate.role))
+              if (!account) return
+              setEmail(account.email)
+              setPassword(account.password)
             }}
             className="w-full h-11 rounded-xl text-[14px] font-medium bg-white border flex items-center justify-center gap-2.5 transition-colors hover:bg-[#f7f9f8]"
             style={{ borderColor: "#e2e8e4", color: "#3d4a41" }}
@@ -325,7 +334,7 @@ export default function Login({ onSignIn }: { onSignIn: (email: string, password
               <rect x="3" y="4" width="18" height="16" rx="2" />
               <path d="M3 8l9 6 9-6" />
             </svg>
-            Fill administrator demo credentials
+            Fill {audience} demo credentials
           </button>}
 
           <p

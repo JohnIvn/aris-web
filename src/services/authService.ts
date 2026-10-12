@@ -55,5 +55,5 @@ export async function signIn(email: string, password: string): Promise<AuthSessi
 }
 
 function isUserRole(value: unknown): value is UserRole {
-	return value === "administrator" || value === "professor";
+	return value === "administrator" || value === "professor" || value === "staff";
 }

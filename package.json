@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "desktop:dev": "vite --mode desktop --host 0.0.0.0",
+    "desktop:build": "tsc && vite build --mode desktop",
+    "desktop": "tauri dev",
+    "desktop:package": "tauri build",
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run"
@@ -24,6 +28,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/container-queries": "^0.1.1",
+    "@tauri-apps/cli": "^2.12.2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",

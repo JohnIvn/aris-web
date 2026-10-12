@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { RouterProvider } from "react-router";
 import Login from "@/components/Login";
-import { AuthContext, router } from "@/app/routes";
+import { AuthContext } from "@/app/authContext";
+import { router } from "@/app/routes";
 import type { UserAccount } from "@/data/demoAccounts";
 import { signIn as authenticate } from "@/services/authService";
 
 function getStoredUser(): UserAccount | null {
   try {
     const user = JSON.parse(sessionStorage.getItem("aris-user") ?? "null") as UserAccount | null;
-    return user?.id && user?.email && (user.role === "administrator" || user.role === "professor") ? user : null;
+    return user?.id && user?.email && user.role === "administrator" ? user : null;
   } catch {
     sessionStorage.removeItem("aris-user");
     return null;
@@ -20,9 +21,12 @@ export default function App() {
 
   const signIn = async (email: string, password: string) => {
     const session = await authenticate(email, password);
+    if (session.user.role !== "administrator") {
+      throw new Error("Use the ARIS Desktop app to sign in with this account.");
+    }
     sessionStorage.setItem("aris-user", JSON.stringify(session.user));
     if (session.token) sessionStorage.setItem("aris-token", session.token);
-    await router.navigate(session.user.role === "professor" ? "/prof" : "/");
+    await router.navigate("/");
     setUser(session.user);
   };
   const signOut = () => {

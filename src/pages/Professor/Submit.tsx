@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { PageTitle } from "@/components/ui"
-import { useAuth } from "@/app/routes"
+import { useAuth } from "@/app/authContext"
 import { saveResource } from "@/services/dataSource"
 
 type ColumnDef = {

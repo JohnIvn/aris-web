@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BRAND } from "@/config/navigation";
-import { useAuth } from "@/app/routes";
+import { useAuth } from "@/app/authContext";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 import {
@@ -170,7 +170,7 @@ export default function UserSettings() {
           </p>
           <div className="mt-2">
             <Badge tone="green" dot>
-              {user.role === "administrator" ? "Administrator" : "Professor"}
+              {user.role === "administrator" ? "Administrator" : user.role === "staff" ? "Staff" : "Professor"}
             </Badge>
           </div>
           <div className="mt-4">

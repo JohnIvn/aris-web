@@ -16,6 +16,12 @@ describe("demo authentication", () => {
     expect(session.user.role).toBe("professor");
   });
 
+  it("authenticates the staff account", () => {
+    const session = authenticateDemo("staff@aris.edu.ph", "Staff12345");
+
+    expect(session.user.role).toBe("staff");
+  });
+
   it("rejects unknown accounts and incorrect passwords", () => {
     expect(() => authenticateDemo("unknown@aris.edu.ph", "Admin12345")).toThrow(
       "Email or password is incorrect.",
