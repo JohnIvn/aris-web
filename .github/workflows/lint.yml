@@ -81,7 +81,7 @@ jobs:
           fi
 
           case "$GITHUB_REPOSITORY" in
-            *aris-app*) COLOR=16711680;;
+            *aris-web*) COLOR=16711680;;
             *aris-vista*) COLOR=65280;;
             *) COLOR=255;;
           esac
@@ -161,7 +161,7 @@ jobs:
           FILES=$(cat detected.txt)
 
           case "$GITHUB_REPOSITORY" in
-            *aris-app*) COLOR=16711680;;
+            *aris-web*) COLOR=16711680;;
             *aris-vista*) COLOR=65280;;
             *) COLOR=255;;
           esac
