@@ -1,7 +1,5 @@
 import { useState } from "react"
 import arisLogo from "@/assets/brand/image.png"
-import { demoAccounts, type UserRole } from "@/data/demoAccounts"
-import { isDemoMode } from "@/services/dataSource"
 
 const BRAND = "#3a7d4e"
 const BRAND_DARK = "#0d1a10"
@@ -9,11 +7,9 @@ const BRAND_DARK = "#0d1a10"
 export default function Login({
   onSignIn,
   audience = "administrator",
-  allowedRoles = ["administrator"],
 }: {
   onSignIn: (email: string, password: string) => Promise<void>;
   audience?: string;
-  allowedRoles?: UserRole[];
 }) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -279,63 +275,6 @@ export default function Login({
             </button>
             {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
           </form>
-
-          {isDemoMode && (
-            <div className="mt-4 rounded-xl border p-3" style={{ borderColor: "#e2e8e4" }}>
-              <p className="text-[12px] font-semibold" style={{ color: "#111c14" }}>Demo accounts</p>
-              {demoAccounts.filter((account) => allowedRoles.includes(account.role)).map((account) => (
-                <button
-                  key={account.id}
-                  type="button"
-                  onClick={() => {
-                    setEmail(account.email)
-                    setPassword(account.password)
-                  }}
-                  className="mt-2 block text-left text-[11px]"
-                  style={{ color: "#5a6b5e" }}
-                >
-                  {account.role === "administrator" ? "Administrator" : account.role === "professor" ? "Professor" : "Staff"}: {account.email} / {account.password}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {isDemoMode && <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px" style={{ background: "#e2e8e4" }} />
-            <span
-              className="text-[11px] uppercase tracking-widest"
-              style={{ color: "#b6c3ba" }}
-            >
-              or
-            </span>
-            <div className="flex-1 h-px" style={{ background: "#e2e8e4" }} />
-          </div>}
-
-          {isDemoMode && <button
-            type="button"
-            onClick={() => {
-              const account = demoAccounts.find((candidate) => allowedRoles.includes(candidate.role))
-              if (!account) return
-              setEmail(account.email)
-              setPassword(account.password)
-            }}
-            className="w-full h-11 rounded-xl text-[14px] font-medium bg-white border flex items-center justify-center gap-2.5 transition-colors hover:bg-[#f7f9f8]"
-            style={{ borderColor: "#e2e8e4", color: "#3d4a41" }}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-[18px] h-[18px]"
-            >
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <path d="M3 8l9 6 9-6" />
-            </svg>
-            Fill {audience} demo credentials
-          </button>}
 
           <p
             className="text-[12.5px] text-center mt-8"

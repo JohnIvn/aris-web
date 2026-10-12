@@ -36,7 +36,7 @@ export default function DesktopApp() {
     setUser(null);
   };
 
-  if (!user) return <Login audience="desktop" allowedRoles={["professor", "staff"]} onSignIn={signIn} />;
+  if (!user) return <Login audience="desktop" onSignIn={signIn} />;
 
   return (
     <AuthContext.Provider value={{ signOut, user }}>

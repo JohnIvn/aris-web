@@ -4,16 +4,23 @@ import arisLogo from "@/assets/brand/image.png"
 import { BRAND, BRAND_DARK, mainNav, settingsNav, type NavItem } from "@/config/navigation"
 import type { UserAccount } from "@/data/demoAccounts"
 import DataModeNotice from "@/components/DataModeNotice"
+import { GhostButton, Modal, PrimaryButton } from "@/components/ui"
 
 export default function Root({ onSignOut, user }: { onSignOut: () => void; user: UserAccount }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
 
   const [currentTime, setCurrentTime] = useState(new Date())
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
+
+  const confirmSignOut = () => {
+    setShowSignOutConfirm(false)
+    onSignOut()
+  }
 
   const NavButton = ({ item }: { item: NavItem }) => {
     const active = location.pathname === item.path
@@ -120,7 +127,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
               </p>
             </div>
             <button
-              onClick={onSignOut}
+              onClick={() => setShowSignOutConfirm(true)}
               aria-label="Sign out"
               className="transition-opacity hover:opacity-60"
               style={{ color: "#b6c3ba" }}
@@ -157,7 +164,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
         <div className="lg:hidden mb-2 flex min-w-0 flex-shrink-0 items-center gap-2 border-b border-[#e2e8e4] px-1 pb-2">
           <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ background: BRAND }}>{user.name.slice(0, 2).toUpperCase()}</span>
           <span className="min-w-0 flex-1 truncate text-[12px] font-medium" style={{ color: "#3d4a41" }}>{user.name}</span>
-          <button onClick={onSignOut} className="flex-shrink-0 px-2 py-1 text-[12px] font-semibold" style={{ color: BRAND }}>Sign out</button>
+          <button onClick={() => setShowSignOutConfirm(true)} className="flex-shrink-0 px-2 py-1 text-[12px] font-semibold" style={{ color: BRAND }}>Sign out</button>
         </div>
         {location.pathname === "/" && (
           <header className="flex flex-col gap-2 flex-shrink-0 pb-2 pl-1 pr-1 sm:flex-row sm:items-center sm:justify-between">
@@ -250,6 +257,26 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
           <Outlet />
         </main>
       </div>
+      <Modal
+        isOpen={showSignOutConfirm}
+        onClose={() => setShowSignOutConfirm(false)}
+        title="Confirm Sign Out"
+        icon={
+          <div className="w-14 h-14 rounded-full flex items-center justify-center bg-[#fbecec] text-[#c0392b]">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-7 h-7">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+          </div>
+        }
+        actions={
+          <>
+            <GhostButton onClick={() => setShowSignOutConfirm(false)}>Cancel</GhostButton>
+            <PrimaryButton onClick={confirmSignOut}>Sign Out</PrimaryButton>
+          </>
+        }
+      >
+        Are you sure you want to sign out of ARIS?
+      </Modal>
     </div>
   )
 }

@@ -77,15 +77,6 @@ export const mainNav: NavItem[] = [
     ),
   },
   {
-    path: "/performance",
-    label: "Performance",
-    icon: icon(
-      <>
-        <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-      </>,
-    ),
-  },
-  {
     path: "/audit",
     label: "Audit Logs",
     icon: icon(
@@ -99,13 +90,6 @@ export const mainNav: NavItem[] = [
       <>
         <path d="M4 17l6-6-6-6M12 19h8" />
       </>,
-    ),
-  },
-  {
-    path: "/curriculum",
-    label: "Curriculum",
-    icon: icon(
-      <path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 4.5A2.5 2.5 0 016.5 2H20v20H6.5a2.5 2.5 0 01-2.5-2.5V4.5z" />,
     ),
   },
   {

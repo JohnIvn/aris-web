@@ -10,11 +10,9 @@ import Staff from "@/pages/Admin/Staff";
 import AddStaff from "@/pages/Admin/AddStaff";
 import Payroll from "@/pages/Admin/Payroll";
 import AIML from "@/pages/Admin/AIML";
-import Performance from "@/pages/Admin/Performance";
 import Audit from "@/pages/Admin/Audit";
 import SystemLogs from "@/pages/Admin/SystemLogs";
 import Database from "@/pages/Admin/Database";
-import Curriculum from "@/pages/Admin/Curriculum";
 import SoftwareMonitoring from "@/pages/Admin/SoftwareMonitoring";
 import SystemSettings from "@/pages/Admin/SystemSettings";
 import UserSettings from "@/pages/Admin/UserSettings";
@@ -63,11 +61,9 @@ export const router = createHashRouter([
       },
       { path: "payroll", Component: Payroll },
       { path: "aiml", Component: AIML },
-      { path: "performance", Component: Performance },
       { path: "audit", Component: Audit },
       { path: "system-logs", Component: SystemLogs },
       { path: "database", Component: Database },
-      { path: "curriculum", Component: Curriculum },
       { path: "software-monitoring", Component: SoftwareMonitoring },
       { path: "settings/system", Component: SystemSettings },
       { path: "settings/user", Component: UserSettings },
