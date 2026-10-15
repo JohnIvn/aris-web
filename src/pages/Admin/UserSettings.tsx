@@ -13,7 +13,7 @@ import {
   Modal,
 } from "@/components/ui";
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) {
   return (
     <div>
       <p
@@ -23,8 +23,10 @@ function Field({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <input
-        defaultValue={value}
-        className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]"
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full h-10 px-3.5 rounded-lg bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e] disabled:bg-[#f7f9f8] disabled:text-[#738176]"
         style={{ borderColor: "#e2e8e4", color: "#111c14" }}
       />
     </div>
@@ -62,12 +64,37 @@ const defaultPreferences = { desktop: true, weekly: true, mentions: false };
 
 export default function UserSettings() {
   const { user } = useAuth();
+  const defaultProfile = { firstName: user.name.split(" ")[0] ?? "", lastName: user.name.split(" ").slice(1).join(" "), email: user.email, phone: "+63 917 555 0142" };
+  const { data: storedProfile, setData: setProfile } = useResource("/users/me/profile", defaultProfile);
+  const profile = { ...defaultProfile, ...(Array.isArray(storedProfile) ? {} : storedProfile) };
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
   const { data: prefs, setData: setPrefs } = useResource("/users/me/preferences", defaultPreferences);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const set = (k: keyof typeof prefs) =>
     setPrefs((p) => ({ ...p, [k]: !p[k] }));
+
+  const updateProfile = (key: keyof typeof profile, value: string) => {
+    setProfile((current) => ({ ...current, [key]: value }));
+    setProfileMessage(null);
+  };
+
+  const saveProfile = async () => {
+    setProfileSaving(true);
+    setProfileMessage(null);
+    try {
+      await saveResource("/users/me/profile", profile, "PUT");
+      setEditingProfile(false);
+      setProfileMessage("Information saved.");
+    } catch (reason) {
+      setProfileMessage(reason instanceof Error ? reason.message : "Unable to save profile information.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const savePreferences = async () => {
     try {
@@ -157,16 +184,16 @@ export default function UserSettings() {
             className="w-20 h-20 rounded-full flex items-center justify-center text-white text-[26px] font-semibold"
             style={{ background: BRAND }}
           >
-            {user.name.slice(0, 2).toUpperCase()}
+            {`${profile.firstName} ${profile.lastName}`.trim().slice(0, 2).toUpperCase()}
           </div>
           <p
             className="text-[16px] font-semibold mt-3"
             style={{ color: "#111c14" }}
           >
-            {user.name}
+            {`${profile.firstName} ${profile.lastName}`.trim()}
           </p>
           <p className="text-[13px]" style={{ color: "#8fa394" }}>
-            {user.email}
+            {profile.email}
           </p>
           <div className="mt-2">
             <Badge tone="green" dot>
@@ -209,17 +236,18 @@ export default function UserSettings() {
         {/* Right column */}
         <div className="flex flex-col gap-4 min-h-0">
           <Card>
-            <p
-              className="text-[15px] font-semibold mb-4"
-              style={{ color: "#111c14" }}
-            >
-              Profile
-            </p>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <p className="text-[15px] font-semibold" style={{ color: "#111c14" }}>Profile</p>
+              <PrimaryButton onClick={() => editingProfile ? void saveProfile() : setEditingProfile(true)}>
+                {profileSaving ? "Saving..." : editingProfile ? "Save information" : "Edit information"}
+              </PrimaryButton>
+            </div>
+            {profileMessage && <p role="status" className="mb-3 text-[12px]" style={{ color: profileMessage === "Information saved." ? "#2f7043" : "#c0392b" }}>{profileMessage}</p>}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="First name" value={user.name.split(" ")[0] ?? ""} />
-              <Field label="Last name" value={user.name.split(" ").slice(1).join(" ")} />
-              <Field label="Email" value={user.email} />
-              <Field label="Phone" value="+63 917 555 0142" />
+              <Field label="First name" value={profile.firstName} disabled={!editingProfile} onChange={(value) => updateProfile("firstName", value)} />
+              <Field label="Last name" value={profile.lastName} disabled={!editingProfile} onChange={(value) => updateProfile("lastName", value)} />
+              <Field label="Email" value={profile.email} disabled={!editingProfile} onChange={(value) => updateProfile("email", value)} />
+              <Field label="Phone" value={profile.phone} disabled={!editingProfile} onChange={(value) => updateProfile("phone", value)} />
             </div>
           </Card>
 

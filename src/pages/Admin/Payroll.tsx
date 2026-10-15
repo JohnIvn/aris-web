@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { BRAND, BRAND_DARK } from "@/config/navigation";
-import { Card, PageTitle, GhostButton, Badge } from "@/components/ui";
+import { Card, PageTitle, GhostButton, Badge, SearchInput } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
 
 // Each submitted AR / DTR record carries a computed amount (units × rate).
@@ -24,8 +25,15 @@ const demoClasses = [
 ];
 
 export default function Payroll() {
+  const [search, setSearch] = useState("");
+  const [recordFilter, setRecordFilter] = useState("All records");
+  const [filterOpen, setFilterOpen] = useState(false);
   const { data } = useResource("/payroll", { records: demoRecords, classes: demoClasses });
   const { records, classes } = data;
+  const filteredRecords = records.filter((record) => {
+    const className = record.status === "Approved" ? "Accepted" : record.status;
+    return (recordFilter === "All records" || className === recordFilter) && `${record.name} ${record.type} ${record.period}`.toLowerCase().includes(search.toLowerCase());
+  });
   return (
     <div className="pb-2">
       <PageTitle
@@ -69,17 +77,29 @@ export default function Payroll() {
 
       {/* Per-record computation, full width */}
       <Card className="p-0 overflow-x-auto">
-        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "#eef1ef" }}>
+        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
           <div>
             <p className="text-[15px] font-semibold" style={{ color: "#111c14" }}>Computed Records</p>
             <p className="text-[12px] mt-0.5" style={{ color: "#8fa394" }}>September Cycle 1 · amount = units × rate · only accepted records count toward payable</p>
           </div>
-          <button className="text-[12.5px] font-medium" style={{ color: BRAND }}>View all 372</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchInput placeholder="Search records" value={search} onChange={setSearch} />
+            <div className="relative">
+              <GhostButton onClick={() => setFilterOpen((open) => !open)} aria-expanded={filterOpen}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-4 w-4"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z" /></svg>
+                {recordFilter === "All records" ? "Filter records" : recordFilter}
+              </GhostButton>
+              {filterOpen && <div className="absolute right-0 top-11 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
+                {["All records", "Accepted", "Pending", "Rejected"].map((filter) => <button key={filter} type="button" onClick={() => { setRecordFilter(filter); setFilterOpen(false); }} className="block w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">{filter}</button>)}
+              </div>}
+            </div>
+            <span className="text-[11px] text-[#8fa394]">{filteredRecords.length} shown</span>
+          </div>
         </div>
         <div className="grid min-w-[960px] grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
           <span>Employee</span><span>Type</span><span>Period</span><span>Units</span><span className="text-right">Rate</span><span className="text-right">Amount</span><span className="text-right">Class</span>
         </div>
-        {records.map((r, i) => (
+        {filteredRecords.map((r, i) => (
           <div key={i} className="grid min-w-[960px] grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
             <span className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{r.name}</span>
             <span className="text-[12px] font-semibold" style={{ color: r.type === "DTR" ? BRAND : "#3f8ecc" }}>{r.type}</span>

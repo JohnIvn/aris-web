@@ -4,12 +4,16 @@ import arisLogo from "@/assets/brand/image.png"
 import { BRAND, BRAND_DARK, mainNav, settingsNav, type NavItem } from "@/config/navigation"
 import type { UserAccount } from "@/data/demoAccounts"
 import DataModeNotice from "@/components/DataModeNotice"
-import { GhostButton, Modal, PrimaryButton } from "@/components/ui"
+import { GhostButton, Modal, PrimaryButton, SearchInput } from "@/components/ui"
 
 export default function Root({ onSignOut, user }: { onSignOut: () => void; user: UserAccount }) {
   const location = useLocation()
   const navigate = useNavigate()
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true)
 
   const [currentTime, setCurrentTime] = useState(new Date())
   useEffect(() => {
@@ -21,6 +25,10 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     setShowSignOutConfirm(false)
     onSignOut()
   }
+
+  const searchItems = [...mainNav, ...settingsNav].filter((item) =>
+    item.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+  )
 
   const NavButton = ({ item }: { item: NavItem }) => {
     const active = location.pathname === item.path
@@ -189,6 +197,10 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
+                type="button"
+                aria-label="Search pages"
+                title="Search pages"
+                onClick={() => setShowSearch(true)}
                 className="w-9 h-9 flex items-center justify-center rounded-xl bg-white border"
                 style={{ borderColor: "#e2e8e4", color: "#5a6b5e" }}
               >
@@ -204,6 +216,10 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                 </svg>
               </button>
               <button
+                type="button"
+                aria-label="Notifications"
+                title="Notifications"
+                onClick={() => { setShowNotifications(true); setHasUnreadNotifications(false); }}
                 className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-white border"
                 style={{ borderColor: "#e2e8e4", color: "#5a6b5e" }}
               >
@@ -218,10 +234,10 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                 >
                   <path d="M15 17H9m6 0a3 3 0 01-6 0m6 0h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5" />
                 </svg>
-                <span
+                {hasUnreadNotifications && <span
                   className="absolute top-2 right-2 w-2 h-2 rounded-full border-2 border-white"
                   style={{ background: BRAND }}
-                />
+                />}
               </button>
               <div
                 className="hidden sm:flex items-center gap-2 h-9 px-4 rounded-xl text-[13px] font-medium bg-white border"
@@ -257,6 +273,24 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
           <Outlet />
         </main>
       </div>
+      <Modal isOpen={showSearch} onClose={() => setShowSearch(false)} title="Search ARIS" size="lg" align="left" actions={<GhostButton onClick={() => setShowSearch(false)}>Close</GhostButton>}>
+        <SearchInput placeholder="Search pages" value={searchQuery} onChange={setSearchQuery} className="w-full" />
+        <div className="mt-3 space-y-1">
+          {searchItems.length ? searchItems.map((item) => <button key={item.path} type="button" onClick={() => { navigate(item.path); setShowSearch(false); setSearchQuery(""); }} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] text-[#3d4a41] hover:bg-[#f4f6f5]">{item.icon}<span>{item.label}</span></button>) : <p className="px-3 py-4 text-[12px] text-[#8fa394]">No matching pages.</p>}
+        </div>
+      </Modal>
+      <Modal isOpen={showNotifications} onClose={() => setShowNotifications(false)} title="Notifications" size="lg" align="left" actions={<PrimaryButton onClick={() => setShowNotifications(false)}>Done</PrimaryButton>}>
+        <div className="divide-y divide-[#eef1ef]">
+          {[
+            { title: "Payroll cycle is ready for review", detail: "48 records are still pending approval.", path: "/payroll", label: "Payroll" },
+            { title: "Database snapshot verified", detail: "The latest automated backup passed its integrity check.", path: "/database", label: "Database" },
+            { title: "Staff directory updated", detail: "Review current role assignments and account statuses.", path: "/staff", label: "Staff" },
+          ].map((notice) => <button key={notice.title} type="button" onClick={() => { navigate(notice.path); setShowNotifications(false); }} className="flex w-full items-start justify-between gap-4 py-3 text-left hover:bg-[#fafbfa]">
+            <span><span className="block text-[13px] font-semibold text-[#111c14]">{notice.title}</span><span className="mt-1 block text-[12px] text-[#8fa394]">{notice.detail}</span></span>
+            <span className="shrink-0 text-[11px] font-medium text-[#3a7d4e]">{notice.label}</span>
+          </button>)}
+        </div>
+      </Modal>
       <Modal
         isOpen={showSignOutConfirm}
         onClose={() => setShowSignOutConfirm(false)}

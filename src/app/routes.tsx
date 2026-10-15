@@ -16,6 +16,7 @@ import Database from "@/pages/Admin/Database";
 import SoftwareMonitoring from "@/pages/Admin/SoftwareMonitoring";
 import SystemSettings from "@/pages/Admin/SystemSettings";
 import UserSettings from "@/pages/Admin/UserSettings";
+import Support from "@/pages/Admin/Support";
 
 function RootWithAuth() {
   const { signOut, user } = useAuth();
@@ -67,6 +68,7 @@ export const router = createHashRouter([
       { path: "software-monitoring", Component: SoftwareMonitoring },
       { path: "settings/system", Component: SystemSettings },
       { path: "settings/user", Component: UserSettings },
+      { path: "support", Component: Support },
       { path: "*", Component: Dashboard },
     ],
   },

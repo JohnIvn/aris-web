@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Card, PageTitle, PrimaryButton, GhostButton, SearchInput, Badge, Avatar, Tabs, StatCard, StatGrid, initialsColor } from "@/components/ui";
+import { Card, PageTitle, PrimaryButton, GhostButton, SearchInput, Badge, Avatar, Tabs, StatCard, StatGrid, initialsColor, Modal } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 
@@ -18,13 +18,19 @@ const people = [
 export default function Professors() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("All");
+  const [search, setSearch] = useState("");
+  const [department, setDepartment] = useState("All departments");
+  const [selected, setSelected] = useState<(typeof people)[number] | null>(null);
+  const [pendingToggle, setPendingToggle] = useState<(typeof people)[number] | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { data: items, setData: setItems } = useResource("/professors", people);
   const tabs = ["All", "Active", "Deactivated"];
 
-  const toggle = async (email: string) => {
-    const updatedItems = items.map((person) => person.email === email ? { ...person, active: !person.active } : person);
+  const toggle = async (person: (typeof people)[number]) => {
+    const updatedItems = items.map((item) => item.email === person.email ? { ...item, active: !item.active } : item);
     setItems(updatedItems);
+    setPendingToggle(null);
     try {
       await saveResource("/professors", updatedItems, "PUT");
       setSaveError(null);
@@ -32,7 +38,13 @@ export default function Professors() {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update professor.");
     }
   };
-  const rows = items.filter((p) => tab === "All" || (tab === "Active" ? p.active : !p.active));
+  const departments = [...new Set(items.map((person) => person.dept))];
+  const rows = items.filter((person) => {
+    const matchesTab = tab === "All" || (tab === "Active" ? person.active : !person.active);
+    const matchesDepartment = department === "All departments" || person.dept === department;
+    const matchesSearch = `${person.name} ${person.email} ${person.dept} ${person.rank}`.toLowerCase().includes(search.toLowerCase());
+    return matchesTab && matchesDepartment && matchesSearch;
+  });
 
   const activeCount = items.filter((p) => p.active).length;
   const stats = [["Total Faculty", String(items.length)], ["Active", String(activeCount)], ["Deactivated", String(items.length - activeCount)], ["Colleges", "6"]];
@@ -52,40 +64,55 @@ export default function Professors() {
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
           <Tabs tabs={tabs} value={tab} onChange={setTab} />
           <div className="flex gap-2">
-            <SearchInput placeholder="Search faculty" />
-            <GhostButton><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z" /></svg>Filter</GhostButton>
+            <SearchInput placeholder="Search faculty" value={search} onChange={setSearch} />
+            <label className="sr-only" htmlFor="professor-department-filter">Filter by department</label>
+            <select id="professor-department-filter" value={department} onChange={(event) => setDepartment(event.target.value)} className="h-9 max-w-44 rounded-xl border bg-white px-3 text-[12px] text-[#3d4a41]" style={{ borderColor: "#e2e8e4" }}>
+              <option>All departments</option>
+              {departments.map((name) => <option key={name}>{name}</option>)}
+            </select>
           </div>
         </div>
         <div className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
           <span>Name</span><span>Department</span><span>Rank</span><span>Courses</span><span>Status</span><span className="text-right">Action</span>
         </div>
         {rows.map((p, i) => (
-          <div key={p.email} className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
-            <div className="flex items-center gap-3 min-w-0">
+          <div key={p.email} onClick={() => setSelected(p)} className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
+            <button type="button" aria-label={`View details for ${p.name}`} onClick={(event) => { event.stopPropagation(); setSelected(p); }} className="flex min-w-0 items-center gap-3 text-left">
               <Avatar initials={p.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} color={initialsColor(i)} />
               <div className="min-w-0">
                 <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{p.name}</p>
                 <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>{p.email}</p>
               </div>
-            </div>
+            </button>
             <span className="text-[13px]" style={{ color: "#3d4a41" }}>{p.dept}</span>
             <span className="text-[13px]" style={{ color: "#3d4a41" }}>{p.rank}</span>
             <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>{p.courses}</span>
             <span><Badge tone={p.active ? "green" : "gray"} dot>{p.active ? "Active" : "Deactivated"}</Badge></span>
-            <span className="flex justify-end">
-              <button
-                onClick={() => toggle(p.email)}
-                className="h-8 px-3 rounded-lg text-[12.5px] font-semibold border transition-colors"
-                style={p.active
-                  ? { color: "#d0674a", borderColor: "#f0d9d2", background: "#fdf3f0" }
-                  : { color: "#3a7d4e", borderColor: "#cfe3d6", background: "#f0f7f2" }}
-              >
-                {p.active ? "Deactivate" : "Activate"}
+            <span className="relative flex justify-end">
+              <button type="button" aria-label={`Actions for ${p.name}`} aria-expanded={openMenu === p.email} onClick={(event) => { event.stopPropagation(); setOpenMenu(openMenu === p.email ? null : p.email); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
               </button>
+              {openMenu === p.email && <div className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(p); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setPendingToggle(p); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">{p.active ? "Deactivate" : "Reactivate"}</button>
+              </div>}
             </span>
           </div>
         ))}
       </Card>
+      <Modal isOpen={Boolean(selected)} onClose={() => setSelected(null)} title="Professor details" size="lg" align="left" actions={<GhostButton onClick={() => setSelected(null)}>Close</GhostButton>}>
+        {selected && <div className="grid gap-4 sm:grid-cols-2">
+          <div><p className="text-xs text-[#8fa394]">Name</p><p className="font-semibold text-[#111c14]">{selected.name}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Email</p><p className="font-medium text-[#111c14]">{selected.email}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Department</p><p className="font-medium text-[#111c14]">{selected.dept}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Rank</p><p className="font-medium text-[#111c14]">{selected.rank}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Courses</p><p className="font-medium text-[#111c14]">{selected.courses}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Status</p><p className="font-medium text-[#111c14]">{selected.active ? "Active" : "Deactivated"}</p></div>
+        </div>}
+      </Modal>
+      <Modal isOpen={Boolean(pendingToggle)} onClose={() => setPendingToggle(null)} title={pendingToggle?.active ? "Deactivate professor?" : "Reactivate professor?"} actions={<><GhostButton onClick={() => setPendingToggle(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingToggle && void toggle(pendingToggle)}>{pendingToggle?.active ? "Deactivate" : "Reactivate"}</PrimaryButton></>}>
+        {pendingToggle && <>Are you sure you want to {pendingToggle.active ? "deactivate" : "reactivate"} {pendingToggle.name}?</>}
+      </Modal>
     </div>
   );
 }

@@ -1,14 +1,22 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { Building2 } from "lucide-react"
 import arisLogo from "@/assets/brand/image.png"
+import { GhostButton, Modal, PrimaryButton } from "@/components/ui"
 
 const BRAND = "#3a7d4e"
 const BRAND_DARK = "#0d1a10"
+const SUPPORT_EMAIL = "admin@aris.edu.ph"
+
+const supportMailto = (subject: string, body: string) =>
+  `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 
 export default function Login({
   onSignIn,
+  onCampusSso,
   audience = "administrator",
 }: {
   onSignIn: (email: string, password: string) => Promise<void>;
+  onCampusSso?: () => Promise<void> | void;
   audience?: string;
 }) {
   const [email, setEmail] = useState("")
@@ -17,6 +25,37 @@ export default function Login({
   const [remember, setRemember] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [dialog, setDialog] = useState<"forgot" | "contact" | null>(null)
+  const resetFormRef = useRef<HTMLFormElement>(null)
+
+  const handlePasswordReset = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const body = `Hello IT Administration,\n\nPlease help me reset the password for my ARIS ${audience} account.\n\nAccount email: ${email.trim()}`
+    window.location.href = supportMailto(`ARIS ${audience} password reset`, body)
+    setDialog(null)
+  }
+
+  const contactSupport = () => {
+    const body = `Hello IT Administration,\n\nI need help with my ARIS ${audience} account.\n\nAccount email: ${email.trim() || "Not provided"}`
+    window.location.href = supportMailto("ARIS support request", body)
+    setDialog(null)
+  }
+
+  const startCampusSso = async () => {
+    setError(null)
+    if (!onCampusSso) {
+      setError("Campus SSO is not configured yet. Contact IT administration for access.")
+      return
+    }
+    setSubmitting(true)
+    try {
+      await onCampusSso()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to start campus SSO.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -179,6 +218,7 @@ export default function Login({
                 </span>
                 <button
                   type="button"
+                  onClick={() => setDialog("forgot")}
                   className="text-[12.5px] font-medium transition-opacity hover:opacity-70"
                   style={{ color: BRAND }}
                 >
@@ -276,12 +316,24 @@ export default function Login({
             {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
           </form>
 
+          <div className="my-5 flex items-center gap-3 text-[10px] text-[#a0aaa2]">
+            <span className="h-px flex-1 bg-[#e5eae5]" />
+            <span>OR</span>
+            <span className="h-px flex-1 bg-[#e5eae5]" />
+          </div>
+          <button type="button" disabled={submitting} onClick={startCampusSso} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border bg-white text-[13px] font-medium text-[#3d4a41] transition-colors hover:bg-[#f7f9f8] disabled:opacity-60" style={{ borderColor: "#e2e8e4" }}>
+            <Building2 className="h-4 w-4" aria-hidden="true" />
+            Continue with campus SSO
+          </button>
+
           <p
             className="text-[12.5px] text-center mt-8"
             style={{ color: "#8fa394" }}
           >
             Need access?{" "}
             <button
+              type="button"
+              onClick={() => setDialog("contact")}
               className="font-medium transition-opacity hover:opacity-70"
               style={{ color: BRAND }}
             >
@@ -290,6 +342,72 @@ export default function Login({
           </p>
         </div>
       </div>
+      <Modal
+        isOpen={dialog !== null}
+        onClose={() => setDialog(null)}
+        title={dialog === "forgot" ? "Reset your password" : "Contact IT administration"}
+        align="left"
+        icon={
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#eaf4ee] text-[#2f7043]">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="m3 7 9 6 9-6" />
+            </svg>
+          </div>
+        }
+        actions={
+          dialog === "forgot" ? (
+            <>
+              <GhostButton onClick={() => setDialog(null)}>Cancel</GhostButton>
+              <PrimaryButton onClick={() => resetFormRef.current?.requestSubmit()}>
+                Email IT
+              </PrimaryButton>
+            </>
+          ) : (
+            <>
+              <GhostButton onClick={() => setDialog(null)}>Close</GhostButton>
+              <PrimaryButton onClick={contactSupport}>Email IT</PrimaryButton>
+            </>
+          )
+        }
+      >
+        {dialog === "forgot" ? (
+          <>
+            <p>
+              Enter your account email. ARIS will open a prefilled request to IT;
+              it does not send automatic reset links.
+            </p>
+            <form ref={resetFormRef} onSubmit={handlePasswordReset} className="mt-4">
+              <label className="block text-[12.5px] font-medium" style={{ color: "#3d4a41" }}>
+                Account email
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                  className="mt-1.5 h-11 w-full rounded-xl border bg-white px-3.5 text-[14px] outline-none focus:border-[#3a7d4e]"
+                  style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+                />
+              </label>
+            </form>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <p>
+              For account access, password help, or technical support, contact
+              IT administration.
+            </p>
+            <a
+              href={supportMailto("ARIS support request", `Hello IT Administration,\n\nI need help with my ARIS ${audience} account.`)}
+              className="font-semibold underline underline-offset-2"
+              style={{ color: BRAND }}
+            >
+              {SUPPORT_EMAIL}
+            </a>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

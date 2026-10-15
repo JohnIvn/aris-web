@@ -33,4 +33,31 @@ describe("demo data source", () => {
       { id: "created", label: "Created record" },
     ]);
   });
+
+  it("persists first-time object updates while retaining default fields", async () => {
+    if (!isDemoMode) return;
+
+    await saveResource("/test-settings", { siteName: "ARIS" }, "PUT");
+
+    await expect(loadResource("/test-settings", { siteName: "Default", requireMfa: true })).resolves.toEqual({
+      siteName: "ARIS",
+      requireMfa: true,
+    });
+  });
+
+  it("replaces a stale empty-array value with an object update", async () => {
+    if (!isDemoMode) return;
+
+    values.set("aris:demo:/test-settings", "[]");
+    await expect(loadResource("/test-settings", { siteName: "Default", requireMfa: true })).resolves.toEqual({
+      siteName: "Default",
+      requireMfa: true,
+    });
+    await saveResource("/test-settings", { siteName: "ARIS" }, "PUT");
+
+    await expect(loadResource("/test-settings", { siteName: "Default", requireMfa: true })).resolves.toEqual({
+      siteName: "ARIS",
+      requireMfa: true,
+    });
+  });
 });

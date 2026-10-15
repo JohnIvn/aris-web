@@ -215,6 +215,7 @@ export default function Database() {
   const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
   const [crossRegionEnabled, setCrossRegionEnabled] = useState(true);
   const [pointInTimeEnabled, setPointInTimeEnabled] = useState(true);
+  const [restoreTarget, setRestoreTarget] = useState<(typeof initialBackups)[number] | null>(null);
 
   // Modal states
   const [showDiagConfirm, setShowDiagConfirm] = useState(false);
@@ -288,6 +289,18 @@ export default function Database() {
     return matchesSearch && matchesType;
   });
 
+  const confirmRestore = () => {
+    if (!restoreTarget) return;
+    const backupName = restoreTarget.name;
+    setRestoreTarget(null);
+    setIsProcessing(true);
+    setBannerMessage(`Restoring database from ${backupName}...`);
+    setTimeout(() => {
+      setIsProcessing(false);
+      setBannerMessage(`Restoration completed from ${backupName}.`);
+    }, 1200);
+  };
+
   return (
     <div className="pb-6">
       <PageTitle
@@ -324,6 +337,15 @@ export default function Database() {
           </div>
         }
       />
+
+      <Modal
+        isOpen={Boolean(restoreTarget)}
+        onClose={() => setRestoreTarget(null)}
+        title="Confirm database restoration"
+        actions={<><GhostButton onClick={() => setRestoreTarget(null)}>Cancel</GhostButton><PrimaryButton onClick={confirmRestore}>Restore backup</PrimaryButton></>}
+      >
+        {restoreTarget && <>Restore the database from <strong>{restoreTarget.name}</strong>? This will replace the current database state.</>}
+      </Modal>
 
       <Modal
         isOpen={showDiagConfirm}
@@ -479,27 +501,12 @@ export default function Database() {
         >
           <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
           {activeTab === "Backups & Snapshots" && (
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1 p-0.5 rounded-xl bg-[#f0f2f0]">
-                {["All", "Automated", "Manual"].map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilterType(f)}
-                    className="text-[12px] font-medium px-2.5 py-1 rounded-lg transition-colors"
-                    style={{
-                      background: filterType === f ? "#fff" : "transparent",
-                      color: filterType === f ? "#111c14" : "#8fa394",
-                      boxShadow:
-                        filterType === f
-                          ? "0 1px 2px rgba(0,0,0,0.06)"
-                          : "none",
-                    }}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
               <SearchInput placeholder="Search snapshots" value={searchQuery} onChange={setSearchQuery} />
+              <label className="sr-only" htmlFor="backup-type-filter">Filter backup type</label>
+              <select id="backup-type-filter" value={filterType} onChange={(event) => setFilterType(event.target.value)} className="h-9 rounded-xl border bg-white px-3 text-[12px] text-[#3d4a41]" style={{ borderColor: "#e2e8e4" }}>
+                {["All", "Automated", "Manual"].map((filter) => <option key={filter} value={filter}>{filter}</option>)}
+              </select>
             </div>
           )}
         </div>
@@ -590,16 +597,7 @@ export default function Database() {
                   <div className="flex items-center justify-end gap-1.5">
                     <button
                       onClick={() => {
-                        setBannerMessage(
-                          `Initiating restoration test preview for ${b.name}...`,
-                        );
-                        setTimeout(
-                          () =>
-                            setBannerMessage(
-                              `Restoration check verified for ${b.name}`,
-                            ),
-                          1000,
-                        );
+                        setRestoreTarget(b);
                       }}
                       className="px-2.5 py-1 rounded-lg text-[12px] font-medium transition-colors hover:bg-[#eaf4ee]"
                       style={{ color: "#2f7043" }}

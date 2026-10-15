@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useResource } from "@/hooks/useResource";
+import { saveResource } from "@/services/dataSource";
 import {
   Card,
   PageTitle,
@@ -12,6 +13,7 @@ import {
   Tabs,
   StatCard,
   StatGrid,
+  Modal,
 } from "@/components/ui";
 
 // Staff IDs are prefixed by role: CHK (Checker), SEC (Secretary), HR (HR), ACC (Accounting)
@@ -33,9 +35,33 @@ const roleColor: Record<string, string> = { Checker: "#3a7d4e", Secretary: "#3f8
 export default function Staff() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("All");
-  const { data: staff } = useResource("/staff", demoStaff);
+  const [search, setSearch] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("All statuses");
+  const [selected, setSelected] = useState<(typeof demoStaff)[number] | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<(typeof demoStaff)[number] | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { data: staff, setData: setStaff } = useResource("/staff", demoStaff);
   const tabs = ["All", "Checker", "Secretary", "HR", "Accounting"];
-  const rows = staff.filter((s) => tab === "All" || s.role === tab);
+  const rows = staff.filter((person) => {
+    const matchesRole = tab === "All" || person.role === tab;
+    const matchesStatus = statusFilter === "All statuses" || person.status === statusFilter;
+    const matchesSearch = `${person.name} ${person.email} ${person.id} ${person.role} ${person.dept}`.toLowerCase().includes(search.toLowerCase());
+    return matchesRole && matchesStatus && matchesSearch;
+  });
+
+  const updateStatus = async (person: (typeof demoStaff)[number]) => {
+    const updated = staff.map((item) => item.id === person.id ? { ...item, status: item.status === "Active" ? "On Leave" as const : "Active" as const } : item);
+    setStaff(updated);
+    setPendingStatus(null);
+    try {
+      await saveResource("/staff", updated, "PUT");
+      setSaveError(null);
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Unable to update staff status.");
+    }
+  };
 
   const counts = {
     Checker: staff.filter((s) => s.role === "Checker").length,
@@ -47,6 +73,7 @@ export default function Staff() {
   return (
     <div className="pb-2">
       <PageTitle title="Staff Management" subtitle="Support staff by role — checkers, secretaries, HR, and accounting." action={<PrimaryButton onClick={() => navigate("/staff/new")}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>Add Staff</PrimaryButton>} />
+      {saveError && <p role="alert" className="mb-3 text-[12px] text-red-700">{saveError}</p>}
 
       <StatGrid columns={5} className="mb-4">
         <StatCard label="Total Staff" value={staff.length} />
@@ -59,31 +86,61 @@ export default function Staff() {
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
           <Tabs tabs={tabs} value={tab} onChange={setTab} />
           <div className="flex gap-2">
-            <SearchInput placeholder="Search staff or ID" />
-            <GhostButton><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z" /></svg>Filter</GhostButton>
+            <SearchInput placeholder="Search staff or ID" value={search} onChange={setSearch} />
+            <div className="relative">
+              <GhostButton onClick={() => setFilterOpen((open) => !open)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z" /></svg>Filter</GhostButton>
+              {filterOpen && <div className="absolute right-0 top-11 z-10 min-w-44 rounded-lg border bg-white p-3 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
+                <label className="block text-[11px] font-medium text-[#5a6b5e]" htmlFor="staff-status-filter">Status</label>
+                <select id="staff-status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="mt-1 h-9 w-full rounded-md border bg-white px-2 text-[12px]" style={{ borderColor: "#e2e8e4" }}>
+                  {["All statuses", "Active", "On Leave"].map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </div>}
+            </div>
           </div>
         </div>
         <div className="grid min-w-[760px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr] gap-4 px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
-          <span>Name</span><span>Staff ID</span><span>Role</span><span>Department</span><span className="text-right">Status</span>
+          <span>Name</span><span>Staff ID</span><span>Role</span><span>Department</span><span>Status</span><span className="text-right">Action</span>
         </div>
         {rows.map((s) => (
-          <div key={s.id} className="grid min-w-[760px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
-            <div className="flex items-center gap-3 min-w-0">
+          <div key={s.id} onClick={() => setSelected(s)} className="grid min-w-[900px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr_0.7fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
+            <button type="button" aria-label={`View details for ${s.name}`} onClick={(event) => { event.stopPropagation(); setSelected(s); }} className="flex min-w-0 items-center gap-3 text-left">
               <Avatar initials={s.name.split(" ").map((w) => w[0]).join("").slice(0, 2)} color={roleColor[s.role]} />
               <div className="min-w-0">
                 <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{s.name}</p>
                 <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>{s.email}</p>
               </div>
-            </div>
+            </button>
             <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: "#3d4a41" }}>{s.id}</span>
             <span className="flex items-center gap-2 text-[13px]" style={{ color: "#3d4a41" }}>
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: roleColor[s.role] }} />{s.role}
             </span>
             <span className="text-[13px]" style={{ color: "#3d4a41" }}>{s.dept}</span>
-            <span className="flex justify-end"><Badge tone={staffStatusTone[s.status]} dot>{s.status}</Badge></span>
+            <span><Badge tone={staffStatusTone[s.status]} dot>{s.status}</Badge></span>
+            <span className="relative flex justify-end">
+              <button type="button" aria-label={`Actions for ${s.name}`} aria-expanded={openMenu === s.id} onClick={(event) => { event.stopPropagation(); setOpenMenu(openMenu === s.id ? null : s.id); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+              </button>
+              {openMenu === s.id && <div className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setPendingStatus(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">{s.status === "Active" ? "Set on leave" : "Reactivate"}</button>
+              </div>}
+            </span>
           </div>
         ))}
       </Card>
+      <Modal isOpen={Boolean(selected)} onClose={() => setSelected(null)} title="Staff details" size="lg" align="left" actions={<GhostButton onClick={() => setSelected(null)}>Close</GhostButton>}>
+        {selected && <div className="grid gap-4 sm:grid-cols-2">
+          <div><p className="text-xs text-[#8fa394]">Name</p><p className="font-semibold text-[#111c14]">{selected.name}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Email</p><p className="font-medium text-[#111c14]">{selected.email}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Staff ID</p><p className="font-medium text-[#111c14]">{selected.id}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Role</p><p className="font-medium text-[#111c14]">{selected.role}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Department</p><p className="font-medium text-[#111c14]">{selected.dept}</p></div>
+          <div><p className="text-xs text-[#8fa394]">Status</p><p className="font-medium text-[#111c14]">{selected.status}</p></div>
+        </div>}
+      </Modal>
+      <Modal isOpen={Boolean(pendingStatus)} onClose={() => setPendingStatus(null)} title={pendingStatus?.status === "Active" ? "Set staff member on leave?" : "Reactivate staff member?"} actions={<><GhostButton onClick={() => setPendingStatus(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingStatus && void updateStatus(pendingStatus)}>{pendingStatus?.status === "Active" ? "Set on leave" : "Reactivate"}</PrimaryButton></>}>
+        {pendingStatus && <>Confirm status change for {pendingStatus.name}?</>}
+      </Modal>
     </div>
   );
 }
