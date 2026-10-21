@@ -15,7 +15,7 @@ Copy `.env.example` to `.env` to configure the data source. The default `VITE_DA
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Administrator | `admin@aris.edu.ph` | `Admin12345` |
+| Administrator | `admin@ucc.edu.ph` | `Admin12345` |
 
 ## Backend Contract
 

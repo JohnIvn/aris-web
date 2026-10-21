@@ -48,12 +48,15 @@ export async function signIn(email: string, password: string): Promise<AuthSessi
 	const payload = "data" in response.data
 		? (response.data as SignInEnvelope).data
 		: response.data as SignInPayload;
-	if (!payload?.user?.id || !payload.user.email || !isUserRole(payload.user.role)) {
+	if (!payload?.user?.id || !payload.user.email) {
 		throw new Error("The server returned an invalid user session.");
+	}
+	if (!isUserRole(payload.user.role)) {
+		throw new Error("Only administrator accounts can sign in to ARIS Web.");
 	}
 	return payload;
 }
 
 function isUserRole(value: unknown): value is UserRole {
-	return value === "administrator" || value === "professor" || value === "staff";
+	return value === "administrator";
 }

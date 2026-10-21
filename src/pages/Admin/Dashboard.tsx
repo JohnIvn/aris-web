@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { LineChart, Line, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
 import { BRAND } from "@/config/navigation";
 import { Card, CardHeader } from "@/components/ui";
@@ -31,25 +32,27 @@ function Delta({ v, up }: { v: string; up: boolean }) {
     <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: up ? "#eaf4ee" : "#fbecec", color: up ? "#2f7043" : "#c0392b" }}>{v}</span>
   );
 }
-function CardHead({ title, action }: { title: string; action: string }) {
+function CardHead({ title, action, onActionClick }: { title: string; action?: string; onActionClick?: () => void }) {
   return (
     <CardHeader
       title={title}
+      titleColor={"#6B7A6F"}
       className="mb-3 items-center"
-      action={<button className="text-[12px] font-medium px-2.5 py-1 rounded-lg border transition-colors hover:bg-[#f4f6f5]" style={{ color: "#3d4a41", borderColor: "#e2e8e4" }}>{action}</button>}
+      action={action ? <button type="button" onClick={onActionClick} className="text-[12px] font-medium px-2.5 py-1 rounded-lg border transition-colors hover:bg-[#f4f6f5]" style={{ color: "#3d4a41", borderColor: "#e2e8e4" }}>{action}</button> : undefined}
     />
   );
 }
 
 export default function Dashboard() {
   const [range, setRange] = useState("1M");
+  const navigate = useNavigate();
   const { data } = useResource("/dashboard", demoDashboard);
   const { enrollTrend: enrollmentData, payrollArea: payrollData, radarData: activityData, programs: programData, departments: departmentData } = data;
   return (
-    <div className="grid auto-rows-[minmax(16rem,auto)] grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+    <div className="grid auto-rows-[minmax(16rem,auto)] grid-cols-1 gap-3 sm:grid-cols-3 2xl:grid-cols-3">
       {/* Enrollment */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Total Enrollment" action="Report" />
+        <CardHead title="Department Tracker" />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>4,821</p>
           <Delta v="+3.2%" up />
@@ -80,7 +83,7 @@ export default function Dashboard() {
 
       {/* Community */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Campus Community" action="Details" />
+        <CardHead title="Report Ratio" action="Details" onActionClick={() => navigate("/audit")} />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>5,281</p>
           <Delta v="+0.9%" up />
@@ -107,7 +110,7 @@ export default function Dashboard() {
 
       {/* Payroll */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Payroll This Cycle" action="Details" />
+        <CardHead title="Payroll This Cycle" action="Details"  onActionClick={() => navigate("/payroll")} />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>₱2.4M</p>
           <Delta v="+2.1%" up />
@@ -141,7 +144,7 @@ export default function Dashboard() {
 
       {/* Department load */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Department Load" action="Details" />
+        <CardHead title="Department Load" />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>78%</p>
           <Delta v="-0.4%" up={false} />
@@ -172,7 +175,7 @@ export default function Dashboard() {
 
       {/* Attendance */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Attendance Rate" action="Details" />
+        <CardHead title="Submission Rate" action="Details"  onActionClick={() => navigate("/audit")} />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>94%</p>
           <Delta v="+2.0%" up />
@@ -195,7 +198,7 @@ export default function Dashboard() {
 
       {/* Weekly activity */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Weekly Activity" action="Details" />
+        <CardHead title="Weekly Activity" action="Details"  onActionClick={() => navigate("/audit")} />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>16,008</p>
           <Delta v="+1.1%" up />

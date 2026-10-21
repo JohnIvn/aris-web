@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import ProfileDetailsModal from "@/components/ProfileDetailsModal";
 import { Card, PageTitle, PrimaryButton, GhostButton, SearchInput, Badge, Avatar, Tabs, StatCard, StatGrid, initialsColor, Modal } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
@@ -100,16 +101,19 @@ export default function Professors() {
           </div>
         ))}
       </Card>
-      <Modal isOpen={Boolean(selected)} onClose={() => setSelected(null)} title="Professor details" size="lg" align="left" actions={<GhostButton onClick={() => setSelected(null)}>Close</GhostButton>}>
-        {selected && <div className="grid gap-4 sm:grid-cols-2">
-          <div><p className="text-xs text-[#8fa394]">Name</p><p className="font-semibold text-[#111c14]">{selected.name}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Email</p><p className="font-medium text-[#111c14]">{selected.email}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Department</p><p className="font-medium text-[#111c14]">{selected.dept}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Rank</p><p className="font-medium text-[#111c14]">{selected.rank}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Courses</p><p className="font-medium text-[#111c14]">{selected.courses}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Status</p><p className="font-medium text-[#111c14]">{selected.active ? "Active" : "Deactivated"}</p></div>
-        </div>}
-      </Modal>
+      <ProfileDetailsModal
+        isOpen={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        heading="Professor ID"
+        name={selected?.name ?? ""}
+        role="Professor"
+        fields={[
+          { label: "Email", value: selected?.email ?? "" },
+          { label: "Department", value: selected?.dept ?? "" },
+          { label: "Phone", value: "Not provided" },
+          { label: "Address", value: "Not provided", wide: true },
+        ]}
+      />
       <Modal isOpen={Boolean(pendingToggle)} onClose={() => setPendingToggle(null)} title={pendingToggle?.active ? "Deactivate professor?" : "Reactivate professor?"} actions={<><GhostButton onClick={() => setPendingToggle(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingToggle && void toggle(pendingToggle)}>{pendingToggle?.active ? "Deactivate" : "Reactivate"}</PrimaryButton></>}>
         {pendingToggle && <>Are you sure you want to {pendingToggle.active ? "deactivate" : "reactivate"} {pendingToggle.name}?</>}
       </Modal>

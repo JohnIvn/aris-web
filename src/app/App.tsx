@@ -22,7 +22,7 @@ export default function App() {
   const signIn = async (email: string, password: string) => {
     const session = await authenticate(email, password);
     if (session.user.role !== "administrator") {
-      throw new Error("Use the ARIS Desktop app to sign in with this account.");
+      throw new Error("Only administrator accounts can sign in to ARIS Web.");
     }
     sessionStorage.setItem("aris-user", JSON.stringify(session.user));
     if (session.token) sessionStorage.setItem("aris-token", session.token);

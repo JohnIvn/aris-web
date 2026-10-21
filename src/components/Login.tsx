@@ -1,11 +1,11 @@
 import { useRef, useState } from "react"
-import { Building2 } from "lucide-react"
+import { Mail } from "lucide-react"
 import arisLogo from "@/assets/brand/image.png"
 import { GhostButton, Modal, PrimaryButton } from "@/components/ui"
 
 const BRAND = "#3a7d4e"
 const BRAND_DARK = "#0d1a10"
-const SUPPORT_EMAIL = "admin@aris.edu.ph"
+const SUPPORT_EMAIL = "admin@ucc.edu.ph"
 
 const supportMailto = (subject: string, body: string) =>
   `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
@@ -202,7 +202,7 @@ export default function Login({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@aris.edu.ph"
+                placeholder="admin@ucc.edu.ph"
                 className="mt-1.5 w-full h-11 px-3.5 rounded-xl bg-white border text-[14px] outline-none transition-colors focus:border-[#3a7d4e]"
                 style={{ borderColor: "#e2e8e4", color: "#111c14" }}
               />
@@ -321,8 +321,8 @@ export default function Login({
             <span>OR</span>
             <span className="h-px flex-1 bg-[#e5eae5]" />
           </div>
-          <button type="button" disabled={submitting} onClick={startCampusSso} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border bg-white text-[13px] font-medium text-[#3d4a41] transition-colors hover:bg-[#f7f9f8] disabled:opacity-60" style={{ borderColor: "#e2e8e4" }}>
-            <Building2 className="h-4 w-4" aria-hidden="true" />
+          <button type="button" disabled={submitting} onClick={startCampusSso} className="flex h-11 w-full items-center justify-center gap-3 leading-[0px] rounded-xl border bg-white text-[13px] font-medium text-[#3d4a41] transition-colors hover:bg-[#f7f9f8] disabled:opacity-60" style={{ borderColor: "#e2e8e4" }}>
+            <Mail className="h-4 w-4" aria-hidden="true" />
             Continue with campus SSO
           </button>
 

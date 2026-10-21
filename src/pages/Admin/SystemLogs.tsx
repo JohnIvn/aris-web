@@ -57,7 +57,7 @@ const demoSystemLogs = [
     actor: "Unknown",
     init: "??",
     event: "Failed sign-in",
-    detail: "3 attempts · admin@aris.edu.ph",
+    detail: "3 attempts · admin@ucc.edu.ph",
     ip: "203.117.44.9",
     time: "11:02 AM",
     kind: "Alert" as const,

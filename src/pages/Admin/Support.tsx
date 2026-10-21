@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Card, PageTitle, PrimaryButton } from "@/components/ui";
 
-const supportEmail = "admin@aris.edu.ph";
+const supportEmail = "admin@ucc.edu.ph";
 
 export default function Support() {
   const [subject, setSubject] = useState("");

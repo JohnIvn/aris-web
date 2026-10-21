@@ -137,7 +137,7 @@ function Login({ onLogin, onCampusSso, error }: AdminLoginProps) {
             </button>
 
             <p className="mt-5 text-center text-[11px] text-[#9aa49c]">
-              Need access? <a href="mailto:admin@aris.edu.ph" className="font-medium text-[#397c4d] hover:underline">Contact IT administration</a>
+              Need access? <a href="mailto:admin@ucc.edu.ph" className="font-medium text-[#397c4d] hover:underline">Contact IT administration</a>
             </p>
           </div>
         </section>

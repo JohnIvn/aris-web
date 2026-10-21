@@ -71,11 +71,13 @@ export function StatGrid({
 
 export function CardHeader({
   title,
+  titleColor = "#6B7A6F",
   description,
   action,
   className = "",
 }: {
   title: string;
+  titleColor: string;
   description?: string;
   action?: ReactNode;
   className?: string;
@@ -83,7 +85,7 @@ export function CardHeader({
   return (
     <div className={`flex items-start justify-between gap-3 ${className}`}>
       <div className="min-w-0">
-        <h2 className="text-[13px] font-semibold" style={{ color: "#111c14" }}>{title}</h2>
+        <h2 className="text-[13px] font-medium" style={{ color: titleColor  }}>{title}</h2>
         {description && <p className="text-[12px] mt-0.5" style={{ color: "#8fa394" }}>{description}</p>}
       </div>
       {action}

@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from "react-router"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import arisLogo from "@/assets/brand/image.png"
-import { BRAND, BRAND_DARK, mainNav, settingsNav, type NavItem } from "@/config/navigation"
+import { BRAND, BRAND_DARK, mainNav, managementNav, settingsNav, supportNav, type NavItem } from "@/config/navigation"
 import type { UserAccount } from "@/data/demoAccounts"
 import DataModeNotice from "@/components/DataModeNotice"
 import { GhostButton, Modal, PrimaryButton, SearchInput } from "@/components/ui"
@@ -9,6 +9,7 @@ import { GhostButton, Modal, PrimaryButton, SearchInput } from "@/components/ui"
 export default function Root({ onSignOut, user }: { onSignOut: () => void; user: UserAccount }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const mainRef = useRef<HTMLElement>(null)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -21,12 +22,16 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     return () => clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 })
+  }, [location.pathname])
+
   const confirmSignOut = () => {
     setShowSignOutConfirm(false)
     onSignOut()
   }
 
-  const searchItems = [...mainNav, ...settingsNav].filter((item) =>
+  const searchItems = [...mainNav, ...managementNav, ...supportNav, ...settingsNav].filter((item) =>
     item.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
   )
 
@@ -42,18 +47,21 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
         }}
       >
         <span style={{ opacity: active ? 1 : 0.65 }}>{item.icon}</span>
-        <span className="flex-1">{item.label}</span>
-        {active && (
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="w-3.5 h-3.5"
-          >
-            <path d="M9 18l6-6-6-6" />
-          </svg>
-        )}
+        
+        <div className="flex items-center justify-between w-full">
+          <span className="flex-1">{item.label}</span>
+          {active && (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="w-3.5 h-3.5"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          )}
+        </div>
       </button>
     )
   }
@@ -68,7 +76,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     >
       {/* Sidebar */}
       <aside
-        className="hidden lg:flex lg:flex-col lg:w-56 lg:h-full lg:flex-shrink-0 select-none rounded-3xl bg-white"
+        className="hidden lg:flex lg:flex-col lg:w-60 lg:h-full lg:flex-shrink-0 select-none rounded-3xl bg-white"
         style={{ boxShadow: "0 1px 2px rgba(16,32,20,0.05)" }}
       >
         <div className="flex items-center gap-3 px-4 pt-5 pb-4">
@@ -105,6 +113,24 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
             className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
             style={{ color: "#b6c3ba" }}
           >
+            Management
+          </p>
+          {managementNav.map((item) => (
+            <NavButton key={item.path} item={item} />
+          ))}
+          <p
+            className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
+            style={{ color: "#b6c3ba" }}
+          >
+            Support
+          </p>
+          {supportNav.map((item) => (
+            <NavButton key={item.path} item={item} />
+          ))}
+          <p
+            className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
+            style={{ color: "#b6c3ba" }}
+          >
             Settings
           </p>
           {settingsNav.map((item) => (
@@ -134,23 +160,24 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                 {user.email}
               </p>
             </div>
-            <button
-              onClick={() => setShowSignOutConfirm(true)}
-              aria-label="Sign out"
-              className="transition-opacity hover:opacity-60"
-              style={{ color: "#b6c3ba" }}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="w-4 h-4"
-              >
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-              </svg>
-            </button>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowSignOutConfirm(true)}
+            className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-[13px] font-medium text-[#5a6b5e] transition-colors hover:bg-[#f4f6f5] hover:text-[#c0392b]"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-5 w-5"
+              aria-hidden="true"
+            >
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            Logout
+          </button>
         </div>
       </aside>
 
@@ -268,7 +295,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
           </header>
         )}
 
-        <main className="flex-1 overflow-y-auto min-h-0 pr-1">
+        <main ref={mainRef} className="flex-1 overflow-y-auto min-h-0 pr-1">
           <DataModeNotice />
           <Outlet />
         </main>

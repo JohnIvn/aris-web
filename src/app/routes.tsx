@@ -17,6 +17,8 @@ import SoftwareMonitoring from "@/pages/Admin/SoftwareMonitoring";
 import SystemSettings from "@/pages/Admin/SystemSettings";
 import UserSettings from "@/pages/Admin/UserSettings";
 import Support from "@/pages/Admin/Support";
+import Tickets from "@/pages/Admin/Tickets";
+import HardwareMonitoring from "@/pages/Admin/HardwareMonitoring";
 
 function RootWithAuth() {
   const { signOut, user } = useAuth();
@@ -65,10 +67,12 @@ export const router = createHashRouter([
       { path: "audit", Component: Audit },
       { path: "system-logs", Component: SystemLogs },
       { path: "database", Component: Database },
+      { path: "hardware-monitoring", Component: HardwareMonitoring },
       { path: "software-monitoring", Component: SoftwareMonitoring },
       { path: "settings/system", Component: SystemSettings },
       { path: "settings/user", Component: UserSettings },
       { path: "support", Component: Support },
+      { path: "tickets", Component: Tickets },
       { path: "*", Component: Dashboard },
     ],
   },

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 html,
@@ -8,7 +8,12 @@ body,
   overflow: hidden;
 }
 
+html {
+  font-family: 'DM Sans', sans-serif;
+}
+
 @theme inline {
+  --font-sans: 'DM Sans', sans-serif;
   --color-sidebar: #0d1a10;
   --color-sidebar-hover: #1a3320;
   --color-sidebar-active: #243d2a;

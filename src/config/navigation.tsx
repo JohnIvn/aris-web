@@ -18,7 +18,6 @@ export const icon = (path: JSX.Element) => (
 )
 
 export type NavItem = { path: string; label: string; icon: JSX.Element }
-
 export const mainNav: NavItem[] = [
   {
     path: "/",
@@ -32,11 +31,21 @@ export const mainNav: NavItem[] = [
       </>,
     ),
   },
+]
+
+export const managementNav: NavItem[] = [
   {
     path: "/announcements",
     label: "Announcements",
     icon: icon(
       <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />,
+    ),
+  },
+  {
+    path: "/audit",
+    label: "Audit Logs",
+    icon: icon(
+      <path d="M9 12h6M9 16h6M9 8h6M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />,
     ),
   },
   {
@@ -50,13 +59,6 @@ export const mainNav: NavItem[] = [
     ),
   },
   {
-    path: "/staff",
-    label: "Staff",
-    icon: icon(
-      <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />,
-    ),
-  },
-  {
     path: "/payroll",
     label: "Payroll",
     icon: icon(
@@ -67,28 +69,36 @@ export const mainNav: NavItem[] = [
     ),
   },
   {
+    path: "/staff",
+    label: "Staff",
+    icon: icon(
+      <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />,
+    ),
+  },
+]
+
+export const supportNav: NavItem[] = [
+  {
+    path: "/tickets",
+    label: "Tickets",
+    icon: icon(
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+        <path d="M12 17h.01" />
+      </>,
+    ),
+  },
+]
+
+export const settingsNav: NavItem[] = [
+  {
     path: "/aiml",
     label: "AI / ML",
     icon: icon(
       <>
         <circle cx="12" cy="12" r="3" />
         <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
-      </>,
-    ),
-  },
-  {
-    path: "/audit",
-    label: "Audit Logs",
-    icon: icon(
-      <path d="M9 12h6M9 16h6M9 8h6M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />,
-    ),
-  },
-  {
-    path: "/system-logs",
-    label: "System Logs",
-    icon: icon(
-      <>
-        <path d="M4 17l6-6-6-6M12 19h8" />
       </>,
     ),
   },
@@ -104,13 +114,24 @@ export const mainNav: NavItem[] = [
     ),
   },
   {
+    path: "/hardware-monitoring",
+    label: "Hardware Monitoring",
+    icon: icon(<path d="M4 17l6-6-6-6M12 19h8" />),
+  },
+  {
     path: "/software-monitoring",
     label: "Software Monitoring",
     icon: icon(<path d="M22 12h-4l-3 9L9 3l-3 9H2" />),
   },
-]
-
-export const settingsNav: NavItem[] = [
+  {
+    path: "/system-logs",
+    label: "System Logs",
+    icon: icon(
+      <>
+        <path d="M4 17l6-6-6-6M12 19h8" />
+      </>,
+    ),
+  },
   {
     path: "/settings/system",
     label: "System Settings",
@@ -131,145 +152,7 @@ export const settingsNav: NavItem[] = [
       </>,
     ),
   },
-  {
-    path: "/support",
-    label: "Support",
-    icon: icon(
-      <>
-        <circle cx="12" cy="12" r="10" />
-        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
-      </>,
-    ),
-  },
 ]
 
-export const allNav = [...mainNav, ...settingsNav]
+export const allNav = [...mainNav, ...managementNav, ...supportNav, ...settingsNav]
 
-// Professor-side variant (/prof)
-export const profMainNav: NavItem[] = [
-  {
-    path: "/prof",
-    label: "Overview",
-    icon: icon(
-      <>
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
-      </>,
-    ),
-  },
-  {
-    path: "/prof/announcements",
-    label: "Announcements",
-    icon: icon(
-      <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />,
-    ),
-  },
-  {
-    path: "/prof/submit",
-    label: "Submit",
-    icon: icon(
-      <>
-        <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
-        <path d="M12 3v13M7 8l5-5 5 5" />
-      </>,
-    ),
-  },
-  {
-    path: "/prof/history",
-    label: "History",
-    icon: icon(
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-      </>,
-    ),
-  },
-  {
-    path: "/prof/summaries",
-    label: "Summaries",
-    icon: icon(
-      <>
-        <path d="M12 15a3 3 0 003-3V6a3 3 0 10-6 0v6a3 3 0 003 3z" />
-        <path d="M19 11a7 7 0 01-14 0M4 20h16" />
-      </>,
-    ),
-  },
-]
-
-export const profSettingsNav: NavItem[] = [
-  {
-    path: "/prof/settings/system",
-    label: "System Settings",
-    icon: icon(
-      <>
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-      </>,
-    ),
-  },
-  {
-    path: "/prof/settings/user",
-    label: "User Settings",
-    icon: icon(
-      <>
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </>,
-    ),
-  },
-  {
-    path: "/prof/support",
-    label: "Support",
-    icon: icon(
-      <>
-        <circle cx="12" cy="12" r="10" />
-        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
-      </>,
-    ),
-  },
-]
-
-export const staffMainNav: NavItem[] = [
-  {
-    path: "/staff",
-    label: "Overview",
-    icon: icon(
-      <>
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
-      </>,
-    ),
-  },
-  {
-    path: "/staff/approvals",
-    label: "Approvals",
-    icon: icon(
-      <>
-        <path d="M9 11l2 2 4-4" />
-        <path d="M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />
-      </>,
-    ),
-  },
-  {
-    path: "/staff/announcements",
-    label: "Announcements",
-    icon: icon(<path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />),
-  },
-]
-
-export const staffSettingsNav: NavItem[] = [
-  {
-    path: "/staff/settings",
-    label: "Settings",
-    icon: icon(
-      <>
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
-      </>,
-    ),
-  },
-]

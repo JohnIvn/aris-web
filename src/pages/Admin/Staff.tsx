@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import ProfileDetailsModal from "@/components/ProfileDetailsModal";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 import {
@@ -128,20 +129,23 @@ export default function Staff() {
           </div>
         ))}
       </Card>
-      <Modal isOpen={Boolean(selected)} onClose={() => setSelected(null)} title="Staff details" size="lg" align="left" actions={<GhostButton onClick={() => setSelected(null)}>Close</GhostButton>}>
-        {selected && <div className="grid gap-4 sm:grid-cols-2">
-          <div><p className="text-xs text-[#8fa394]">Name</p><p className="font-semibold text-[#111c14]">{selected.name}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Email</p><p className="font-medium text-[#111c14]">{selected.email}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Staff ID</p><p className="font-medium text-[#111c14]">{selected.id}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Role</p><p className="font-medium text-[#111c14]">{selected.role}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Department</p><p className="font-medium text-[#111c14]">{selected.dept}</p></div>
-          <div><p className="text-xs text-[#8fa394]">Status</p><p className="font-medium text-[#111c14]">{selected.status}</p></div>
-        </div>}
-      </Modal>
+      <ProfileDetailsModal
+        isOpen={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        heading="Staff ID"
+        name={selected?.name ?? ""}
+        role={selected?.role ?? ""}
+        fields={[
+          { label: "Staff ID", value: selected?.id ?? "" },
+          { label: "Email", value: selected?.email ?? "" },
+          { label: "Department", value: selected?.dept ?? "" },
+          { label: "Phone", value: "Not provided" },
+          { label: "Address", value: "Not provided", wide: true },
+        ]}
+      />
       <Modal isOpen={Boolean(pendingStatus)} onClose={() => setPendingStatus(null)} title={pendingStatus?.status === "Active" ? "Set staff member on leave?" : "Reactivate staff member?"} actions={<><GhostButton onClick={() => setPendingStatus(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingStatus && void updateStatus(pendingStatus)}>{pendingStatus?.status === "Active" ? "Set on leave" : "Reactivate"}</PrimaryButton></>}>
         {pendingStatus && <>Confirm status change for {pendingStatus.name}?</>}
       </Modal>
     </div>
   );
 }
-
