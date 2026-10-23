@@ -10,19 +10,22 @@ describe("demo authentication", () => {
     expect(session.user).not.toHaveProperty("password");
   });
 
-  it("rejects professor and staff accounts", () => {
+  it("reports missing professor and staff accounts", () => {
     expect(() =>
       authenticateDemo("professor@ucc.edu.ph", "Professor123"),
-    ).toThrow("Email or password is incorrect.");
+    ).toThrow("Account does not exist.");
     expect(() =>
       authenticateDemo("staff@ucc.edu.ph", "Staff12345"),
-    ).toThrow("Email or password is incorrect.");
+    ).toThrow("Account does not exist.");
   });
 
-  it("rejects unknown accounts and incorrect passwords", () => {
+  it("reports when an account does not exist", () => {
     expect(() => authenticateDemo("unknown@ucc.edu.ph", "Admin12345")).toThrow(
-      "Email or password is incorrect.",
+      "Account does not exist.",
     );
+  });
+
+  it("rejects incorrect passwords for existing accounts", () => {
     expect(() => authenticateDemo("admin@ucc.edu.ph", "wrong-password")).toThrow(
       "Email or password is incorrect.",
     );

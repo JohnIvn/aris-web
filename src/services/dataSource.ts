@@ -1,6 +1,6 @@
 import { apiClient } from "@/services/apiClient";
 
-export const isDemoMode = import.meta.env.VITE_DATA_MODE !== "api";
+export const isDemoMode = import.meta.env.VITE_DATA_MODE === "demo";
 
 interface ApiEnvelope<T> {
 	ok?: boolean;

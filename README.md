@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Copy `.env.example` to `.env` to configure the data source. The default `VITE_DATA_MODE=demo` uses the seeded records and persists demo changes in browser storage. Set `VITE_DATA_MODE=api` and `VITE_API_BASE_URL` to connect a backend.
+Copy `.env.example` to `.env` to connect the web app to the ARIS API. The default configuration uses `http://localhost:3000`, where the Nest server reads administrator accounts from the database. Set `VITE_DATA_MODE=demo` only when intentionally using the local demo data.
 
 ## Demo Accounts
 
