@@ -14,7 +14,6 @@ import Audit from "@/pages/Admin/Audit";
 import SystemLogs from "@/pages/Admin/SystemLogs";
 import Database from "@/pages/Admin/Database";
 import SoftwareMonitoring from "@/pages/Admin/SoftwareMonitoring";
-import SystemSettings from "@/pages/Admin/SystemSettings";
 import UserSettings from "@/pages/Admin/UserSettings";
 import Support from "@/pages/Admin/Support";
 import Tickets from "@/pages/Admin/Tickets";
@@ -69,7 +68,6 @@ export const router = createHashRouter([
       { path: "database", Component: Database },
       { path: "hardware-monitoring", Component: HardwareMonitoring },
       { path: "software-monitoring", Component: SoftwareMonitoring },
-      { path: "settings/system", Component: SystemSettings },
       { path: "settings/user", Component: UserSettings },
       { path: "support", Component: Support },
       { path: "tickets", Component: Tickets },

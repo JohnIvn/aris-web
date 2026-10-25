@@ -5,38 +5,16 @@ import { saveResource } from "@/services/dataSource";
 
 type SystemSettingsData = {
   siteName: string;
-  theme: "Light" | "Dark" | "System";
   maintenanceMode: boolean;
-  requireMfa: boolean;
-  campusSso: boolean;
   sessionTimeoutMinutes: number;
-  emailNotifications: boolean;
-  aiGrading: boolean; 
-  googleGateway: boolean;
-  weeklyDigest: boolean;
-  automaticBackups: boolean;
-  backupFrequencyHours: number;
-  backupRetentionDays: number;
-  academicYear: string;
   maxUploadMb: number;
 };
 
 const defaultSettings: SystemSettingsData = {
   siteName: "ARIS University",
-  theme: "Light",
   maintenanceMode: false,
-  requireMfa: true,
-  campusSso: true,
   sessionTimeoutMinutes: 30,
-  emailNotifications: true,
-  aiGrading: true,
-  googleGateway: true,
-  weeklyDigest: true,
-  automaticBackups: true,
-  backupFrequencyHours: 24,
-  backupRetentionDays: 30,
-  academicYear: "2026-2027",
-  maxUploadMb: 25,
+  maxUploadMb: 6,
 };
 
 function SettingRow({
@@ -111,37 +89,20 @@ export default function SystemSettings() {
               className={inputClassName}
             />
           </label>
-          <label className="mb-2 block">
-            <span className="mb-1 block text-[10px] font-medium text-[#405347]">Theme</span>
-            <select
-              value={settings.theme}
-              onChange={(event) => update("theme", event.target.value as SystemSettingsData["theme"])}
-              className={inputClassName}
-            >
-              <option>Light</option>
-              <option>Dark</option>
-              <option>System</option>
-            </select>
-          </label>
           <SettingRow
             title="Maintenance mode"
             description="Take ARIS offline for scheduled work."
             control={<Toggle on={settings.maintenanceMode} onChange={(value) => update("maintenanceMode", value)} />}
           />
+          <label className="mt-3 block">
+            <span className="mb-1 block text-[10px] font-medium text-[#405347]">Maximum upload size (MB)</span>
+            <input type="number" min={1} max={6} value={settings.maxUploadMb} onChange={(event) => update("maxUploadMb", Number(event.target.value))} className={inputClassName} />
+            <span className="mt-1 block text-[10px] text-[#8fa394]">Applied to profile photo uploads. Maximum supported by the server: 6 MB.</span>
+          </label>
         </Card>
 
         <Card className="!p-3 sm:!p-3.5">
           <h2 className="mb-1 text-[11px] font-semibold text-[#17251c]">Security</h2>
-          <SettingRow
-            title="Two-factor authentication"
-            description="Require 2FA for all administrator accounts."
-            control={<Toggle on={settings.requireMfa} onChange={(value) => update("requireMfa", value)} />}
-          />
-          <SettingRow
-            title="Campus SSO"
-            description="Allow sign-in with institutional accounts."
-            control={<Toggle on={settings.campusSso} onChange={(value) => update("campusSso", value)} />}
-          />
           <SettingRow
             title="Session timeout"
             description="Auto sign-out after inactivity."
@@ -162,45 +123,10 @@ export default function SystemSettings() {
         </Card>
 
         <Card className="!p-3 sm:!p-3.5">
-          <h2 className="mb-2 text-[11px] font-semibold text-[#17251c]">Data &amp; Backups</h2>
-          <SettingRow
-            title="Automatic backups"
-            description="Nightly encrypted snapshots at 2:00 AM."
-            control={<Toggle on={settings.automaticBackups} onChange={(value) => update("automaticBackups", value)} />}
-          />
-          <SettingRow
-            title="Last backup"
-            description="Today at 2:00 AM · 4.2 GB"
-            control={<Badge tone="green" dot>Healthy</Badge>}
-          />
-          <div className="flex items-center justify-between gap-3 pt-2">
-            <div>
-              <p className="text-[11px] font-medium text-[#17251c]">Storage used</p>
-              <p className="mt-0.5 text-[10px] text-[#8fa394]">312 GB of 500 GB</p>
-            </div>
-            <div className="h-1 w-20 overflow-hidden rounded-full bg-[#e8ede9]">
-              <div className="h-full w-[62.4%] rounded-full bg-[#3a7d4e]" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="!p-3 sm:!p-3.5">
           <h2 className="mb-2 text-[11px] font-semibold text-[#17251c]">Notifications &amp; Integrations</h2>
-          <SettingRow
-            title="AI grading"
-            description="Enable machine-assisted assessment scoring."
-            control={<Toggle on={settings.aiGrading} onChange={(value) => update("aiGrading", value)} />}
-          />
-          <SettingRow
-            title="Email alerts"
-            description="Send critical system alerts to administrators."
-            control={<Toggle on={settings.emailNotifications} onChange={(value) => update("emailNotifications", value)} />}
-          />
-          <SettingRow
-            title="Google gateway"
-            description="Connected via Google."
-            control={settings.googleGateway ? <Badge tone="green" dot>Connected</Badge> : <Badge tone="gray">Disconnected</Badge>}
-          />
+          <p className="py-3 text-[10px] leading-relaxed text-[#8fa394]">
+            No external notification or integration provider is configured for this deployment.
+          </p>
         </Card>
       </div>
     </div>
