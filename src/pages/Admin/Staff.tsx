@@ -57,6 +57,7 @@ export default function Staff() {
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [selected, setSelected] = useState<StaffMember | null>(null);
   const [pendingStatus, setPendingStatus] = useState<StaffMember | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<StaffMember | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { data: resourceStaff, setData: setResourceStaff } = useResource<StaffMember[]>("/staff", demoStaff);
@@ -87,6 +88,17 @@ export default function Staff() {
       setSaveError(null);
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update staff status.");
+    }
+  };
+  const deleteStaff = async (person: StaffMember) => {
+    setPendingDelete(null);
+    try {
+      if (!person.id) throw new Error("This staff member does not have a server ID.");
+      await saveResource(`/staff/${person.id}`, undefined, "DELETE");
+      setStaff(staff.filter((item) => item.id !== person.id));
+      setSaveError(null);
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Unable to delete staff member.");
     }
   };
 
@@ -150,6 +162,7 @@ export default function Staff() {
               {openMenu === s.id && <div className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
                 <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
                 <button type="button" onClick={(event) => { event.stopPropagation(); setPendingStatus(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">{s.status === "Active" ? "Set on leave" : "Reactivate"}</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setPendingDelete(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]">Delete</button>
               </div>}
             </span>
           </div>
@@ -171,6 +184,9 @@ export default function Staff() {
       />
       <Modal isOpen={Boolean(pendingStatus)} onClose={() => setPendingStatus(null)} title={pendingStatus?.status === "Active" ? "Set staff member on leave?" : "Reactivate staff member?"} actions={<><GhostButton onClick={() => setPendingStatus(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingStatus && void updateStatus(pendingStatus)}>{pendingStatus?.status === "Active" ? "Set on leave" : "Reactivate"}</PrimaryButton></>}>
         {pendingStatus && <>Confirm status change for {pendingStatus.name}?</>}
+      </Modal>
+      <Modal isOpen={Boolean(pendingDelete)} onClose={() => setPendingDelete(null)} title="Delete staff member?" actions={<><GhostButton onClick={() => setPendingDelete(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingDelete && void deleteStaff(pendingDelete)}>Delete</PrimaryButton></>}>
+        {pendingDelete && <>Are you sure you want to permanently delete {pendingDelete.name}? This action cannot be undone.</>}
       </Modal>
     </div>
   );

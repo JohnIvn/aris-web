@@ -17,6 +17,7 @@ type Professor = {
   rank?: string;
   position?: string | null;
   courses?: number;
+  provider?: "local" | "google";
   active?: boolean;
   is_banned?: boolean;
 };
@@ -39,6 +40,7 @@ export default function Professors() {
   const [department, setDepartment] = useState("All departments");
   const [selected, setSelected] = useState<Professor | null>(null);
   const [pendingToggle, setPendingToggle] = useState<Professor | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Professor | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { data: resourceItems, setData: setResourceItems } = useResource<Professor[]>("/professors", people);
@@ -63,6 +65,17 @@ export default function Professors() {
       setSaveError(null);
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update professor.");
+    }
+  };
+  const deleteProfessor = async (person: Professor) => {
+    setPendingDelete(null);
+    try {
+      if (!person.id) throw new Error("This professor does not have a server ID.");
+      await saveResource(`/professors/${person.id}`, undefined, "DELETE");
+      setItems(items.filter((item) => item.id !== person.id));
+      setSaveError(null);
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Unable to delete professor.");
     }
   };
   const departments = [...new Set(items.map((person) => person.dept))];
@@ -99,11 +112,11 @@ export default function Professors() {
             </select>
           </div>
         </div>
-        <div className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
-          <span>Name</span><span>Department</span><span>Rank</span><span>Courses</span><span>Status</span><span className="text-right">Action</span>
+        <div className="grid min-w-[1000px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr_1.2fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
+          <span>Name</span><span>Department</span><span>Rank</span><span>Courses</span><span>Status</span><span>OAuth</span><span className="text-right">Action</span>
         </div>
         {rows.map((p, i) => (
-          <div key={p.email} onClick={() => setSelected(p)} className="grid min-w-[900px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
+          <div key={p.email} onClick={() => setSelected(p)} className="grid min-w-[1000px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
             <button type="button" aria-label={`View details for ${p.name}`} onClick={(event) => { event.stopPropagation(); setSelected(p); }} className="flex min-w-0 items-center gap-3 text-left">
               <Avatar initials={p.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} color={initialsColor(i)} />
               <div className="min-w-0">
@@ -115,6 +128,16 @@ export default function Professors() {
             <span className="text-[13px]" style={{ color: "#3d4a41" }}>{p.rank}</span>
             <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>{p.courses}</span>
             <span><Badge tone={p.active ? "green" : "gray"} dot>{p.active ? "Active" : "Deactivated"}</Badge></span>
+            <span aria-label={p.provider === "google" ? "Connected via Google" : "OAuth not connected"}>
+              <Badge tone={p.provider === "google" ? "green" : "gray"}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-3.5 w-3.5" aria-hidden="true">
+                  <path d="M8.5 12h7" />
+                  <path d="M10.5 8.5 8.7 6.7a3.2 3.2 0 0 0-4.5 4.5l2.6 2.6a3.2 3.2 0 0 0 4.5 0l1.2-1.2" />
+                  <path d="m13.5 15.5 1.8 1.8a3.2 3.2 0 0 0 4.5-4.5l-2.6-2.6a3.2 3.2 0 0 0-4.5 0l-1.2 1.2" />
+                </svg>
+                {p.provider === "google" ? "Google" : "None"}
+              </Badge>
+            </span>
             <span className="relative flex justify-end">
               <button type="button" aria-label={`Actions for ${p.name}`} aria-expanded={openMenu === p.email} onClick={(event) => { event.stopPropagation(); setOpenMenu(openMenu === p.email ? null : p.email); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]">
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
@@ -122,6 +145,7 @@ export default function Professors() {
               {openMenu === p.email && <div className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
                 <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(p); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
                 <button type="button" onClick={(event) => { event.stopPropagation(); setPendingToggle(p); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">{p.active ? "Deactivate" : "Reactivate"}</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setPendingDelete(p); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]">Delete</button>
               </div>}
             </span>
           </div>
@@ -135,6 +159,7 @@ export default function Professors() {
         role="Professor"
         fields={[
           { label: "Email", value: selected?.email ?? "" },
+          { label: "OAuth account", value: selected?.provider === "google" ? "Connected via Google" : "Not connected" },
           { label: "Department", value: selected?.dept ?? "" },
           { label: "Phone", value: "Not provided" },
           { label: "Address", value: "Not provided", wide: true },
@@ -142,6 +167,9 @@ export default function Professors() {
       />
       <Modal isOpen={Boolean(pendingToggle)} onClose={() => setPendingToggle(null)} title={pendingToggle?.active ? "Deactivate professor?" : "Reactivate professor?"} actions={<><GhostButton onClick={() => setPendingToggle(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingToggle && void toggle(pendingToggle)}>{pendingToggle?.active ? "Deactivate" : "Reactivate"}</PrimaryButton></>}>
         {pendingToggle && <>Are you sure you want to {pendingToggle.active ? "deactivate" : "reactivate"} {pendingToggle.name}?</>}
+      </Modal>
+      <Modal isOpen={Boolean(pendingDelete)} onClose={() => setPendingDelete(null)} title="Delete professor?" actions={<><GhostButton onClick={() => setPendingDelete(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingDelete && void deleteProfessor(pendingDelete)}>Delete</PrimaryButton></>}>
+        {pendingDelete && <>Are you sure you want to permanently delete {pendingDelete.name}? This action cannot be undone.</>}
       </Modal>
     </div>
   );

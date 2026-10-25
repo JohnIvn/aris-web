@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { BRAND } from "@/config/navigation";
 import { PrimaryButton, GhostButton, Toggle } from "@/components/ui";
 import { saveResource } from "@/services/dataSource";
+import GoogleOAuthButton from "@/components/GoogleOAuthButton";
 
 const depts = ["Engineering", "Computer Science", "Business", "Sciences", "Arts & Humanities"];
 const ranks = ["Professor", "Associate Prof.", "Assistant Prof.", "Lecturer", "Adjunct"];
@@ -20,12 +21,13 @@ export default function AddProfessor() {
   const [dept, setDept] = useState(depts[0]);
   const [rank, setRank] = useState(ranks[0]);
   const [password, setPassword] = useState("");
+  const [oauthToken, setOauthToken] = useState("");
   const [active, setActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    if (!employeeId.trim() || !username.trim() || !firstname.trim() || !lastname.trim() || !email.trim() || !password) {
-      setError("Employee ID, username, first name, last name, email, and password are required.");
+    if (!employeeId.trim() || !username.trim() || !firstname.trim() || !lastname.trim() || !email.trim() || (!oauthToken && !password)) {
+      setError(`Employee ID, username, first name, last name, email, and ${oauthToken ? "a verified OAuth account" : "password"} are required.`);
       return;
     }
     try {
@@ -37,9 +39,10 @@ export default function AddProfessor() {
         middlename: middlename.trim() || undefined,
         lastname: lastname.trim(),
         email: email.trim().toLowerCase(),
-        password,
+        ...(password ? { password } : {}),
         department: dept,
         position: rank,
+        ...(oauthToken ? { provider: "google", oauth_id_token: oauthToken } : {}),
         active,
       });
       close();
@@ -73,7 +76,7 @@ export default function AddProfessor() {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <input aria-label="Username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
-            <input aria-label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (8+ characters)" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <input aria-label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={oauthToken ? "Not needed for Google" : "Password (8+ characters)"} disabled={Boolean(oauthToken)} className="h-10 px-3.5 rounded-xl border text-[13.5px] disabled:bg-[#f4f6f5] disabled:text-[#8fa394]" style={{ borderColor: "#e2e8e4" }} />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <input aria-label="First name" value={firstname} onChange={(e) => setFirstname(e.target.value)} placeholder="First name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
@@ -82,7 +85,23 @@ export default function AddProfessor() {
           </div>
           <div>
             <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Email</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@aris.edu.ph" className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@aris.edu.ph" disabled={Boolean(oauthToken)} className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e] disabled:bg-[#f4f6f5] disabled:text-[#8fa394]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
+          </div>
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>OAuth account <span style={{ color: "#8fa394" }}>(optional)</span></label>
+            <GoogleOAuthButton
+              token={oauthToken}
+              onVerified={(token, profile) => {
+                setOauthToken(token);
+                setFirstname(profile.firstname);
+                setLastname(profile.lastname);
+                setEmail(profile.email);
+                setUsername(profile.email.split("@")[0]);
+                setPassword("");
+                setError(null);
+              }}
+              onClear={() => setOauthToken("")}
+            />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
