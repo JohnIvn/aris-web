@@ -39,6 +39,7 @@ export default function GoogleOAuthButton({
 }) {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<GoogleProfile | null>(null);
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function GoogleOAuthButton({
             if (!response.data.ok || !response.data.data) {
               throw new Error(response.data.message ?? "Google account verification failed.");
             }
+            setProfile(response.data.data);
             onVerified(credential, response.data.data);
           } catch (reason) {
             setError(reason instanceof Error ? reason.message : "Google account verification failed.");
@@ -92,13 +94,17 @@ export default function GoogleOAuthButton({
     return (
       <div className="flex items-center justify-between gap-3 rounded-xl border border-[#b9ddc2] bg-[#f0f9f2] px-3 py-2.5">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2f7043] text-white" aria-hidden="true">✓</span>
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
+          ) : (
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2f7043] text-white" aria-hidden="true">✓</span>
+          )}
           <div>
             <p className="text-[12.5px] font-semibold text-[#2f7043]">Verified Google account</p>
-            <p className="text-[11px] text-[#5f8068]">The account details were filled from Google.</p>
+            <p className="text-[11px] text-[#5f8068]">{profile?.email ?? "The account details were filled from Google."}</p>
           </div>
         </div>
-        <button type="button" onClick={onClear} className="text-[11px] font-medium text-[#2f7043] hover:underline">Change</button>
+        <button type="button" onClick={() => { setProfile(null); onClear(); }} className="text-[11px] font-medium text-[#2f7043] hover:underline">Change</button>
       </div>
     );
   }
