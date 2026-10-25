@@ -4,6 +4,14 @@ import arisLogo from "@/assets/brand/image.png"
 import { BRAND, BRAND_DARK, mainNav, managementNav, settingsNav, supportNav, type NavItem } from "@/config/navigation"
 import type { UserAccount } from "@/data/demoAccounts"
 import { GhostButton, Modal, PrimaryButton, SearchInput } from "@/components/ui"
+import { useResource } from "@/hooks/useResource"
+
+type AdminAnnouncement = {
+  id: string
+  title: string
+  body: string
+  tag?: string
+}
 
 export default function Root({ onSignOut, user }: { onSignOut: () => void; user: UserAccount }) {
   const location = useLocation()
@@ -13,7 +21,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [showNotifications, setShowNotifications] = useState(false)
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true)
+  const { data: announcements } = useResource<AdminAnnouncement[]>("/announcements", [])
 
   const [currentTime, setCurrentTime] = useState(new Date())
   useEffect(() => {
@@ -245,7 +253,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                 type="button"
                 aria-label="Notifications"
                 title="Notifications"
-                onClick={() => { setShowNotifications(true); setHasUnreadNotifications(false); }}
+                onClick={() => setShowNotifications(true)}
                 className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-white border"
                 style={{ borderColor: "#e2e8e4", color: "#5a6b5e" }}
               >
@@ -260,7 +268,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                 >
                   <path d="M15 17H9m6 0a3 3 0 01-6 0m6 0h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5" />
                 </svg>
-                {hasUnreadNotifications && <span
+                {announcements.length > 0 && <span
                   className="absolute top-2 right-2 w-2 h-2 rounded-full border-2 border-white"
                   style={{ background: BRAND }}
                 />}
@@ -306,13 +314,10 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
       </Modal>
       <Modal isOpen={showNotifications} onClose={() => setShowNotifications(false)} title="Notifications" size="lg" align="left" actions={<PrimaryButton onClick={() => setShowNotifications(false)}>Done</PrimaryButton>}>
         <div className="divide-y divide-[#eef1ef]">
-          {[
-            { title: "Payroll cycle is ready for review", detail: "48 records are still pending approval.", path: "/payroll", label: "Payroll" },
-            { title: "Database snapshot verified", detail: "The latest automated backup passed its integrity check.", path: "/database", label: "Database" },
-            { title: "Staff directory updated", detail: "Review current role assignments and account statuses.", path: "/staff", label: "Staff" },
-          ].map((notice) => <button key={notice.title} type="button" onClick={() => { navigate(notice.path); setShowNotifications(false); }} className="flex w-full items-start justify-between gap-4 py-3 text-left hover:bg-[#fafbfa]">
-            <span><span className="block text-[13px] font-semibold text-[#111c14]">{notice.title}</span><span className="mt-1 block text-[12px] text-[#8fa394]">{notice.detail}</span></span>
-            <span className="shrink-0 text-[11px] font-medium text-[#3a7d4e]">{notice.label}</span>
+          {announcements.length === 0 && <p className="px-3 py-4 text-[12px] text-[#8fa394]">No notifications available.</p>}
+          {announcements.map((notice) => <button key={notice.id} type="button" onClick={() => { navigate("/announcements"); setShowNotifications(false); }} className="flex w-full items-start justify-between gap-4 py-3 text-left hover:bg-[#fafbfa]">
+            <span><span className="block text-[13px] font-semibold text-[#111c14]">{notice.title}</span><span className="mt-1 block text-[12px] text-[#8fa394]">{notice.body}</span></span>
+            <span className="shrink-0 text-[11px] font-medium text-[#3a7d4e]">{notice.tag ?? "Announcement"}</span>
           </button>)}
         </div>
       </Modal>

@@ -1,10 +1,10 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router";
 import arisLogo from "@/assets/brand/image.png";
 import { BRAND } from "@/config/navigation";
 import { useAuth } from "@/app/authContext";
 import { useResource } from "@/hooks/useResource";
-import { Card, PageTitle, PrimaryButton } from "@/components/ui";
+import { Card, Modal, PageTitle, PrimaryButton } from "@/components/ui";
 import Approvals from "./Approvals";
 import Announcements from "./Announcements";
 
@@ -14,6 +14,13 @@ type Profile = {
   email?: string;
   position?: string | null;
   department?: string | null;
+};
+
+type StaffAnnouncement = {
+  id: string;
+  title: string;
+  body: string;
+  tag?: string;
 };
 
 const staffNavigation = [
@@ -132,14 +139,73 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
 }
 
 function StaffDashboard({ displayName, profile, user, onManageProfile }: { displayName: string; profile: Profile; user: { email: string }; onManageProfile: () => void }) {
+  const navigate = useNavigate();
+  const { data: announcements } = useResource<StaffAnnouncement[]>("/announcements", []);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifications = announcements.map((announcement) => ({
+    title: announcement.title,
+    detail: announcement.body,
+    label: announcement.tag ?? "Announcement",
+  }));
+
   return (
     <div className="mx-auto max-w-5xl py-5">
-      <PageTitle title={`Welcome, ${displayName}`} subtitle="Review your ARIS work and current updates." />
+      <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <PageTitle title={`Welcome, ${displayName}`} subtitle="Review your ARIS work and current updates." />
+        <button
+          type="button"
+          aria-label="Open notifications"
+          title="Notifications"
+          onClick={() => {
+            setShowNotifications(true);
+          }}
+          className="relative flex h-9 w-9 items-center justify-center self-start rounded-xl border bg-white sm:self-auto"
+          style={{ borderColor: "#e2e8e4", color: "#5a6b5e" }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-[17px] w-[17px]">
+            <path d="M15 17H9m6 0a3 3 0 01-6 0m6 0h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5" />
+          </svg>
+          {notifications.length > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white" style={{ background: BRAND }} />}
+        </button>
+      </div>
       <Card>
         <h2 className="text-[15px] font-semibold text-[#111c14]">Your account</h2>
         <div className="mt-3 space-y-2 text-[13px]"><p><span className="text-[#8fa394]">Email: </span>{profile.email ?? user.email}</p><p><span className="text-[#8fa394]">Position: </span>{profile.position ?? "Not assigned"}</p><p><span className="text-[#8fa394]">Department: </span>{profile.department ?? "Not assigned"}</p></div>
         <div className="mt-4"><PrimaryButton onClick={onManageProfile}>Manage profile</PrimaryButton></div>
       </Card>
+      <Modal
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        title="Notifications"
+        size="lg"
+        align="left"
+        actions={<PrimaryButton onClick={() => setShowNotifications(false)}>Done</PrimaryButton>}
+      >
+        <div className="divide-y divide-[#eef1ef]">
+          {notifications.length === 0 && (
+            <p className="px-3 py-4 text-[12px] text-[#8fa394]">
+              No notifications available.
+            </p>
+          )}
+          {notifications.map((notice, index) => (
+            <button
+              key={`${notice.title}-${index}`}
+              type="button"
+              onClick={() => {
+                setShowNotifications(false);
+                navigate("/notifications");
+              }}
+              className="flex w-full items-start justify-between gap-4 py-3 text-left hover:bg-[#fafbfa]"
+            >
+              <span>
+                <span className="block text-[13px] font-semibold text-[#111c14]">{notice.title}</span>
+                <span className="mt-1 block text-[12px] text-[#8fa394]">{notice.detail}</span>
+              </span>
+              <span className="shrink-0 text-[11px] font-medium text-[#3a7d4e]">{notice.label}</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }
