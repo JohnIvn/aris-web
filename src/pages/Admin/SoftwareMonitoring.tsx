@@ -33,8 +33,20 @@ const demoMonitoring = { services, topEndpoints };
 
 export default function SoftwareMonitoring() {
   const [timeRange, setTimeRange] = useState<"24h" | "7d" | "30d">("24h");
-  const { data } = useResource("/system/monitoring", demoMonitoring);
+  const { data, loading, error } = useResource("/system/monitoring", demoMonitoring);
   const { services: serviceData, topEndpoints: endpointData } = data;
+  const downCount = serviceData.filter((service) => service.status === "Down").length;
+  const degradedCount = serviceData.filter((service) => service.status === "Degraded").length;
+  const healthyCount = serviceData.filter((service) => service.status === "Healthy").length;
+  const averageRequests =
+    endpointData.length === 0
+      ? 0
+      : endpointData.reduce((total, endpoint) => total + endpoint.reqSec, 0);
+  const averageErrorRate =
+    endpointData.length === 0
+      ? 0
+      : endpointData.reduce((total, endpoint) => total + Number.parseFloat(endpoint.err), 0) /
+        endpointData.length;
 
   return (
     <div className="pb-6">
@@ -48,6 +60,7 @@ export default function SoftwareMonitoring() {
             API performance, service health, and error tracking.
           </p>
         </div>
+        {error && <p role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{error}</p>}
 
         {/* Time Range Filter Buttons */}
         <div className="flex items-center gap-1 bg-[#eef1ef] p-1 rounded-xl">
@@ -71,16 +84,16 @@ export default function SoftwareMonitoring() {
       <div className="mb-4 p-3.5 rounded-2xl flex items-center gap-2.5 text-[13px] font-medium" style={{ background: "#fbecec", border: "1px solid #f9d6d6", color: "#c0392b" }}>
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#c0392b" }} />
         <span>
-          <strong>1 service down — 1 degraded</strong> — check Recent Errors for details.
+          <strong>{downCount} service{downCount === 1 ? "" : "s"} down — {degradedCount} degraded</strong> — check Recent Errors for details.
         </span>
       </div>
 
       {/* 4 Summary Cards */}
       <StatGrid className="mb-4">
-        <StatCard label="Avg req / s" value="186" detail="peak 241 at 11:00" />
-        <StatCard label="Error rate" value="1.4%" valueColor="#c0392b" detail="34 errors today" />
+        <StatCard label="Avg req / s" value={averageRequests.toFixed(0)} detail="from monitored endpoints" />
+        <StatCard label="Error rate" value={`${averageErrorRate.toFixed(1)}%`} valueColor="#c0392b" detail="from monitored endpoints" />
         <StatCard label="p95 latency" value="84 ms" detail="p99 at 210 ms" />
-        <StatCard label="Services up" value="5 / 7" detail="1 down, 1 degraded" />
+        <StatCard label="Services up" value={`${healthyCount} / ${serviceData.length}`} detail={`${downCount} down, ${degradedCount} degraded`} />
       </StatGrid>
 
       {/* Charts Section */}
@@ -250,6 +263,7 @@ export default function SoftwareMonitoring() {
             Service Health
           </h3>
           <div className="divide-y" style={{ borderColor: "#f2f4f2" }}>
+            {loading && serviceData.length === 0 && <p className="py-4 text-[12px] text-[#8fa394]">Loading service health...</p>}
             {serviceData.map((s) => (
               <div key={s.name} className="py-2.5 flex items-center justify-between first:pt-0 last:pb-0">
                 <div className="flex items-center gap-2.5">
@@ -302,6 +316,7 @@ export default function SoftwareMonitoring() {
 
             {/* Table Body */}
             <div className="divide-y" style={{ borderColor: "#f2f4f2" }}>
+              {loading && endpointData.length === 0 && <p className="py-4 text-[12px] text-[#8fa394]">Loading endpoint metrics...</p>}
               {endpointData.map((e) => (
                 <div key={e.path} className="grid grid-cols-[3fr_1fr_1fr_1fr] items-center py-2.5 text-[12.5px] text-right">
                   <div className="flex items-center gap-2 min-w-0 pr-2 text-left">
@@ -333,4 +348,3 @@ export default function SoftwareMonitoring() {
     </div>
   );
 }
-

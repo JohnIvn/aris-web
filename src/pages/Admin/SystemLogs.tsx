@@ -112,7 +112,7 @@ const demoSystemLogs = [
 const kindTone = { Auth: "blue", Security: "green", Alert: "red" } as const
 
 export default function SystemLogs() {
-  const { data: logs } = useResource("/system/logs", demoSystemLogs)
+  const { data: logs, loading, error } = useResource("/system/logs", demoSystemLogs)
   const [tab, setTab] = useState("All")
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [showExportSuccess, setShowExportSuccess] = useState(false)
@@ -147,6 +147,7 @@ export default function SystemLogs() {
           </GhostButton>
         }
       />
+      {error && <p role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{error}</p>}
 
       <Modal
         isOpen={showExportConfirm}
@@ -254,6 +255,8 @@ export default function SystemLogs() {
           <span>Time</span>
           <span className="text-right">Type</span>
         </div>
+        {loading && rows.length === 0 && <p className="py-6 text-center text-[12px] text-[#8fa394]">Loading system logs...</p>}
+        {!loading && rows.length === 0 && <p className="py-6 text-center text-[12px] text-[#8fa394]">No system logs found.</p>}
         {rows.map((l, i) => (
           <div
             key={i}
