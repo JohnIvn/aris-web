@@ -7,6 +7,10 @@ export const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
   transformRequest: [
     (data, headers) => {
+      if (typeof FormData !== "undefined" && data instanceof FormData) {
+        delete headers["Content-Type"];
+        return data;
+      }
       if (data && typeof data === "object") {
         headers["Content-Type"] = "application/json";
         return JSON.stringify(data);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BRAND } from "@/config/navigation";
 import { useAuth } from "@/app/authContext";
 import { useResource } from "@/hooks/useResource";
@@ -64,9 +64,15 @@ const defaultPreferences = { desktop: true, weekly: true, mentions: false };
 
 export default function UserSettings() {
   const { user } = useAuth();
-  const defaultProfile = { firstName: user.name.split(" ")[0] ?? "", lastName: user.name.split(" ").slice(1).join(" "), email: user.email, phone: "+63 917 555 0142" };
+  const defaultProfile = { firstName: user.name.split(" ")[0] ?? "", lastName: user.name.split(" ").slice(1).join(" "), email: user.email, phone: "", avatar_url: "" };
   const { data: storedProfile, setData: setProfile } = useResource("/users/me/profile", defaultProfile);
-  const profile = { ...defaultProfile, ...(Array.isArray(storedProfile) ? {} : storedProfile) };
+  const apiProfile = storedProfile as typeof defaultProfile & { firstname?: string; lastname?: string };
+  const profile = {
+    ...defaultProfile,
+    ...(Array.isArray(apiProfile) ? {} : apiProfile),
+    firstName: Array.isArray(apiProfile) ? defaultProfile.firstName : apiProfile.firstName ?? apiProfile.firstname ?? defaultProfile.firstName,
+    lastName: Array.isArray(apiProfile) ? defaultProfile.lastName : apiProfile.lastName ?? apiProfile.lastname ?? defaultProfile.lastName,
+  };
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -74,6 +80,10 @@ export default function UserSettings() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
+  const photoInput = useRef<HTMLInputElement>(null);
   const set = (k: keyof typeof prefs) =>
     setPrefs((p) => ({ ...p, [k]: !p[k] }));
 
@@ -86,7 +96,7 @@ export default function UserSettings() {
     setProfileSaving(true);
     setProfileMessage(null);
     try {
-      await saveResource("/users/me/profile", profile, "PUT");
+      await saveResource("/users/me/profile", profile, "PATCH");
       setEditingProfile(false);
       setProfileMessage("Information saved.");
     } catch (reason) {
@@ -96,9 +106,32 @@ export default function UserSettings() {
     }
   };
 
+  const savePassword = async () => {
+    setPasswordMessage(null);
+    try {
+      await saveResource("/users/me/password", { password: newPassword, confirmPassword }, "POST");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordMessage("Password updated.");
+    } catch (reason) {
+      setPasswordMessage(reason instanceof Error ? reason.message : "Unable to update password.");
+    }
+  };
+
+  const uploadPhoto = async (file: File) => {
+    const form = new FormData();
+    form.append("photo", file);
+    try {
+      const response = await saveResource<{ avatar_url: string }>("/users/me/photo", form, "POST");
+      setProfile((current) => ({ ...current, avatar_url: response.avatar_url }));
+    } catch (reason) {
+      setProfileMessage(reason instanceof Error ? reason.message : "Unable to update photo.");
+    }
+  };
+
   const savePreferences = async () => {
     try {
-      await saveResource("/users/me/preferences", prefs, "PUT");
+      await saveResource("/users/me/preferences", prefs, "PATCH");
       setShowConfirm(false);
       setShowSaved(true);
       setSaveError(null);
@@ -180,12 +213,14 @@ export default function UserSettings() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
         {/* Profile summary */}
         <Card className="flex flex-col items-center text-center overflow-hidden">
-          <div
+          {profile.avatar_url ? (
+            <img src={`${import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:3000"}${profile.avatar_url}`} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
+          ) : <div
             className="w-20 h-20 rounded-full flex items-center justify-center text-white text-[26px] font-semibold"
             style={{ background: BRAND }}
           >
             {`${profile.firstName} ${profile.lastName}`.trim().slice(0, 2).toUpperCase()}
-          </div>
+          </div>}
           <p
             className="text-[16px] font-semibold mt-3"
             style={{ color: "#111c14" }}
@@ -201,7 +236,7 @@ export default function UserSettings() {
             </Badge>
           </div>
           <div className="mt-4">
-            <GhostButton>
+            <GhostButton onClick={() => photoInput.current?.click()}>
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -213,6 +248,11 @@ export default function UserSettings() {
               </svg>
               Change photo
             </GhostButton>
+            <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) void uploadPhoto(file);
+              event.target.value = "";
+            }} />
           </div>
           <div
             className="w-full mt-auto pt-5 border-t space-y-2.5 text-left"
@@ -249,6 +289,8 @@ export default function UserSettings() {
               <Field label="Email" value={profile.email} disabled={!editingProfile} onChange={(value) => updateProfile("email", value)} />
               <Field label="Phone" value={profile.phone} disabled={!editingProfile} onChange={(value) => updateProfile("phone", value)} />
             </div>
+            {passwordMessage && <p role="status" className="mt-3 text-[12px]" style={{ color: passwordMessage === "Password updated." ? "#2f7043" : "#c0392b" }}>{passwordMessage}</p>}
+            <div className="mt-3 flex justify-end"><PrimaryButton onClick={() => void savePassword()}>Update password</PrimaryButton></div>
           </Card>
 
           <Card>
@@ -268,6 +310,8 @@ export default function UserSettings() {
                 </p>
                 <input
                   type="password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
                   placeholder="••••••••"
                   className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]"
                   style={{ borderColor: "#e2e8e4" }}
@@ -282,6 +326,8 @@ export default function UserSettings() {
                 </p>
                 <input
                   type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="••••••••"
                   className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]"
                   style={{ borderColor: "#e2e8e4" }}
