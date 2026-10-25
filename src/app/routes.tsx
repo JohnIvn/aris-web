@@ -18,10 +18,14 @@ import UserSettings from "@/pages/Admin/UserSettings";
 import Support from "@/pages/Admin/Support";
 import Tickets from "@/pages/Admin/Tickets";
 import HardwareMonitoring from "@/pages/Admin/HardwareMonitoring";
+import StaffDashboard from "@/pages/Staff/Dashboard";
 
 function RootWithAuth() {
   const { signOut, user } = useAuth();
-  if (user.role !== "administrator") return <Navigate to="/" replace />;
+  if (user.role === "staff") {
+    return <StaffDashboard onSignOut={signOut} />;
+  }
+  if (user.role !== "administrator" && user.role !== "admin") return <Navigate to="/" replace />;
   return <Root onSignOut={signOut} user={user} />;
 }
 
@@ -31,6 +35,8 @@ export const router = createHashRouter([
     Component: RootWithAuth,
     children: [
       { index: true, Component: Dashboard },
+      { path: "notifications", Component: () => null },
+      { path: "approvals", Component: () => null },
       { path: "announcements", Component: Announcements },
       {
         path: "announcements/new",

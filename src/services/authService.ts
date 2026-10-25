@@ -65,19 +65,15 @@ export async function signIn(email: string, password: string): Promise<AuthSessi
 		throw new Error("The server returned an invalid user session.");
 	}
 	if (!isUserRole(payload.user.role)) {
-		throw new Error("Only administrator accounts can sign in to ARIS Web.");
+		throw new Error("This account role cannot access ARIS Web.");
 	}
 	return {
 		...payload,
-		user: {
-			...payload.user,
-			role: "administrator",
-		},
 	};
 }
 
 function isUserRole(value: unknown): value is UserRole {
-	return value === "administrator" || value === "admin";
+	return value === "administrator" || value === "admin" || value === "staff";
 }
 
 function axiosErrorData(error: unknown): { error?: string; message?: string } | null {

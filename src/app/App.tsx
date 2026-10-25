@@ -9,7 +9,7 @@ import { signIn as authenticate } from "@/services/authService";
 function getStoredUser(): UserAccount | null {
   try {
     const user = JSON.parse(sessionStorage.getItem("aris-user") ?? "null") as UserAccount | null;
-    return user?.id && user?.email && user.role === "administrator" ? user : null;
+    return user?.id && user?.email && ["administrator", "admin", "staff"].includes(user.role) ? user : null;
   } catch {
     sessionStorage.removeItem("aris-user");
     return null;
@@ -21,8 +21,8 @@ export default function App() {
 
   const signIn = async (email: string, password: string) => {
     const session = await authenticate(email, password);
-    if (session.user.role !== "administrator") {
-      throw new Error("Only administrator accounts can sign in to ARIS Web.");
+    if (!["administrator", "admin", "staff"].includes(session.user.role)) {
+      throw new Error("This account role cannot access ARIS Web.");
     }
     sessionStorage.setItem("aris-user", JSON.stringify(session.user));
     if (session.token) sessionStorage.setItem("aris-token", session.token);

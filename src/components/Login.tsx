@@ -134,7 +134,7 @@ export default function Login({
             className="text-[15px] mt-5 leading-relaxed max-w-sm"
             style={{ color: "#8fb69b" }}
           >
-            One quiet place to manage professors, staff, payroll, and every
+            One secure place to manage your ARIS work.
             academic record — no clutter.
           </p>
         </div>
