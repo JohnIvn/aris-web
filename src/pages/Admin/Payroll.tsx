@@ -3,9 +3,26 @@ import { BRAND, BRAND_DARK } from "@/config/navigation";
 import { Card, PageTitle, GhostButton, Badge, SearchInput } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
 
-// Each submitted AR / DTR record carries a computed amount (units × rate).
-// The system classifies that amount by the record's approval outcome.
-const demoRecords = [
+type PayrollRecord = {
+  id?: string;
+  name: string;
+  type: "AR" | "DTR";
+  period: string;
+  units: string;
+  rate: string;
+  amount: string;
+  status: "Approved" | "Pending" | "Rejected";
+};
+
+type PayrollClass = {
+  label: string;
+  note: string;
+  value: string;
+  pct: number;
+  color: string;
+};
+
+const demoRecords: PayrollRecord[] = [
   { name: "Dr. Maria Santos", type: "DTR", period: "Sep 1–15", units: "22 days", rate: "₱2,150", amount: "₱47,300", status: "Approved" as const },
   { name: "Prof. Lito Cruz", type: "AR", period: "Sep 1–15", units: "18 outputs", rate: "₱1,800", amount: "₱32,400", status: "Approved" as const },
   { name: "James Reyes", type: "DTR", period: "Sep 1–15", units: "22 days", rate: "₱1,420", amount: "₱31,240", status: "Approved" as const },
@@ -18,7 +35,7 @@ const demoRecords = [
 
 const statusTone = { Approved: "green", Pending: "amber", Rejected: "red" } as const;
 
-const demoClasses = [
+const demoClasses: PayrollClass[] = [
   { label: "Accepted", note: "312 records", value: "₱2.15M", pct: 84, color: "#4a9d62" },
   { label: "Pending", note: "48 records", value: "₱0.33M", pct: 13, color: "#e0a63a" },
   { label: "Rejected", note: "12 records", value: "₱0.08M", pct: 3, color: "#d0674a" },
@@ -28,12 +45,14 @@ export default function Payroll() {
   const [search, setSearch] = useState("");
   const [recordFilter, setRecordFilter] = useState("All records");
   const [filterOpen, setFilterOpen] = useState(false);
-  const { data } = useResource("/payroll", { records: demoRecords, classes: demoClasses });
+  const { data, loading, error } = useResource<{ records: PayrollRecord[]; classes: PayrollClass[] }>("/payroll", { records: [], classes: [] });
   const { records, classes } = data;
   const filteredRecords = records.filter((record) => {
     const className = record.status === "Approved" ? "Accepted" : record.status;
     return (recordFilter === "All records" || className === recordFilter) && `${record.name} ${record.type} ${record.period}`.toLowerCase().includes(search.toLowerCase());
   });
+  const acceptedCount = records.filter((record) => record.status === "Approved").length;
+  const rejectedCount = records.filter((record) => record.status === "Rejected").length;
   return (
     <div className="pb-2">
       <PageTitle
@@ -47,12 +66,12 @@ export default function Payroll() {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: "#5f8c6c" }}>Payable Now · Accepted</p>
-            <p className="text-[40px] font-bold leading-none tracking-tight mt-2" style={{ color: "#fff" }}>₱2.15M</p>
-            <p className="text-[12.5px] mt-2" style={{ color: "#7aaa86" }}>312 approved records · September Cycle 1</p>
+            <p className="text-[40px] font-bold leading-none tracking-tight mt-2" style={{ color: "#fff" }}>₱0</p>
+            <p className="text-[12.5px] mt-2" style={{ color: "#7aaa86" }}>{acceptedCount} approved records</p>
             <div className="flex items-center gap-4 mt-4 text-[12.5px]">
-              <span style={{ color: "#7aaa86" }}>Total computed <span className="font-semibold" style={{ color: "#cfe3d6" }}>₱2.56M</span></span>
+              <span style={{ color: "#7aaa86" }}>Total computed <span className="font-semibold" style={{ color: "#cfe3d6" }}>₱0</span></span>
               <span className="w-1 h-1 rounded-full" style={{ background: "#2c4433" }} />
-              <span style={{ color: "#7aaa86" }}>Rejected excluded <span className="font-semibold" style={{ color: "#d0674a" }}>−₱0.08M</span></span>
+              <span style={{ color: "#7aaa86" }}>Rejected excluded <span className="font-semibold" style={{ color: "#d0674a" }}>{rejectedCount} records</span></span>
             </div>
           </div>
 
@@ -96,11 +115,14 @@ export default function Payroll() {
             <span className="text-[11px] text-[#8fa394]">{filteredRecords.length} shown</span>
           </div>
         </div>
+        {loading && <p className="p-5 text-[13px]" style={{ color: "#8fa394" }}>Loading payroll records...</p>}
+        {error && <p role="alert" className="p-5 text-[13px] text-red-700">{error}</p>}
+        {!loading && !error && filteredRecords.length === 0 && <p className="p-5 text-[13px]" style={{ color: "#8fa394" }}>No payroll records found.</p>}
         <div className="grid min-w-[960px] grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
           <span>Employee</span><span>Type</span><span>Period</span><span>Units</span><span className="text-right">Rate</span><span className="text-right">Amount</span><span className="text-right">Class</span>
         </div>
-        {filteredRecords.map((r, i) => (
-          <div key={i} className="grid min-w-[960px] grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
+        {filteredRecords.map((r) => (
+          <div key={r.id ?? `${r.name}-${r.period}`} className="grid min-w-[960px] grid-cols-[2.2fr_0.7fr_1.1fr_1.2fr_1fr_1.2fr_1.2fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa]" style={{ borderColor: "#f2f4f2" }}>
             <span className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{r.name}</span>
             <span className="text-[12px] font-semibold" style={{ color: r.type === "DTR" ? BRAND : "#3f8ecc" }}>{r.type}</span>
             <span className="text-[13px]" style={{ color: "#3d4a41" }}>{r.period}</span>
