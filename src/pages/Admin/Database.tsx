@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 import {
@@ -14,6 +14,45 @@ import {
   StatCard,
   StatGrid,
 } from "@/components/ui";
+
+function formatBytes(bytes: number) {
+  if (!bytes) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 2)} ${units[index]}`;
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat().format(value);
+}
+
+function formatRelativeTime(value: string) {
+  const timestamp = new Date(value).getTime();
+  if (Number.isNaN(timestamp)) return "Time unavailable";
+  const elapsed = Math.max(0, Date.now() - timestamp);
+  const minutes = Math.floor(elapsed / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  return `${Math.floor(hours / 24)} days ago`;
+}
+
+type DatabaseMetrics = {
+  clusterStatus: string;
+  clusterDetail: string;
+  databaseSizeBytes: number;
+  activeConnections: number;
+  maxConnections: number;
+  blockReads: number;
+  blockHits: number;
+  latestSnapshot: {
+    name: string;
+    type: string;
+    sizeBytes: number;
+    createdAt: string;
+  } | null;
+};
 
 // Mock data for Backups & Snapshots
 const initialBackups = [
@@ -226,9 +265,48 @@ export default function Database() {
   // Interactive action feedback
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const { data: backupsList, setData: setBackupsList } = useResource("/system/database/backups", initialBackups);
-  const { data: healthChecks, setData: setHealthChecks } = useResource("/system/database/health-checks", initialHealthChecks);
-  const { data: restoreLogData } = useResource("/system/database/restore-logs", restoreLogs);
+  const { data: backupsList, setData: setBackupsList, loading: backupsLoading, error: backupsError } = useResource("/system/database/backups", initialBackups);
+  const { data: healthChecks, setData: setHealthChecks, loading: healthChecksLoading } = useResource("/system/database/health-checks", initialHealthChecks);
+  const { data: restoreLogData, loading: restoreLogsLoading } = useResource("/system/database/restore-logs", restoreLogs);
+  const { data: metrics, loading: metricsLoading, error: metricsError } = useResource<DatabaseMetrics>("/system/database/metrics", {
+    clusterStatus: "Unavailable",
+    clusterDetail: "Unable to read database status",
+    databaseSizeBytes: 0,
+    activeConnections: 0,
+    maxConnections: 0,
+    blockReads: 0,
+    blockHits: 0,
+    latestSnapshot: null,
+  });
+  const { data: backupSettings, error: settingsError } = useResource("/system/database/settings", {
+    autoBackupEnabled: true,
+    crossRegionEnabled: false,
+    pointInTimeEnabled: false,
+  });
+
+  useEffect(() => {
+    setAutoBackupEnabled(backupSettings.autoBackupEnabled);
+    setCrossRegionEnabled(backupSettings.crossRegionEnabled);
+    setPointInTimeEnabled(backupSettings.pointInTimeEnabled);
+  }, [backupSettings]);
+
+  const updateBackupSetting = async (
+    key: "autoBackupEnabled" | "crossRegionEnabled" | "pointInTimeEnabled",
+    value: boolean,
+  ) => {
+    const setters = {
+      autoBackupEnabled: setAutoBackupEnabled,
+      crossRegionEnabled: setCrossRegionEnabled,
+      pointInTimeEnabled: setPointInTimeEnabled,
+    };
+    setters[key](value);
+    try {
+      await saveResource("/system/database/settings", { [key]: value }, "PATCH");
+    } catch (reason: unknown) {
+      setters[key](!value);
+      setBannerMessage(reason instanceof Error ? reason.message : "Unable to save backup setting.");
+    }
+  };
 
   const tabs = [
     "Backups & Snapshots",
@@ -237,30 +315,20 @@ export default function Database() {
     "Backup Settings",
   ];
 
-  const handleTriggerBackupConfirm = () => {
+  const handleTriggerBackupConfirm = async () => {
     setShowBackupConfirm(false);
     setIsProcessing(true);
     setBannerMessage("Creating new manual database backup snapshot...");
-    setTimeout(() => {
-      const now = new Date();
-      const newBackup = {
-        id: `bk-${Date.now().toString().slice(-4)}`,
-        name: `manual_snapshot_${now.toISOString().slice(0, 10).replace(/-/g, "")}_${now.getHours()}${now.getMinutes()}`,
-        type: "Manual Snapshot",
-        size: "1.43 GB",
-        date: "Just now",
-        status: "Verified",
-        checksum: "sha256:a9f23c...11e",
-      };
-      const updatedBackups = [newBackup, ...backupsList];
-      setBackupsList(updatedBackups);
-      void saveResource("/system/database/backups", updatedBackups, "PUT").catch((reason: unknown) => {
-        setBannerMessage(reason instanceof Error ? reason.message : "Unable to save backup.");
-      });
+    try {
+      const newBackup = await saveResource<typeof initialBackups[number]>("/system/database/backups", {}, "POST");
+      setBackupsList([newBackup, ...backupsList]);
       setIsProcessing(false);
       setBannerMessage(null);
       setShowBackupSuccess(true);
-    }, 1500);
+    } catch (reason: unknown) {
+      setIsProcessing(false);
+      setBannerMessage(reason instanceof Error ? reason.message : "Unable to create backup.");
+    }
   };
 
   const handleRunDiagnosticsConfirm = () => {
@@ -337,6 +405,8 @@ export default function Database() {
           </div>
         }
       />
+      {(backupsError || settingsError || metricsError) && <p role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{backupsError || settingsError || metricsError}</p>}
+      {isProcessing && <p role="status" className="mb-3 rounded-xl border border-[#dce9df] bg-[#f4faf5] px-3 py-2 text-[12px] text-[#347849]">{bannerMessage}</p>}
 
       <Modal
         isOpen={Boolean(restoreTarget)}
@@ -487,10 +557,29 @@ export default function Database() {
 
       {/* Summary KPI Cards */}
       <StatGrid className="mb-4">
-        <StatCard label="Cluster Status" value="99.99% Uptime" detail="Primary / Standby WAL Sync" badge={<Badge tone="green" dot>Healthy</Badge>} />
-        <StatCard label="Database Size" value="42.8 GB / 100 GB" detail="42.8% used" footer={<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#f0f2f0]"><div className="h-full rounded-full bg-[#3a7d4e]" style={{ width: "42.8%" }} /></div>} />
-        <StatCard label="Latest Snapshot" value="18 mins ago" detail="Automated Daily · Verified" badge={<Badge tone="blue">1.42 GB</Badge>} />
-        <StatCard label="Connections & IOPS" value="1,240 IOPS" detail="Avg Latency: 2.1 ms" badge={<Badge tone="gray">48 / 200</Badge>} />
+        <StatCard
+          label="Cluster Status"
+          value={metricsLoading ? "Checking..." : metrics.clusterStatus}
+          detail={metrics.clusterDetail}
+          badge={<Badge tone={metrics.clusterStatus === "Healthy" ? "green" : "red"} dot>{metrics.clusterStatus}</Badge>}
+        />
+        <StatCard
+          label="Database Size"
+          value={metricsLoading ? "Checking..." : formatBytes(metrics.databaseSizeBytes)}
+          detail="Current PostgreSQL database size"
+        />
+        <StatCard
+          label="Latest Snapshot"
+          value={metrics.latestSnapshot ? formatRelativeTime(metrics.latestSnapshot.createdAt) : "No snapshot"}
+          detail={metrics.latestSnapshot?.name ?? "Create a backup to record a snapshot"}
+          badge={metrics.latestSnapshot ? <Badge tone="blue">{formatBytes(metrics.latestSnapshot.sizeBytes)}</Badge> : undefined}
+        />
+        <StatCard
+          label="Connections & DB Activity"
+          value={`${metrics.activeConnections} active`}
+          detail={`${formatNumber(metrics.blockReads + metrics.blockHits)} cumulative block operations`}
+          badge={<Badge tone="gray">{metrics.activeConnections} / {metrics.maxConnections}</Badge>}
+        />
       </StatGrid>
 
       {/* Main Tabs Container */}
@@ -533,7 +622,11 @@ export default function Database() {
                 No backup snapshots match your search criteria.
               </div>
             ) : (
-              filteredBackups.map((b) => (
+              backupsLoading && filteredBackups.length === 0 ? (
+                <p className="py-6 text-center text-[12px] text-[#8fa394]">Loading backups...</p>
+              ) : filteredBackups.length === 0 ? (
+                <p className="py-6 text-center text-[12px] text-[#8fa394]">No backups found.</p>
+              ) : filteredBackups.map((b) => (
                 <div
                   key={b.id}
                   className="grid min-w-[900px] grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
@@ -780,7 +873,7 @@ export default function Database() {
                   hours.
                 </p>
               </div>
-              <Toggle on={autoBackupEnabled} onChange={setAutoBackupEnabled} />
+              <Toggle on={autoBackupEnabled} onChange={(value) => void updateBackupSetting("autoBackupEnabled", value)} />
             </div>
 
             <div
@@ -792,19 +885,19 @@ export default function Database() {
                   className="text-[14.5px] font-semibold"
                   style={{ color: "#111c14" }}
                 >
-                  Cross-Region Storage Replication (AWS S3)
+                  Cross-Region Storage Replication
                 </h3>
                 <p
                   className="text-[12.5px] mt-0.5"
                   style={{ color: "#8fa394" }}
                 >
-                  Mirror backup snapshots to secondary disaster recovery region
-                  (ap-southeast-1).
+                  Store backups in a configured secondary storage region when
+                  replication is available.
                 </p>
               </div>
               <Toggle
                 on={crossRegionEnabled}
-                onChange={setCrossRegionEnabled}
+                onChange={(value) => void updateBackupSetting("crossRegionEnabled", value)}
               />
             </div>
 
@@ -823,13 +916,13 @@ export default function Database() {
                   className="text-[12.5px] mt-0.5"
                   style={{ color: "#8fa394" }}
                 >
-                  Stream Write-Ahead Logs continuously to allow recovery to any
-                  second within 14 days.
+                  Enable the database provider's point-in-time recovery policy
+                  for this environment.
                 </p>
               </div>
               <Toggle
                 on={pointInTimeEnabled}
-                onChange={setPointInTimeEnabled}
+                onChange={(value) => void updateBackupSetting("pointInTimeEnabled", value)}
               />
             </div>
 
