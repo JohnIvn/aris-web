@@ -11,27 +11,35 @@ export default function AddProfessor() {
   const navigate = useNavigate();
   const close = () => navigate("/professors");
 
-  const [name, setName] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [username, setUsername] = useState("");
+  const [firstname, setFirstname] = useState("");
+  const [middlename, setMiddlename] = useState("");
+  const [lastname, setLastname] = useState("");
   const [email, setEmail] = useState("");
   const [dept, setDept] = useState(depts[0]);
   const [rank, setRank] = useState(ranks[0]);
-  const [courses, setCourses] = useState("");
+  const [password, setPassword] = useState("");
   const [active, setActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    if (!name.trim() || !email.trim()) {
-      setError("Name and email are required.");
+    if (!employeeId.trim() || !username.trim() || !firstname.trim() || !lastname.trim() || !email.trim() || !password) {
+      setError("Employee ID, username, first name, last name, email, and password are required.");
       return;
     }
     try {
       await saveResource("/professors", {
-        id: `prof-${Date.now()}`,
-        name: name.trim(),
+
+        employee_id: employeeId.trim(),
+        username: username.trim(),
+        firstname: firstname.trim(),
+        middlename: middlename.trim() || undefined,
+        lastname: lastname.trim(),
         email: email.trim().toLowerCase(),
-        dept,
-        rank,
-        courses: Number(courses) || 0,
+        password,
+        department: dept,
+        position: rank,
         active,
       });
       close();
@@ -60,8 +68,17 @@ export default function AddProfessor() {
 
         <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
-            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Full name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Dr. Maria Santos" className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
+            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Employee ID</label>
+            <input value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} placeholder="e.g. PROF-0001" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <input aria-label="Username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <input aria-label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (8+ characters)" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <input aria-label="First name" value={firstname} onChange={(e) => setFirstname(e.target.value)} placeholder="First name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <input aria-label="Middle name" value={middlename} onChange={(e) => setMiddlename(e.target.value)} placeholder="Middle name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <input aria-label="Last name" value={lastname} onChange={(e) => setLastname(e.target.value)} placeholder="Last name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
           </div>
           <div>
             <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Email</label>
@@ -80,10 +97,6 @@ export default function AddProfessor() {
                 {ranks.map((r) => <option key={r}>{r}</option>)}
               </select>
             </div>
-          </div>
-          <div>
-            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Assigned courses</label>
-            <input value={courses} onChange={(e) => setCourses(e.target.value)} type="number" min="0" placeholder="0" className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
           </div>
           <div className="flex items-center justify-between pt-1">
             <div>

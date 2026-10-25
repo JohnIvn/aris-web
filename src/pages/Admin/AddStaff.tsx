@@ -16,27 +16,35 @@ export default function AddStaff() {
   const navigate = useNavigate();
   const close = () => navigate("/staff");
 
-  const [name, setName] = useState("");
+  const [employeeId, setEmployeeId] = useState("");
+  const [username, setUsername] = useState("");
+  const [firstname, setFirstname] = useState("");
+  const [middlename, setMiddlename] = useState("");
+  const [lastname, setLastname] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("Checker");
   const [dept, setDept] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const prefix = roles.find((r) => r.key === role)!.prefix;
 
   const submit = async () => {
-    if (!name.trim() || !email.trim() || !dept.trim()) {
-      setError("Name, email, and department are required.");
+    if (!employeeId.trim() || !username.trim() || !firstname.trim() || !lastname.trim() || !email.trim() || !password) {
+      setError("Employee ID, username, first name, last name, email, and password are required.");
       return;
     }
     try {
       await saveResource("/staff", {
-        id: `${prefix}-${Date.now()}`,
-        name: name.trim(),
+        employee_id: employeeId.trim(),
         email: email.trim().toLowerCase(),
-        role,
-        dept: dept.trim(),
-        status: "Active",
+        username: username.trim(),
+        firstname: firstname.trim(),
+        middlename: middlename.trim() || undefined,
+        lastname: lastname.trim(),
+        password,
+        position: role,
+        department: dept.trim(),
       });
       close();
     } catch (reason) {
@@ -64,8 +72,17 @@ export default function AddStaff() {
 
         <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
-            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Full name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. James Reyes" className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
+            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Employee ID</label>
+            <input value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} placeholder={`${prefix}-0001`} className="w-full h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <input aria-label="Username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <input aria-label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password (8+ characters)" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <input aria-label="First name" value={firstname} onChange={(e) => setFirstname(e.target.value)} placeholder="First name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <input aria-label="Middle name" value={middlename} onChange={(e) => setMiddlename(e.target.value)} placeholder="Middle name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <input aria-label="Last name" value={lastname} onChange={(e) => setLastname(e.target.value)} placeholder="Last name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
           </div>
           <div>
             <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Email</label>
@@ -89,13 +106,9 @@ export default function AddStaff() {
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
+            <div className="sm:col-span-2">
               <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Department</label>
               <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. Attendance" className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
-            </div>
-            <div>
-              <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Staff ID</label>
-              <div className="w-full h-10 px-3.5 rounded-xl border flex items-center text-[13.5px] font-semibold tabular-nums" style={{ borderColor: "#e2e8e4", background: "#f7f9f8", color: "#3d4a41" }}>{prefix}-0000 <span className="ml-1.5 text-[11px] font-normal" style={{ color: "#b6c3ba" }}>· auto</span></div>
             </div>
           </div>
           {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}

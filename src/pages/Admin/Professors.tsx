@@ -58,7 +58,8 @@ export default function Professors() {
     setItems(updatedItems);
     setPendingToggle(null);
     try {
-      await saveResource("/professors", updatedItems, "PUT");
+      if (!person.id) throw new Error("This professor does not have a server ID.");
+      await saveResource(`/professors/${person.id}/status`, { active: !person.active }, "PATCH");
       setSaveError(null);
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update professor.");

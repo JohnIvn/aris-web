@@ -18,7 +18,23 @@ import {
 } from "@/components/ui";
 
 // Staff IDs are prefixed by role: CHK (Checker), SEC (Secretary), HR (HR), ACC (Accounting)
-const demoStaff = [
+type StaffMember = {
+  id?: string;
+  employee_id?: string;
+  name?: string;
+  firstname?: string;
+  middlename?: string | null;
+  lastname?: string;
+  email: string;
+  role?: string;
+  position?: string | null;
+  dept?: string;
+  department?: string | null;
+  status?: "Active" | "On Leave";
+  is_banned?: boolean;
+};
+
+const demoStaff: StaffMember[] = [
   { name: "James Reyes", email: "j.reyes@aris.edu.ph", id: "CHK-0142", role: "Checker", dept: "Attendance", status: "Active" as const },
   { name: "Marco Dela Cruz", email: "m.delacruz@aris.edu.ph", id: "CHK-0143", role: "Checker", dept: "Attendance", status: "Active" as const },
   { name: "Ben Salvador", email: "b.salvador@aris.edu.ph", id: "CHK-0144", role: "Checker", dept: "Records Review", status: "Active" as const },
@@ -39,11 +55,20 @@ export default function Staff() {
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All statuses");
-  const [selected, setSelected] = useState<(typeof demoStaff)[number] | null>(null);
-  const [pendingStatus, setPendingStatus] = useState<(typeof demoStaff)[number] | null>(null);
+  const [selected, setSelected] = useState<StaffMember | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<StaffMember | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const { data: staff, setData: setStaff } = useResource("/staff", demoStaff);
+  const { data: resourceStaff, setData: setResourceStaff } = useResource<StaffMember[]>("/staff", demoStaff);
+  const staff = resourceStaff.map((person) => ({
+    ...person,
+    id: person.id ?? person.employee_id ?? "",
+    name: person.name ?? ([person.firstname, person.middlename, person.lastname].filter(Boolean).join(" ") || "Unknown staff member"),
+    role: person.role ?? person.position ?? "Staff",
+    dept: person.dept ?? person.department ?? "Unassigned",
+    status: person.status ?? (person.is_banned ? "On Leave" : "Active"),
+  }));
+  const setStaff = (nextStaff: StaffMember[]) => setResourceStaff(nextStaff);
   const tabs = ["All", "Checker", "Secretary", "HR", "Accounting"];
   const rows = staff.filter((person) => {
     const matchesRole = tab === "All" || person.role === tab;
@@ -52,12 +77,13 @@ export default function Staff() {
     return matchesRole && matchesStatus && matchesSearch;
   });
 
-  const updateStatus = async (person: (typeof demoStaff)[number]) => {
+  const updateStatus = async (person: StaffMember) => {
     const updated = staff.map((item) => item.id === person.id ? { ...item, status: item.status === "Active" ? "On Leave" as const : "Active" as const } : item);
     setStaff(updated);
     setPendingStatus(null);
     try {
-      await saveResource("/staff", updated, "PUT");
+      if (!person.id) throw new Error("This staff member does not have a server ID.");
+      await saveResource(`/staff/${person.id}/status`, { active: person.status !== "Active" }, "PATCH");
       setSaveError(null);
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update staff status.");
