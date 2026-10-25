@@ -5,7 +5,23 @@ import { Card, PageTitle, PrimaryButton, GhostButton, SearchInput, Badge, Avatar
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 
-const people = [
+type Professor = {
+  id?: string;
+  name?: string;
+  firstname?: string;
+  middlename?: string | null;
+  lastname?: string;
+  email: string;
+  dept?: string;
+  department?: string | null;
+  rank?: string;
+  position?: string | null;
+  courses?: number;
+  active?: boolean;
+  is_banned?: boolean;
+};
+
+const people: Professor[] = [
   { name: "Dr. Maria Santos", email: "m.santos@aris.edu.ph", dept: "Engineering", rank: "Professor", courses: 4, active: true },
   { name: "Prof. Lito Cruz", email: "l.cruz@aris.edu.ph", dept: "Computer Science", rank: "Associate Prof.", courses: 3, active: true },
   { name: "Dr. Elena Reyes", email: "e.reyes@aris.edu.ph", dept: "Business", rank: "Professor", courses: 5, active: true },
@@ -21,14 +37,23 @@ export default function Professors() {
   const [tab, setTab] = useState("All");
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("All departments");
-  const [selected, setSelected] = useState<(typeof people)[number] | null>(null);
-  const [pendingToggle, setPendingToggle] = useState<(typeof people)[number] | null>(null);
+  const [selected, setSelected] = useState<Professor | null>(null);
+  const [pendingToggle, setPendingToggle] = useState<Professor | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const { data: items, setData: setItems } = useResource("/professors", people);
+  const { data: resourceItems, setData: setResourceItems } = useResource<Professor[]>("/professors", people);
+  const items = resourceItems.map((person) => ({
+    ...person,
+    name: person.name ?? ([person.firstname, person.middlename, person.lastname].filter(Boolean).join(" ") || "Unknown professor"),
+    dept: person.dept ?? person.department ?? "Unassigned",
+    rank: person.rank ?? person.position ?? "Professor",
+    courses: person.courses ?? 0,
+    active: person.active ?? !person.is_banned,
+  }));
+  const setItems = (nextItems: Professor[]) => setResourceItems(nextItems);
   const tabs = ["All", "Active", "Deactivated"];
 
-  const toggle = async (person: (typeof people)[number]) => {
+  const toggle = async (person: Professor) => {
     const updatedItems = items.map((item) => item.email === person.email ? { ...item, active: !item.active } : item);
     setItems(updatedItems);
     setPendingToggle(null);

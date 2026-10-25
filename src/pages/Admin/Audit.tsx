@@ -25,6 +25,7 @@ import {
 
 // Audit trail scoped to AR (Accomplishment Report) / DTR (Daily Time Record) submissions.
 type AuditLog = {
+  id?: string
   actor: string
   init: string
   type: RecordKind
@@ -33,6 +34,16 @@ type AuditLog = {
   time: string
   result: StatusKind
   record: RecordPayload
+}
+
+const csvCell = (value: unknown) => {
+  const text = value == null ? "" : String(value)
+  return `"${text.replace(/"/g, '""')}"`
+}
+
+const formatExportTime = (value: string) => {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toISOString()
 }
 
 const demoAuditLogs: AuditLog[] = [
@@ -310,8 +321,9 @@ const demoAuditLogs: AuditLog[] = [
 ]
 
 export default function Audit() {
-  const { data: logs } = useResource("/audit", demoAuditLogs)
+  const { data: logs, loading, error } = useResource<AuditLog[]>("/audit", [])
   const [tab, setTab] = useState("All")
+  const [search, setSearch] = useState("")
   const [showExportConfirm, setShowExportConfirm] = useState(false)
   const [showExportSuccess, setShowExportSuccess] = useState(false)
   const [selected, setSelected] = useState<{
@@ -327,7 +339,15 @@ export default function Audit() {
     "Flagged",
     "Missing",
   ]
-  const rows = logs.filter((l) => tab === "All" || l.result === tab)
+  const normalizedSearch = search.trim().toLowerCase()
+  const rows = logs.filter((l) => {
+    const matchesTab = tab === "All" || l.result === tab
+    const matchesSearch =
+      !normalizedSearch ||
+      [l.actor, l.action, l.target, l.record.reference]
+        .some((value) => value.toLowerCase().includes(normalizedSearch))
+    return matchesTab && matchesSearch
+  })
 
   const count = (r: string) => logs.filter((l) => l.result === r).length
   const stats = [
@@ -336,6 +356,31 @@ export default function Audit() {
     ["Flagged", String(count("Flagged"))],
     ["Not Submitted", String(count("Missing"))],
   ]
+
+  const exportRows = () => {
+    const header = ["Actor", "Type", "Event", "Details", "Time", "Result", "Reference"]
+    const body = rows.map((log) => [
+      log.actor,
+      log.type,
+      log.action,
+      log.target,
+      formatExportTime(log.time),
+      log.result,
+      log.record.reference,
+    ])
+    const csv = [header, ...body].map((row) => row.map(csvCell).join(",")).join("\r\n")
+    const blob = new Blob([`\uFEFF${csv}\r\n`], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `aris-audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+    setShowExportConfirm(false)
+    setShowExportSuccess(true)
+  }
 
   return (
     <div className="pb-2">
@@ -381,10 +426,7 @@ export default function Audit() {
               Cancel
             </GhostButton>
             <PrimaryButton
-              onClick={() => {
-                setShowExportConfirm(false)
-                setShowExportSuccess(true)
-              }}
+              onClick={exportRows}
             >
               Yes, Export
             </PrimaryButton>
@@ -464,7 +506,11 @@ export default function Audit() {
         >
           <Tabs tabs={tabs} value={tab} onChange={setTab} />
           <div className="flex gap-2">
-            <SearchInput placeholder="Search AR / DTR events" />
+            <SearchInput
+              placeholder="Search AR / DTR events"
+              value={search}
+              onChange={setSearch}
+            />
             <GhostButton>
               <svg
                 viewBox="0 0 24 24"
@@ -491,9 +537,24 @@ export default function Audit() {
           <span>Time</span>
           <span className="text-right">Result</span>
         </div>
+        {loading && (
+          <p className="p-5 text-[13px]" style={{ color: "#8fa394" }}>
+            Loading audit logs...
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="p-5 text-[13px] text-red-700">
+            {error}
+          </p>
+        )}
+        {!loading && !error && rows.length === 0 && (
+          <p className="p-5 text-[13px]" style={{ color: "#8fa394" }}>
+            No audit logs found.
+          </p>
+        )}
         {rows.map((l, i) => (
           <button
-            key={i}
+            key={l.id ?? `${l.actor}-${l.time}-${i}`}
             type="button"
             onClick={() => setSelected({ log: l, idx: i })}
             title="View submission detail"
