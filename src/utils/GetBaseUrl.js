@@ -10,5 +10,5 @@ export default function getBaseUrl() {
   }
 
   // Production default
-  return "https://nutribin-user-backend-production.up.railway.app";
+  return "https://aris-server.up.railway.app/";
 }

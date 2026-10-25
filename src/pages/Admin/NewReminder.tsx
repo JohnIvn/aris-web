@@ -36,15 +36,11 @@ export default function NewReminder() {
     }
     try {
       await saveResource("/announcements", {
-        id: `announcement-${Date.now()}`,
         title: title.trim(),
         body: body.trim(),
-        tag: category,
-        tone: category === "System" ? "amber" : category === "AI / ML" ? "blue" : "green",
+        category,
         audience,
-        initials: title.trim().slice(0, 2).toUpperCase(),
-        date: "Just now",
-        pinned,
+        isPinned: pinned,
       });
       close();
     } catch (reason) {

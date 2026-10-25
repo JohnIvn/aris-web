@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react"
 import arisLogo from "@/assets/brand/image.png"
 import { BRAND, BRAND_DARK, mainNav, managementNav, settingsNav, supportNav, type NavItem } from "@/config/navigation"
 import type { UserAccount } from "@/data/demoAccounts"
-import DataModeNotice from "@/components/DataModeNotice"
 import { GhostButton, Modal, PrimaryButton, SearchInput } from "@/components/ui"
 
 export default function Root({ onSignOut, user }: { onSignOut: () => void; user: UserAccount }) {
@@ -296,7 +295,6 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
         )}
 
         <main ref={mainRef} className="flex-1 overflow-y-auto min-h-0 pr-1">
-          <DataModeNotice />
           <Outlet />
         </main>
       </div>

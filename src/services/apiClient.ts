@@ -42,6 +42,9 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: unknown) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
     if (axios.isAxiosError(error)) {
       console.error("[ARIS API ERROR]", {
         method: error.config?.method?.toUpperCase() ?? "GET",
