@@ -21,6 +21,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [showNotifications, setShowNotifications] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { data: announcements } = useResource<AdminAnnouncement[]>("/announcements", [])
 
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -47,7 +48,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     return (
       <button
         onClick={() => navigate(item.path)}
-        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left transition-all duration-150 text-[13px] font-medium mb-0.5"
+        className={`w-full flex items-center gap-3 py-2 rounded-xl text-left transition-all duration-150 text-[13px] font-medium mb-0.5 ${sidebarCollapsed ? "justify-center px-0" : "px-3"}`}
         style={{
           background: active ? "#f0f7f2" : "transparent",
           color: active ? BRAND : "#5a6b5e",
@@ -55,9 +56,9 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
       >
         <span style={{ opacity: active ? 1 : 0.65 }}>{item.icon}</span>
         
-        <div className="flex items-center justify-between w-full">
-          <span className="flex-1">{item.label}</span>
-          {active && (
+        <div className={`flex items-center justify-between ${sidebarCollapsed ? "w-auto" : "w-full"}`}>
+          {!sidebarCollapsed && <span className="flex-1">{item.label}</span>}
+          {active && !sidebarCollapsed && (
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -83,7 +84,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     >
       {/* Sidebar */}
       <aside
-        className="hidden lg:flex lg:flex-col lg:w-60 lg:h-full lg:flex-shrink-0 select-none rounded-3xl bg-white"
+        className={`hidden lg:flex lg:flex-col lg:h-full lg:flex-shrink-0 select-none rounded-3xl bg-white transition-[width] duration-200 ${sidebarCollapsed ? "lg:w-[4.5rem]" : "lg:w-60"}`}
         style={{ boxShadow: "0 1px 2px rgba(16,32,20,0.05)" }}
       >
         <div className="flex items-center gap-3 px-4 pt-5 pb-4">
@@ -93,7 +94,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
           >
             <img src={arisLogo} alt="ARIS" className="w-6 h-6 object-contain" />
           </div>
-          <div className="flex-1 min-w-0">
+          {!sidebarCollapsed && <div className="flex-1 min-w-0">
             <p
               className="font-semibold text-[14px] leading-none tracking-tight"
               style={{ color: "#111c14" }}
@@ -103,50 +104,53 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
             <p className="text-[11px] mt-1" style={{ color: "#8fa394" }}>
               Administration
             </p>
-          </div>
+          </div>}
+          <button type="button" aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed((value) => !value)} className="ml-auto hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-[#5a6b5e] transition-colors hover:bg-[#f4f6f5] lg:flex">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d={sidebarCollapsed ? "M9 6l6 6-6 6" : "M15 6l-6 6 6 6"} /></svg>
+          </button>
         </div>
 
         <nav className="flex-1 px-3 overflow-y-auto">
-          <p
+          {!sidebarCollapsed && <p
             className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-2 pb-1.5"
             style={{ color: "#b6c3ba" }}
           >
             Main
-          </p>
+          </p>}
           {mainNav.map((item) => (
             <NavButton key={item.path} item={item} />
           ))}
-          <p
+          {!sidebarCollapsed && <p
             className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
             style={{ color: "#b6c3ba" }}
           >
             Management
-          </p>
+          </p>}
           {managementNav.map((item) => (
             <NavButton key={item.path} item={item} />
           ))}
-          <p
+          {!sidebarCollapsed && <p
             className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
             style={{ color: "#b6c3ba" }}
           >
             Support
-          </p>
+          </p>}
           {supportNav.map((item) => (
             <NavButton key={item.path} item={item} />
           ))}
-          <p
+          {!sidebarCollapsed && <p
             className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
             style={{ color: "#b6c3ba" }}
           >
             Settings
-          </p>
+          </p>}
           {settingsNav.map((item) => (
             <NavButton key={item.path} item={item} />
           ))}
         </nav>
 
         <div className="p-3">
-          <div
+          {!sidebarCollapsed && <div
             className="flex items-center gap-3 p-2 rounded-2xl"
             style={{ background: "#f4f6f5" }}
           >
@@ -167,11 +171,11 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                 {user.email}
               </p>
             </div>
-          </div>
+          </div>}
           <button
             type="button"
             onClick={() => setShowSignOutConfirm(true)}
-            className="mt-1 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-[13px] font-medium text-[#5a6b5e] transition-colors hover:bg-[#f4f6f5] hover:text-[#c0392b]"
+            className={`mt-1 flex w-full items-center gap-2 rounded-xl py-2 text-left text-[13px] font-medium text-[#5a6b5e] transition-colors hover:bg-[#f4f6f5] hover:text-[#c0392b] ${sidebarCollapsed ? "justify-center px-0" : "px-2"}`}
           >
             <svg
               viewBox="0 0 24 24"
@@ -183,7 +187,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
             >
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
             </svg>
-            Logout
+            {!sidebarCollapsed && "Logout"}
           </button>
         </div>
       </aside>
