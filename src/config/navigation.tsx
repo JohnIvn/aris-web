@@ -1,7 +1,7 @@
-import type { JSX } from "react"
+import type { JSX } from "react";
 
-export const BRAND = "#3a7d4e"
-export const BRAND_DARK = "#0d1a10"
+export const BRAND = "#3a7d4e";
+export const BRAND_DARK = "#0d1a10";
 
 export const icon = (path: JSX.Element) => (
   <svg
@@ -15,9 +15,9 @@ export const icon = (path: JSX.Element) => (
   >
     {path}
   </svg>
-)
+);
 
-export type NavItem = { path: string; label: string; icon: JSX.Element }
+export type NavItem = { path: string; label: string; icon: JSX.Element };
 export const mainNav: NavItem[] = [
   {
     path: "/",
@@ -31,7 +31,7 @@ export const mainNav: NavItem[] = [
       </>,
     ),
   },
-]
+];
 
 export const managementNav: NavItem[] = [
   {
@@ -85,7 +85,7 @@ export const managementNav: NavItem[] = [
       <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />,
     ),
   },
-]
+];
 
 export const supportNav: NavItem[] = [
   {
@@ -99,7 +99,16 @@ export const supportNav: NavItem[] = [
       </>,
     ),
   },
-]
+  {
+    path: "/support/messages",
+    label: "Messaging",
+    icon: icon(
+      <>
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+      </>,
+    ),
+  },
+];
 
 export const settingsNav: NavItem[] = [
   {
@@ -152,6 +161,11 @@ export const settingsNav: NavItem[] = [
       </>,
     ),
   },
-]
+];
 
-export const allNav = [...mainNav, ...managementNav, ...supportNav, ...settingsNav]
+export const allNav = [
+  ...mainNav,
+  ...managementNav,
+  ...supportNav,
+  ...settingsNav,
+];
