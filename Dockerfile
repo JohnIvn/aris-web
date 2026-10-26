@@ -25,7 +25,7 @@ ENV NODE_ENV=production
 RUN npm install -g serve
 
 # Copy built artifacts from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist/admin ./dist
 
 # Expose the port Railway expects (it will set PORT env)
 EXPOSE 8080
