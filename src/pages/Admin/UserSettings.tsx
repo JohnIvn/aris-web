@@ -3,6 +3,7 @@ import { BRAND } from "@/config/navigation";
 import { useAuth } from "@/app/authContext";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
+import getBaseUrl from "@/utils/GetBaseUrl";
 import {
   Card,
   PageTitle,
@@ -214,7 +215,7 @@ export default function UserSettings() {
         {/* Profile summary */}
         <Card className="flex flex-col items-center text-center overflow-hidden">
           {profile.avatar_url ? (
-            <img src={`${import.meta.env.VITE_API_BASE_URL ?? "https://aris-server.up.railway.app"}${profile.avatar_url}`} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
+            <img src={`${getBaseUrl()}${profile.avatar_url}`} alt="Profile" className="w-20 h-20 rounded-full object-cover" />
           ) : <div
             className="w-20 h-20 rounded-full flex items-center justify-center text-white text-[26px] font-semibold"
             style={{ background: BRAND }}

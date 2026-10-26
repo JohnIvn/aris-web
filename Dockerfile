@@ -9,12 +9,11 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 # Copy project files
 COPY . .
 
-# Build arguments for Railway variables (public backend URL for browser)
-ARG VITE_API_BASE_URL=https://aris-server.up.railway.app/
+# Railway builds must never inherit the local .env backend URL.
 ARG VITE_GOOGLE_CLIENT_ID
 
 # Build the React/Vite app to ./dist
-RUN VITE_API_BASE_URL=${VITE_API_BASE_URL} VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} npm run build
+RUN VITE_API_BASE_URL=https://aris-server.up.railway.app VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID} npm run build
 
 # ---------- Runtime stage ----------
 FROM node:20-alpine AS runner
