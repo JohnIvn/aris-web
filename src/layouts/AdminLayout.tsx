@@ -24,7 +24,31 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
-  const { data: announcements } = useResource<AdminAnnouncement[]>("/announcements", [])
+  const { data: rawAnnouncements } = useResource<AdminAnnouncement[]>("/announcements", [])
+  const announcements = Array.isArray(rawAnnouncements) ? rawAnnouncements : []
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("aris_admin_read_notifications")
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+  const markRead = (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setReadIds((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      try { localStorage.setItem("aris_admin_read_notifications", JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+  const markAllRead = () => {
+    const allIds = announcements.map((a) => a.id)
+    setReadIds(new Set(allIds))
+    try { localStorage.setItem("aris_admin_read_notifications", JSON.stringify(allIds)) } catch {}
+  }
+  const unreadCount = announcements.filter((a) => !readIds.has(a.id)).length
 
   const [currentTime, setCurrentTime] = useState(new Date())
   useEffect(() => {
@@ -65,7 +89,12 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     settingsNav.find((item) => /user|account|profile/i.test(`${item.label} ${item.path}`)) ?? settingsNav[0]
 
   const NavButton = ({ item }: { item: NavItem }) => {
-    const active = location.pathname === item.path
+    const active =
+      location.pathname === item.path ||
+      (item.path === "/announcements" &&
+        (location.pathname === "/notifications" ||
+          location.pathname.startsWith("/announcements") ||
+          location.pathname.startsWith("/notifications")))
     return (
       <button
         onClick={() => navigate(item.path)}
@@ -297,7 +326,12 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                       {section.title}
                     </p>
                     {section.items.map((item) => {
-                      const active = location.pathname === item.path
+                      const active =
+      location.pathname === item.path ||
+      (item.path === "/announcements" &&
+        (location.pathname === "/notifications" ||
+          location.pathname.startsWith("/announcements") ||
+          location.pathname.startsWith("/notifications")))
                       return (
                         <button
                           key={item.path}
@@ -378,7 +412,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                 >
                   <path d="M15 17H9m6 0a3 3 0 01-6 0m6 0h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5" />
                 </svg>
-                {announcements.length > 0 && <span
+                {unreadCount > 0 && <span
                   className="absolute top-2 right-2 w-2 h-2 rounded-full border-2 border-white"
                   style={{ background: BRAND }}
                 />}
@@ -422,13 +456,81 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
           {searchItems.length ? searchItems.map((item) => <button key={item.path} type="button" onClick={() => { navigate(item.path); setShowSearch(false); setSearchQuery(""); }} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-[13px] text-[#3d4a41] hover:bg-[#f4f6f5]">{item.icon}<span>{item.label}</span></button>) : <p className="px-3 py-4 text-[12px] text-[#8fa394]">No matching pages.</p>}
         </div>
       </Modal>
-      <Modal isOpen={showNotifications} onClose={() => setShowNotifications(false)} title="Notifications" size="lg" align="left" actions={<PrimaryButton onClick={() => setShowNotifications(false)}>Done</PrimaryButton>}>
+      <Modal
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        title="Notifications"
+        size="lg"
+        align="left"
+        actions={
+          <div className="flex items-center justify-between w-full">
+            <button
+              type="button"
+              onClick={() => {
+                setShowNotifications(false);
+                navigate("/announcements");
+              }}
+              className="text-[12.5px] font-semibold text-[#3a7d4e] hover:underline"
+            >
+              Manage Announcements →
+            </button>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={markAllRead}
+                  className="text-[12px] font-medium text-[#5a6b5e] hover:text-[#111c14] px-2.5 py-1 rounded-lg border border-[#e2e8e4]"
+                >
+                  Mark all as read
+                </button>
+              )}
+              <PrimaryButton onClick={() => setShowNotifications(false)}>Done</PrimaryButton>
+            </div>
+          </div>
+        }
+      >
         <div className="divide-y divide-[#eef1ef]">
           {announcements.length === 0 && <p className="px-3 py-4 text-[12px] text-[#8fa394]">No notifications available.</p>}
-          {announcements.map((notice) => <button key={notice.id} type="button" onClick={() => { navigate("/announcements"); setShowNotifications(false); }} className="flex w-full items-start justify-between gap-4 py-3 text-left hover:bg-[#fafbfa]">
-            <span><span className="block text-[13px] font-semibold text-[#111c14]">{notice.title}</span><span className="mt-1 block text-[12px] text-[#8fa394]">{notice.body}</span></span>
-            <span className="shrink-0 text-[11px] font-medium text-[#3a7d4e]">{notice.tag ?? "Announcement"}</span>
-          </button>)}
+          {announcements.map((notice) => {
+            const isRead = readIds.has(notice.id);
+            return (
+              <div
+                key={notice.id}
+                onClick={() => {
+                  markRead(notice.id);
+                  navigate("/announcements");
+                  setShowNotifications(false);
+                }}
+                className={`flex w-full items-start justify-between gap-4 py-3 px-2 rounded-xl text-left cursor-pointer transition-colors ${
+                  isRead ? "hover:bg-[#fafbfa] opacity-75" : "bg-[#f9fbf9] hover:bg-[#f0f7f2]"
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {!isRead && <span className="w-2 h-2 rounded-full bg-[#3a7d4e] flex-shrink-0" />}
+                    <span className={`block text-[13px] ${isRead ? "font-medium text-[#405145]" : "font-semibold text-[#111c14]"}`}>
+                      {notice.title}
+                    </span>
+                  </div>
+                  <span className="mt-1 block text-[12px] text-[#8fa394] line-clamp-2">{notice.body}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-[11px] font-medium text-[#3a7d4e]">{notice.tag ?? "Announcement"}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markRead(notice.id);
+                    }}
+                    title={isRead ? "Read" : "Mark as read"}
+                    className="p-1 text-[#8fa394] hover:text-[#3a7d4e]"
+                  >
+                    {isRead ? "✓" : "○"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </Modal>
       <Modal

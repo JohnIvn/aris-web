@@ -5,15 +5,18 @@ export function Card({
   children,
   className = "",
   style,
+  onClick,
 }: {
   children: ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }) {
   return (
     <div
       className={`rounded-3xl bg-white p-5 ${className}`}
       style={{ boxShadow: "0 1px 2px rgba(16,32,20,0.05)", ...style }}
+      onClick={onClick}
     >
       {children}
     </div>

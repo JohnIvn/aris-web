@@ -33,7 +33,7 @@ const staffNavigation = [
   },
   {
     path: "/notifications",
-    label: "Notifications",
+    label: "Notifications & Announcements",
     icon: <path d="M15 17H9m6 0a3 3 0 01-6 0m6 0h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5" />,
   },
   {
@@ -146,7 +146,7 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         </nav>
         <main className="min-h-0 flex-1 overflow-y-auto pr-1">
           {location.pathname === "/" && <StaffDashboard displayName={displayName} profile={profile} user={user} onManageProfile={() => navigate("/settings/user")} />}
-          {location.pathname === "/notifications" && <StaffNotifications />}
+          {(location.pathname === "/notifications" || location.pathname === "/announcements") && <StaffNotifications />}
           {location.pathname === "/approvals" && <StaffApprovals />}
           {location.pathname === "/tickets" && <Tickets />}
           {location.pathname === "/support" && <Support />}
@@ -158,7 +158,8 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
 
 function StaffDashboard({ displayName, profile, user, onManageProfile }: { displayName: string; profile: Profile; user: { email: string }; onManageProfile: () => void }) {
   const navigate = useNavigate();
-  const { data: announcements } = useResource<StaffAnnouncement[]>("/announcements", []);
+  const { data: rawAnnouncements } = useResource<StaffAnnouncement[]>("/announcements", []);
+  const announcements = Array.isArray(rawAnnouncements) ? rawAnnouncements : [];
   const [showNotifications, setShowNotifications] = useState(false);
   const notifications = announcements.map((announcement) => ({
     title: announcement.title,

@@ -46,13 +46,24 @@ const fallbackDepts: CurriculumDepartment[] = [
 export default function Dashboard() {
   const [range, setRange] = useState("1M");
   const navigate = useNavigate();
-  const { data: professors } = useResource<Person[]>("/professors", []);
-  const { data: staff } = useResource<Person[]>("/staff", []);
-  const { data: payroll } = useResource<{ records?: PayrollItem[]; classes?: unknown[] }>("/payroll", { records: [], classes: [] });
-  const { data: announcements } = useResource<unknown[]>("/announcements", []);
-  const { data: auditLogs } = useResource<DashboardAudit[]>("/audit", []);
-  const { data: tickets } = useResource<DashboardTicket[]>("/support/tickets", []);
+  const { data: rawProfessors } = useResource<Person[]>("/professors", []);
+  const { data: rawStaff } = useResource<Person[]>("/staff", []);
+  const { data: rawPayroll } = useResource<{ records?: PayrollItem[]; classes?: unknown[] }>("/payroll", { records: [], classes: [] });
+  const { data: rawAnnouncements } = useResource<unknown[]>("/announcements", []);
+  const { data: rawAudit } = useResource<DashboardAudit[] | { logs?: DashboardAudit[] }>("/audit", []);
+  const { data: rawTickets } = useResource<DashboardTicket[]>("/support/tickets", []);
   const { data: curriculumDepartments } = useResource<CurriculumDepartment[]>("/curriculum/departments", fallbackDepts);
+
+  const professors = Array.isArray(rawProfessors) ? rawProfessors : [];
+  const staff = Array.isArray(rawStaff) ? rawStaff : [];
+  const announcements = Array.isArray(rawAnnouncements) ? rawAnnouncements : [];
+  const auditLogs: DashboardAudit[] = Array.isArray(rawAudit)
+    ? rawAudit
+    : Array.isArray((rawAudit as { logs?: DashboardAudit[] })?.logs)
+      ? (rawAudit as { logs: DashboardAudit[] }).logs
+      : [];
+  const tickets = Array.isArray(rawTickets) ? rawTickets : [];
+  const payroll = rawPayroll && typeof rawPayroll === "object" ? rawPayroll : { records: [], classes: [] };
 
   const payrollRecords = payroll.records ?? [];
   const approvedPayroll = payrollRecords.filter((record) => record.status === "Approved");
