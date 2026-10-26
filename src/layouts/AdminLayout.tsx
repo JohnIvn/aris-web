@@ -22,6 +22,8 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
   const [searchQuery, setSearchQuery] = useState("")
   const [showNotifications, setShowNotifications] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
   const { data: announcements } = useResource<AdminAnnouncement[]>("/announcements", [])
 
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -34,6 +36,12 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     mainRef.current?.scrollTo({ top: 0 })
   }, [location.pathname])
 
+  // Close the mobile menu after any navigation
+  useEffect(() => {
+    setShowMobileMenu(false)
+    setShowProfileMenu(false)
+  }, [location.pathname])
+
   const confirmSignOut = () => {
     setShowSignOutConfirm(false)
     onSignOut()
@@ -42,6 +50,19 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
   const searchItems = [...mainNav, ...managementNav, ...supportNav, ...settingsNav].filter((item) =>
     item.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
   )
+
+  const navSections = [
+    { title: "Main", items: mainNav },
+    { title: "Management", items: managementNav },
+    { title: "Support", items: supportNav },
+    { title: "Settings", items: settingsNav },
+  ]
+
+  // The single "user settings" entry shown in the mobile profile dropdown.
+  // Matches a settingsNav item whose label or path mentions user/account/profile,
+  // and falls back to the first settings item.
+  const userSettingsItem =
+    settingsNav.find((item) => /user|account|profile/i.test(`${item.label} ${item.path}`)) ?? settingsNav[0]
 
   const NavButton = ({ item }: { item: NavItem }) => {
     const active = location.pathname === item.path
@@ -55,7 +76,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
         }}
       >
         <span style={{ opacity: active ? 1 : 0.65 }}>{item.icon}</span>
-        
+
         <div className={`flex items-center justify-between ${sidebarCollapsed ? "w-auto" : "w-full"}`}>
           {!sidebarCollapsed && <span className="flex-1">{item.label}</span>}
           {active && !sidebarCollapsed && (
@@ -194,24 +215,109 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
 
       {/* Main */}
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        <nav aria-label="Mobile navigation" className="lg:hidden flex flex-shrink-0 gap-1 overflow-x-auto pb-2">
-          {[...mainNav, ...settingsNav].map((item) => (
+        {/* Mobile top bar with burger menu (hidden on lg and up) */}
+        <div className="lg:hidden relative mb-2 flex-shrink-0">
+          <div className="flex items-center gap-2 rounded-2xl bg-white px-2 py-2">
             <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              aria-current={location.pathname === item.path ? "page" : undefined}
-              className="flex h-9 flex-shrink-0 items-center gap-2 rounded-lg px-3 text-[12px] font-medium"
-              style={{ background: location.pathname === item.path ? "#e6f1e9" : "#fff", color: location.pathname === item.path ? BRAND : "#5a6b5e" }}
+              type="button"
+              aria-label={showMobileMenu ? "Close menu" : "Open menu"}
+              aria-expanded={showMobileMenu}
+              onClick={() => { setShowProfileMenu(false); setShowMobileMenu((v) => !v) }}
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f4f6f5]"
             >
-              {item.icon}<span>{item.label}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-5 w-5">
+                <path d={showMobileMenu ? "M6 6l12 12M18 6L6 18" : "M4 7h16M4 12h16M4 17h16"} />
+              </svg>
             </button>
-          ))}
-        </nav>
-        <div className="lg:hidden mb-2 flex min-w-0 flex-shrink-0 items-center gap-2 border-b border-[#e2e8e4] px-1 pb-2">
-          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ background: BRAND }}>{user.name.slice(0, 2).toUpperCase()}</span>
-          <span className="min-w-0 flex-1 truncate text-[12px] font-medium" style={{ color: "#3d4a41" }}>{user.name}</span>
-          <button onClick={() => setShowSignOutConfirm(true)} className="flex-shrink-0 px-2 py-1 text-[12px] font-semibold" style={{ color: BRAND }}>Sign out</button>
+            <img src={arisLogo} alt="ARIS" className="h-6 w-6 flex-shrink-0 object-contain" />
+            <span className="flex-1 text-[14px] font-semibold" style={{ color: "#111c14" }}>ARIS</span>
+            <button
+              type="button"
+              aria-label="Profile menu"
+              aria-haspopup="menu"
+              aria-expanded={showProfileMenu}
+              onClick={() => { setShowMobileMenu(false); setShowProfileMenu((v) => !v) }}
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+              style={{ background: BRAND }}
+            >
+              {user.name.slice(0, 2).toUpperCase()}
+            </button>
+          </div>
+
+          {showProfileMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-1 w-56 rounded-2xl bg-white p-2"
+                style={{ boxShadow: "0 8px 24px rgba(16,32,20,0.12)" }}
+              >
+                <div className="px-3 py-2">
+                  <p className="truncate text-[13px] font-semibold" style={{ color: "#111c14" }}>{user.name}</p>
+                  <p className="truncate text-[11px]" style={{ color: "#8fa394" }}>{user.email}</p>
+                </div>
+                <div className="my-1 border-t border-[#eef1ef]" />
+                {userSettingsItem && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { navigate(userSettingsItem.path); setShowProfileMenu(false) }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-[#5a6b5e] hover:bg-[#f4f6f5]"
+                  >
+                    <span style={{ opacity: 0.65 }}>{userSettingsItem.icon}</span>
+                    <span>{userSettingsItem.label}</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setShowProfileMenu(false); setShowSignOutConfirm(true) }}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-[#5a6b5e] hover:bg-[#fbecec] hover:text-[#c0392b]"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]" aria-hidden="true">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                  </svg>
+                  <span>Sign out</span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {showMobileMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowMobileMenu(false)} />
+              <nav
+                aria-label="Mobile navigation"
+                className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-2xl bg-white p-2"
+                style={{ boxShadow: "0 8px 24px rgba(16,32,20,0.12)" }}
+              >
+                {navSections.map((section) => (
+                  <div key={section.title}>
+                    <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#b6c3ba" }}>
+                      {section.title}
+                    </p>
+                    {section.items.map((item) => {
+                      const active = location.pathname === item.path
+                      return (
+                        <button
+                          key={item.path}
+                          onClick={() => navigate(item.path)}
+                          aria-current={active ? "page" : undefined}
+                          className="mb-0.5 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium"
+                          style={{ background: active ? "#f0f7f2" : "transparent", color: active ? BRAND : "#5a6b5e" }}
+                        >
+                          <span style={{ opacity: active ? 1 : 0.65 }}>{item.icon}</span>
+                          <span>{item.label}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
+              </nav>
+            </>
+          )}
         </div>
+
         {location.pathname === "/" && (
           <header className="flex flex-col gap-2 flex-shrink-0 pb-2 pl-1 pr-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
