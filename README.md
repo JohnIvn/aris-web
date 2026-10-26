@@ -9,7 +9,12 @@ npm install
 npm run dev
 ```
 
-Copy `.env.example` to `.env` to connect the web app to the ARIS API. The default configuration uses `http://localhost:3000`, where the Nest server reads administrator accounts from the database. Set `VITE_DATA_MODE=demo` only when intentionally using the local demo data.
+Copy `.env.example` to `.env` to connect the web app to the ARIS API. Local Vite development defaults to `http://localhost:3000`, where the Nest server reads administrator accounts from the database. Set `VITE_API_BASE_URL` to override the backend URL. Railway supplies the production URL during the Docker build. Set `VITE_DATA_MODE=demo` only when intentionally using the local demo data.
+
+Support tickets use the server's `/support/tickets` API. Set
+`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the web deployment to
+enable Supabase Realtime updates for new tickets and replies. The server adds
+the ticket tables to the `supabase_realtime` publication during startup.
 
 ## Demo Accounts
 

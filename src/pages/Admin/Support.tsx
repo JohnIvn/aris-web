@@ -1,16 +1,31 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { Card, PageTitle, PrimaryButton } from "@/components/ui";
+import { useResource } from "@/hooks/useResource";
+import { useSupportRealtime } from "@/hooks/useSupportRealtime";
+import { saveResource } from "@/services/dataSource";
 
 const supportEmail = "admin@ucc.edu.ph";
 
 export default function Support() {
   const [subject, setSubject] = useState("");
   const [details, setDetails] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const { data: tickets, reload } = useResource<Array<{ id: string; title: string; status: string; createdAt: string }>>("/support/tickets", []);
+  const refreshTickets = useCallback(() => reload(), [reload]);
+  useSupportRealtime(refreshTickets);
 
-  const submitRequest = (event: FormEvent<HTMLFormElement>) => {
+  const submitRequest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const mailto = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(details)}`;
-    window.location.href = mailto;
+    setMessage(null);
+    try {
+      await saveResource("/support/tickets", { subject, description: details }, "POST");
+      setSubject("");
+      setDetails("");
+      setMessage("Your support ticket was submitted.");
+      reload();
+    } catch (reason) {
+      setMessage(reason instanceof Error ? reason.message : "Unable to submit support ticket.");
+    }
   };
 
   return (
@@ -19,7 +34,8 @@ export default function Support() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
         <Card>
           <h2 className="text-[15px] font-semibold text-[#111c14]">Contact IT administration</h2>
-          <p className="mt-1 text-[12.5px] text-[#8fa394]">Describe the issue and your email app will open a prepared support request.</p>
+          <p className="mt-1 text-[12.5px] text-[#8fa394]">Describe the issue and the support team will respond here.</p>
+          {message && <p role="status" className="mt-3 rounded-lg bg-[#eef7f0] px-3 py-2 text-[12px] text-[#2f7043]">{message}</p>}
           <form onSubmit={submitRequest} className="mt-5 space-y-4">
             <label className="block text-[12px] font-medium text-[#3d4a41]">
               Subject
@@ -31,10 +47,18 @@ export default function Support() {
             </label>
             <PrimaryButton onClick={() => {}}>Email support</PrimaryButton>
           </form>
-          <a href={`mailto:${supportEmail}`} className="mt-4 inline-block text-[12px] font-medium text-[#3a7d4e] hover:underline">{supportEmail}</a>
+          <p className="mt-4 text-[12px] text-[#738176]">Support email: {supportEmail}</p>
         </Card>
         <Card>
-          <h2 className="text-[15px] font-semibold text-[#111c14]">Common questions</h2>
+          <h2 className="text-[15px] font-semibold text-[#111c14]">My tickets</h2>
+          <div className="mt-3 space-y-2">
+            {tickets.length === 0 && <p className="text-[12px] text-[#8fa394]">No support tickets yet.</p>}
+            {tickets.map((ticket) => <div key={ticket.id} className="rounded-lg border border-[#edf0ed] p-3">
+              <p className="text-[13px] font-medium text-[#3d4a41]">{ticket.title}</p>
+              <p className="mt-1 text-[11px] text-[#8fa394]">{ticket.status} · {new Date(ticket.createdAt).toLocaleDateString()}</p>
+            </div>)}
+          </div>
+          <h2 className="mt-6 text-[15px] font-semibold text-[#111c14]">Common questions</h2>
           <div className="mt-3 divide-y divide-[#eef1ef]">
             <details className="py-3">
               <summary className="cursor-pointer text-[13px] font-medium text-[#3d4a41]">How do I reset my password?</summary>

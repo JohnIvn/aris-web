@@ -7,6 +7,8 @@ import { useResource } from "@/hooks/useResource";
 import { Card, Modal, PageTitle, PrimaryButton } from "@/components/ui";
 import Approvals from "./Approvals";
 import Announcements from "./Announcements";
+import Tickets from "../Admin/Tickets";
+import Support from "../Admin/Support";
 
 type Profile = {
   firstname?: string;
@@ -38,6 +40,16 @@ const staffNavigation = [
     path: "/approvals",
     label: "Approvals",
     icon: <path d="M5 12l4 4L19 6" />,
+  },
+  {
+    path: "/tickets",
+    label: "Tickets",
+    icon: <path d="M4 13a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-2v-6h4M4 13v6h2v-6H4Z" />,
+  },
+  {
+    path: "/support",
+    label: "New Ticket",
+    icon: <path d="M12 5v14M5 12h14" />,
   },
 ];
 
@@ -136,6 +148,8 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           {location.pathname === "/" && <StaffDashboard displayName={displayName} profile={profile} user={user} onManageProfile={() => navigate("/settings/user")} />}
           {location.pathname === "/notifications" && <StaffNotifications />}
           {location.pathname === "/approvals" && <StaffApprovals />}
+          {location.pathname === "/tickets" && <Tickets />}
+          {location.pathname === "/support" && <Support />}
         </main>
       </div>
     </div>

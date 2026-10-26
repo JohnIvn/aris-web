@@ -1,6 +1,8 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { Avatar, Badge, Card, PageTitle } from "@/components/ui";
+import { useAuth } from "@/app/authContext";
 import { useResource } from "@/hooks/useResource";
+import { useSupportRealtime } from "@/hooks/useSupportRealtime";
 import { saveResource } from "@/services/dataSource";
 
 type TicketMessage = {
@@ -14,65 +16,19 @@ type Ticket = {
   id: string;
   title: string;
   requester: string;
-  priority: "Low" | "Medium" | "High";
-  status: "Open" | "Closed";
+  priority: "Low" | "Normal" | "High" | "Urgent";
+  status: "Open" | "In Progress" | "Resolved" | "Closed";
   createdAt: string;
+  description?: string | null;
   messages: TicketMessage[];
 };
-
-const initialTickets: Ticket[] = [
-  {
-    id: "ticket-001",
-    title: "Submitting AR",
-    requester: "Mr Khyrl",
-    priority: "Low",
-    status: "Open",
-    createdAt: "9/16/26",
-    messages: [
-      { id: "message-001", author: "requester", text: "I need help submitting my accomplishment report.", time: "11:42 AM" },
-    ],
-  },
-  {
-    id: "ticket-002",
-    title: "Unable to Change Password",
-    requester: "Mr Cania",
-    priority: "Medium",
-    status: "Open",
-    createdAt: "9/17/26",
-    messages: [
-      { id: "message-002", author: "requester", text: "Hello I am unable to change my password", time: "12:03 PM" },
-      { id: "message-003", author: "admin", text: "Good day sir, could you please explain the issue further?", time: "12:00 PM" },
-    ],
-  },
-  {
-    id: "ticket-003",
-    title: "Wrong Faculty Information",
-    requester: "Ms Gwyneth",
-    priority: "High",
-    status: "Open",
-    createdAt: "9/17/26",
-    messages: [
-      { id: "message-004", author: "requester", text: "My faculty information appears to be incorrect.", time: "9:18 AM" },
-    ],
-  },
-  ...(["Ticket name", "Ticket name", "Ticket name"] as const).map((title, index) => ({
-    id: `ticket-${String(index + 4).padStart(3, "0")}`,
-    title,
-    requester: "TicketUser",
-    priority: "Low" as const,
-    status: "Open" as const,
-    createdAt: "Date",
-    messages: [
-      { id: `message-${String(index + 5).padStart(3, "0")}`, author: "requester" as const, text: "Please review my support request.", time: "10:00 AM" },
-    ],
-  })),
-];
-
-const priorityTone = { Low: "green", Medium: "amber", High: "red" } as const;
+const priorityTone = { Low: "green", Normal: "amber", High: "red", Urgent: "red" } as const;
 
 export default function Tickets() {
-  const { data: tickets, setData: setTickets, loading, error } = useResource<Ticket[]>("/support/tickets", initialTickets);
-  const [selectedId, setSelectedId] = useState(initialTickets[1].id);
+  const { user } = useAuth();
+  const isAdmin = user.role === "admin" || user.role === "administrator";
+  const { data: tickets, setData: setTickets, loading, error, reload } = useResource<Ticket[]>("/support/tickets", []);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | Ticket["status"]>("All");
   const [reply, setReply] = useState("");
@@ -90,12 +46,15 @@ export default function Tickets() {
 
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedId) ?? filteredTickets[0] ?? null;
 
+  const refreshTickets = useCallback(() => reload(), [reload]);
+  useSupportRealtime(refreshTickets);
+
   const updateTicket = async (updatedTicket: Ticket) => {
-    const updatedTickets = tickets.map((ticket) => ticket.id === updatedTicket.id ? updatedTicket : ticket);
-    setTickets(updatedTickets);
     setSaveError(null);
     try {
-      await saveResource("/support/tickets", updatedTickets, "PUT");
+      const status = updatedTicket.status.toLowerCase().replace(" ", "_");
+      const saved = await saveResource<Ticket>(`/support/tickets/${updatedTicket.id}`, { status }, "PATCH");
+      setTickets((current) => current.map((ticket) => ticket.id === saved.id ? { ...ticket, ...saved } : ticket));
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Unable to save ticket changes.");
     }
@@ -106,25 +65,20 @@ export default function Tickets() {
     const text = reply.trim();
     if (!text || !selectedTicket) return;
 
-    const now = new Date();
-    await updateTicket({
-      ...selectedTicket,
-      messages: [
-        ...selectedTicket.messages,
-        {
-          id: `message-${now.getTime()}`,
-          author: "admin",
-          text,
-          time: now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
-        },
-      ],
-    });
+    try {
+      const message = await saveResource<TicketMessage>(`/support/tickets/${selectedTicket.id}/messages`, { body: text }, "POST");
+      setTickets((current) => current.map((ticket) => ticket.id === selectedTicket.id
+        ? { ...ticket, messages: [...ticket.messages, message] }
+        : ticket));
+    } catch (reason) {
+      setSaveError(reason instanceof Error ? reason.message : "Unable to send reply.");
+    }
     setReply("");
   };
 
   return (
     <div className="pb-4">
-      <PageTitle title="Support" subtitle="Review and respond to administrator support tickets." />
+      <PageTitle title={isAdmin ? "Support" : "My Tickets"} subtitle={isAdmin ? "Review and respond to administrator support tickets." : "Track your support requests and replies."} />
       {error && <p role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{error}</p>}
       {saveError && <p role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{saveError}</p>}
 
@@ -200,13 +154,13 @@ export default function Tickets() {
                     {selectedTicket.requester} · <span>{selectedTicket.createdAt}</span>
                   </p>
                 </div>
-                <button
+                {isAdmin && <button
                   type="button"
                   onClick={() => void updateTicket({ ...selectedTicket, status: selectedTicket.status === "Open" ? "Closed" : "Open" })}
                   className="h-9 rounded-xl bg-[#397c4d] px-4 text-[12px] font-semibold text-white transition hover:bg-[#2e6c41]"
                 >
                   {selectedTicket.status === "Open" ? "Close Ticket" : "Reopen Ticket"}
-                </button>
+                </button>}
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-5">
