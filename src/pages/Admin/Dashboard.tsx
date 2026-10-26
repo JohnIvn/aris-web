@@ -9,6 +9,15 @@ type Person = { department?: string | null; dept?: string | null; status?: strin
 type PayrollItem = { amount?: string | number; status?: string };
 type DashboardAudit = { action?: string; result?: string };
 type DashboardTicket = { status?: string };
+type CurriculumDepartment = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  is_active: boolean;
+  professor_count?: number;
+  staff_count?: number;
+};
 
 function Delta({ v, up }: { v: string; up: boolean }) {
   return (
@@ -26,6 +35,14 @@ function CardHead({ title, action, onActionClick }: { title: string; action?: st
   );
 }
 
+const fallbackDepts: CurriculumDepartment[] = [
+  { id: "1", code: "ENG", name: "Engineering", is_active: true },
+  { id: "2", code: "CS", name: "Computer Science", is_active: true },
+  { id: "3", code: "BUS", name: "Business", is_active: true },
+  { id: "4", code: "SCI", name: "Sciences", is_active: true },
+  { id: "5", code: "HUM", name: "Arts & Humanities", is_active: true },
+];
+
 export default function Dashboard() {
   const [range, setRange] = useState("1M");
   const navigate = useNavigate();
@@ -35,6 +52,8 @@ export default function Dashboard() {
   const { data: announcements } = useResource<unknown[]>("/announcements", []);
   const { data: auditLogs } = useResource<DashboardAudit[]>("/audit", []);
   const { data: tickets } = useResource<DashboardTicket[]>("/support/tickets", []);
+  const { data: curriculumDepartments } = useResource<CurriculumDepartment[]>("/curriculum/departments", fallbackDepts);
+
   const payrollRecords = payroll.records ?? [];
   const approvedPayroll = payrollRecords.filter((record) => record.status === "Approved");
   const pendingPayroll = payrollRecords.filter((record) => record.status === "Pending");
@@ -63,21 +82,46 @@ export default function Dashboard() {
     { name: "Staff", value: staff.length.toLocaleString(), delta: "", up: true },
     { name: "Announcements", value: announcements.length.toLocaleString(), delta: "", up: true },
   ];
-  const departmentCounts = staff.reduce<Record<string, number>>((counts, person) => {
-    const department = person.department ?? person.dept ?? "Unassigned";
-    counts[department] = (counts[department] ?? 0) + 1;
-    return counts;
-  }, {});
-  const departmentTotal = staff.length || 1;
-  const departmentData = Object.entries(departmentCounts).slice(0, 3).map(([name, total], index) => ({
-    name,
-    pct: `${Math.round((total / departmentTotal) * 100)}%`,
-    total: String(total),
-    dot: [BRAND, "#d99a2b", "#3f8ecc"][index],
-  }));
+
+  // Curriculum-based Department Load calculation
+  const depts = Array.isArray(curriculumDepartments) && curriculumDepartments.length > 0
+    ? curriculumDepartments
+    : fallbackDepts;
+
+  const facultyTotal = professors.length || 1;
+  const palette = [BRAND, "#d99a2b", "#3f8ecc", "#8a63c4", "#c0563a", "#2b9c8a", "#1b4d3e"];
+
+  const departmentData = depts.map((dept, index) => {
+    // Check professor_count from curriculum or cross-reference professors data
+    const count = dept.professor_count !== undefined && dept.professor_count !== null && dept.professor_count > 0
+      ? dept.professor_count
+      : professors.filter((p) => {
+          const personDept = (p.department ?? p.dept ?? "").toLowerCase().trim();
+          const targetName = dept.name.toLowerCase().trim();
+          const targetCode = (dept.code || "").toLowerCase().trim();
+          return personDept === targetName || (targetCode && personDept === targetCode);
+        }).length;
+
+    const pctNumber = Math.round((count / facultyTotal) * 100);
+    return {
+      name: dept.name,
+      code: dept.code,
+      count,
+      pct: `${pctNumber}%`,
+      pctNumber,
+      total: String(count),
+      dot: palette[index % palette.length],
+      isActive: dept.is_active !== false,
+    };
+  });
+
+  const totalAssignedFaculty = departmentData.reduce((acc, d) => acc + d.count, 0);
+  const departmentLoadRate = facultyTotal > 0 ? Math.min(100, Math.round((totalAssignedFaculty / facultyTotal) * 100)) : 100;
+
   const submissionTotal = payrollRecords.length;
   const submissionRate = submissionTotal ? Math.round((approvedPayroll.length / submissionTotal) * 100) : 0;
   const openTickets = tickets.filter((ticket) => ticket.status === "Open").length;
+
   return (
     <div className="grid auto-rows-[minmax(16rem,auto)] grid-cols-1 gap-3 sm:grid-cols-3 2xl:grid-cols-3">
       {/* Enrollment */}
@@ -104,7 +148,7 @@ export default function Dashboard() {
               <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: BRAND }} />
               <span className="text-[12.5px] flex-1 truncate" style={{ color: "#3d4a41" }}>{p.name}</span>
               <span className="text-[12.5px] font-semibold" style={{ color: "#111c14" }}>{p.value}</span>
-              {p.delta && <span className="text-[11px] font-medium w-12 text-right" style={{ color: p.up ? "#2f7043" : "#c0392b" }}>{p.up ? "↑" : "↓"} {p.delta}</span>}
+              {p.delta && <span className="text-[11px] font-medium w-12 text-right" style={{ color: p.up ? "#2f7043" : "#c0392b" }}>{p.up ? "▲" : "▼"} {p.delta}</span>}
             </div>
           ))}
         </div>
@@ -138,7 +182,7 @@ export default function Dashboard() {
 
       {/* Payroll */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Payroll This Cycle" action="Details"  onActionClick={() => navigate("/payroll")} />
+        <CardHead title="Payroll This Cycle" action="Details" onActionClick={() => navigate("/payroll")} />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>{formatAmount(totalPayroll)}</p>
         </div>
@@ -168,27 +212,50 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* Department load */}
+      {/* Department load (using Curriculum Data) */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Department Load" />
-        <div className="flex items-center gap-2">
-          <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>{staff.length ? `${Math.round((staff.filter((person) => person.status !== "On Leave").length / staff.length) * 100)}%` : "0%"}</p>
+        <CardHead title="Department Load" action="Manage" onActionClick={() => navigate("/curriculum")} />
+        <div className="flex items-baseline gap-2">
+          <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>
+            {departmentLoadRate}%
+          </p>
+          <span className="text-[12px]" style={{ color: "#8fa394" }}>
+            {totalAssignedFaculty} faculty in {depts.length} colleges
+          </span>
         </div>
         <div className="flex gap-1 h-2.5 rounded-full overflow-hidden mt-4">
-          {departmentData.map((department) => <div key={department.name} style={{ width: department.pct, background: department.dot }} />)}
-        </div>
-        <div className="flex gap-4 mt-2.5 text-[11px]">
           {departmentData.map((department) => (
-            <span key={department.name} className="flex items-center gap-1.5" style={{ color: "#5a6b5e" }}><span className="w-2 h-2 rounded-full" style={{ background: department.dot }} />{department.name}</span>
+            <div
+              key={department.name}
+              style={{ width: department.pct, background: department.dot }}
+              title={`${department.name}: ${department.total} faculty (${department.pct})`}
+            />
           ))}
         </div>
-        <div className="mt-4 flex-1 min-h-0">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5 text-[11px]">
+          {departmentData.slice(0, 4).map((department) => (
+            <span key={department.name} className="flex items-center gap-1.5" style={{ color: "#5a6b5e" }}>
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: department.dot }} />
+              {department.name}
+            </span>
+          ))}
+        </div>
+        <div className="mt-4 flex-1 min-h-0 overflow-y-auto max-h-[160px]">
           <div className="flex text-[10px] uppercase tracking-wide font-semibold pb-2" style={{ color: "#b6c3ba" }}>
-            <span className="flex-1">Department</span><span className="w-14 text-right">Share</span><span className="w-16 text-right">Faculty</span>
+            <span className="flex-1">Department</span>
+            <span className="w-14 text-right">Share</span>
+            <span className="w-16 text-right">Faculty</span>
           </div>
           {departmentData.map((d) => (
-            <div key={d.name} className="flex items-center py-1.5 text-[12.5px]">
-              <span className="flex-1 flex items-center gap-2" style={{ color: "#3d4a41" }}><span className="w-2 h-2 rounded-full" style={{ background: d.dot }} />{d.name}</span>
+            <div
+              key={d.name}
+              onClick={() => navigate("/curriculum")}
+              className="flex items-center py-1.5 text-[12.5px] hover:bg-[#fafbfa] rounded-lg px-1 transition-colors cursor-pointer"
+            >
+              <span className="flex-1 flex items-center gap-2 truncate" style={{ color: "#3d4a41" }}>
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: d.dot }} />
+                <span className="truncate">{d.name}</span>
+              </span>
               <span className="w-14 text-right" style={{ color: "#8fa394" }}>{d.pct}</span>
               <span className="w-16 text-right font-semibold" style={{ color: "#111c14" }}>{d.total}</span>
             </div>
@@ -196,9 +263,9 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* Attendance */}
+      {/* Attendance / Submission */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Submission Rate" action="Details"  onActionClick={() => navigate("/audit")} />
+        <CardHead title="Submission Rate" action="Details" onActionClick={() => navigate("/audit")} />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>{submissionRate}%</p>
         </div>
@@ -220,7 +287,7 @@ export default function Dashboard() {
 
       {/* Weekly activity */}
       <Card className="flex flex-col min-h-0">
-        <CardHead title="Weekly Activity" action="Details"  onActionClick={() => navigate("/audit")} />
+        <CardHead title="Weekly Activity" action="Details" onActionClick={() => navigate("/audit")} />
         <div className="flex items-center gap-2">
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>{auditLogs.length.toLocaleString()}</p>
         </div>

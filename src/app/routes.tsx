@@ -18,6 +18,7 @@ import SoftwareMonitoring from "@/pages/Admin/SoftwareMonitoring";
 import UserSettings from "@/pages/Admin/UserSettings";
 import Support from "@/pages/Admin/Support";
 import Tickets from "@/pages/Admin/Tickets";
+import StaffProfMessages from "@/pages/Admin/StaffProfMessages";
 import HardwareMonitoring from "@/pages/Admin/HardwareMonitoring";
 import StaffDashboard from "@/pages/Staff/Dashboard";
 
@@ -82,6 +83,8 @@ export const router = createBrowserRouter([
       { path: "software-monitoring", Component: SoftwareMonitoring },
       { path: "settings/user", Component: UserSettings },
       { path: "support", Component: Support },
+      { path: "support/messages", Component: StaffProfMessages },
+      { path: "messages", Component: StaffProfMessages },
       { path: "tickets", Component: Tickets },
       { path: "*", Component: Dashboard },
     ],

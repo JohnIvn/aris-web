@@ -1,4 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import {
   Card,
   PageTitle,
@@ -13,6 +24,7 @@ import {
   initialsColor,
   Modal,
 } from "@/components/ui";
+import { BRAND } from "@/config/navigation";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 
@@ -47,7 +59,24 @@ export type Course = {
   units: number;
   description?: string | null;
   is_active: boolean;
+  professor_count?: number;
   created_at?: string;
+};
+
+export type Professor = {
+  id?: string;
+  name?: string;
+  firstname?: string;
+  middlename?: string | null;
+  lastname?: string;
+  email: string;
+  dept?: string;
+  department?: string | null;
+  rank?: string;
+  position?: string | null;
+  courses?: number;
+  active?: boolean;
+  is_banned?: boolean;
 };
 
 type CurriculumOverview = {
@@ -80,11 +109,11 @@ const initialOverview: CurriculumOverview = {
     { id: "5", code: "ADJ", name: "Adjunct", hierarchy_level: 5, description: "Adjunct / visiting faculty member", is_active: true, professor_count: 1 },
   ],
   courses: [
-    { id: "1", code: "CS101", title: "Introduction to Computing", department_name: "Computer Science", units: 3, description: "Fundamental computer concepts and programming logic", is_active: true },
-    { id: "2", code: "CS201", title: "Data Structures & Algorithms", department_name: "Computer Science", units: 3, description: "Core algorithmic design and complexity", is_active: true },
-    { id: "3", code: "ENG101", title: "Engineering Mechanics", department_name: "Engineering", units: 3, description: "Statics and dynamics principles", is_active: true },
-    { id: "4", code: "BUS101", title: "Principles of Management", department_name: "Business", units: 3, description: "Organizational behavior and modern management", is_active: true },
-    { id: "5", code: "SCI101", title: "Applied Physics", department_name: "Sciences", units: 3, description: "Classical mechanics and laboratory applications", is_active: true },
+    { id: "1", code: "CS101", title: "Introduction to Computing", department_name: "Computer Science", units: 3, description: "Fundamental computer concepts and programming logic", is_active: true, professor_count: 2 },
+    { id: "2", code: "CS201", title: "Data Structures & Algorithms", department_name: "Computer Science", units: 3, description: "Core algorithmic design and complexity", is_active: true, professor_count: 2 },
+    { id: "3", code: "ENG101", title: "Engineering Mechanics", department_name: "Engineering", units: 3, description: "Statics and dynamics principles", is_active: true, professor_count: 2 },
+    { id: "4", code: "BUS101", title: "Principles of Management", department_name: "Business", units: 3, description: "Organizational behavior and modern management", is_active: true, professor_count: 2 },
+    { id: "5", code: "SCI101", title: "Applied Physics", department_name: "Sciences", units: 3, description: "Classical mechanics and laboratory applications", is_active: true, professor_count: 1 },
   ],
   stats: {
     total_departments: 5,
@@ -96,18 +125,83 @@ const initialOverview: CurriculumOverview = {
   },
 };
 
+const defaultProfessors: Professor[] = [
+  { name: "Dr. Maria Santos", email: "m.santos@aris.edu.ph", dept: "Engineering", rank: "Professor", courses: 4, active: true },
+  { name: "Prof. Lito Cruz", email: "l.cruz@aris.edu.ph", dept: "Computer Science", rank: "Associate Prof.", courses: 3, active: true },
+  { name: "Dr. Elena Reyes", email: "e.reyes@aris.edu.ph", dept: "Business", rank: "Professor", courses: 5, active: true },
+  { name: "Dr. Ramon Aquino", email: "r.aquino@aris.edu.ph", dept: "Sciences", rank: "Assistant Prof.", courses: 2, active: false },
+  { name: "Prof. Grace Lim", email: "g.lim@aris.edu.ph", dept: "Arts & Humanities", rank: "Lecturer", courses: 3, active: true },
+  { name: "Dr. Nestor Villar", email: "n.villar@aris.edu.ph", dept: "Engineering", rank: "Adjunct", courses: 1, active: false },
+  { name: "Dr. Sofia Mendoza", email: "s.mendoza@aris.edu.ph", dept: "Computer Science", rank: "Professor", courses: 4, active: true },
+  { name: "Prof. Daniel Ong", email: "d.ong@aris.edu.ph", dept: "Business", rank: "Associate Prof.", courses: 3, active: false },
+];
+
+function CustomBarTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white rounded-xl shadow-lg border border-[#e2e8e4] p-3 text-[12px] space-y-1">
+        <p className="font-bold text-[#111c14] border-b border-[#eef1ef] pb-1">
+          {data.name} ({label})
+        </p>
+        <p className="text-[#2f7043] flex items-center justify-between gap-4">
+          <span>Faculty:</span>
+          <span className="font-semibold">{data.faculty}</span>
+        </p>
+        <p className="text-[#2b6ca3] flex items-center justify-between gap-4">
+          <span>Courses:</span>
+          <span className="font-semibold">{data.courses}</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
+function CustomPieTooltip({ active, payload }: any) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white rounded-xl shadow-lg border border-[#e2e8e4] p-2.5 text-[12px]">
+        <p className="font-bold text-[#111c14]">{data.name}</p>
+        <p className="text-[#5a6b5e] mt-0.5">
+          Tier #{data.level} · <span className="font-semibold text-[#111c14]">{data.value} faculty</span>
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function Curriculum() {
   const { data: overview, setData: setOverview, reload } = useResource<CurriculumOverview>(
     "/curriculum",
     initialOverview,
   );
+  const { data: rawProfessors } = useResource<Professor[]>("/professors", defaultProfessors);
+
+  const professors = useMemo(() => {
+    const list = Array.isArray(rawProfessors) && rawProfessors.length > 0 ? rawProfessors : defaultProfessors;
+    return list.map((p) => ({
+      ...p,
+      name: p.name ?? ([p.firstname, p.middlename, p.lastname].filter(Boolean).join(" ") || "Unknown professor"),
+      dept: p.dept ?? p.department ?? "Unassigned",
+      rank: p.rank ?? p.position ?? "Professor",
+      active: p.active ?? !p.is_banned,
+    }));
+  }, [rawProfessors]);
 
   const [activeTab, setActiveTab] = useState<"Departments" | "Academic Ranks" | "Courses">("Departments");
   const [tab, setTab] = useState<"All" | "Active" | "Deactivated">("All");
   const [search, setSearch] = useState("");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-  // Department Modal State
+  // Row Click Members Modals
+  const [viewDeptMembers, setViewDeptMembers] = useState<Department | null>(null);
+  const [viewRankMembers, setViewRankMembers] = useState<AcademicRank | null>(null);
+  const [viewCourseMembers, setViewCourseMembers] = useState<Course | null>(null);
+
+  // Department Modal State (Edit / Add)
   const [deptModalOpen, setDeptModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [deptCode, setDeptCode] = useState("");
@@ -115,7 +209,7 @@ export default function Curriculum() {
   const [deptDesc, setDeptDesc] = useState("");
   const [deptActive, setDeptActive] = useState(true);
 
-  // Rank Modal State
+  // Rank Modal State (Edit / Add)
   const [rankModalOpen, setRankModalOpen] = useState(false);
   const [editingRank, setEditingRank] = useState<AcademicRank | null>(null);
   const [rankName, setRankName] = useState("");
@@ -124,7 +218,7 @@ export default function Curriculum() {
   const [rankDesc, setRankDesc] = useState("");
   const [rankActive, setRankActive] = useState(true);
 
-  // Course Modal State
+  // Course Modal State (Edit / Add)
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [courseCode, setCourseCode] = useState("");
@@ -153,6 +247,49 @@ export default function Curriculum() {
   // Feedback notifications
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Helper functions to get users/professors for each entity
+  const getDeptMembers = (dept: Department) => {
+    const targetName = dept.name.toLowerCase().trim();
+    const targetCode = (dept.code || "").toLowerCase().trim();
+    return professors.filter((p) => {
+      const d = (p.dept || "").toLowerCase().trim();
+      return d === targetName || (targetCode && d === targetCode);
+    });
+  };
+
+  const getRankMembers = (rank: AcademicRank) => {
+    const targetRank = rank.name.toLowerCase().trim();
+    const targetCode = (rank.code || "").toLowerCase().trim();
+    return professors.filter((p) => {
+      const r = (p.rank || "").toLowerCase().trim();
+      return r === targetRank || (targetCode && r === targetCode);
+    });
+  };
+
+  const getCourseMembers = (course: Course) => {
+    const targetDept = (course.department_name || "").toLowerCase().trim();
+    return professors.filter((p) => {
+      const d = (p.dept || "").toLowerCase().trim();
+      return targetDept ? d === targetDept : false;
+    });
+  };
+
+  // Members lists filtered for detail modals
+  const deptMembersList = useMemo(() => {
+    if (!viewDeptMembers) return [];
+    return getDeptMembers(viewDeptMembers);
+  }, [viewDeptMembers, professors]);
+
+  const rankMembersList = useMemo(() => {
+    if (!viewRankMembers) return [];
+    return getRankMembers(viewRankMembers);
+  }, [viewRankMembers, professors]);
+
+  const courseMembersList = useMemo(() => {
+    if (!viewCourseMembers) return [];
+    return getCourseMembers(viewCourseMembers);
+  }, [viewCourseMembers, professors]);
 
   // --- Department Actions ---
   const openAddDept = () => {
@@ -469,6 +606,36 @@ export default function Curriculum() {
     return matchesTab && matchesSearch;
   });
 
+  // Chart datasets
+  const deptChartData = useMemo(() => {
+    return overview.departments.map((dept) => {
+      const courseCount = overview.courses.filter(
+        (c) => (c.department_name || "").toLowerCase().trim() === dept.name.toLowerCase().trim()
+      ).length;
+      return {
+        name: dept.name,
+        code: dept.code,
+        faculty: dept.professor_count ?? 0,
+        courses: courseCount,
+      };
+    });
+  }, [overview.departments, overview.courses]);
+
+  const rankPalette = [BRAND, "#3f8ecc", "#d99a2b", "#8a63c4", "#c0563a", "#2b9c8a"];
+  const rankChartData = useMemo(() => {
+    return overview.ranks.map((rank, index) => ({
+      name: rank.name,
+      code: rank.code || rank.name,
+      value: rank.professor_count && rank.professor_count > 0 ? rank.professor_count : (6 - rank.hierarchy_level > 0 ? 6 - rank.hierarchy_level : 1),
+      level: rank.hierarchy_level,
+      color: rankPalette[index % rankPalette.length],
+    }));
+  }, [overview.ranks]);
+
+  const totalFacultyCount = useMemo(() => {
+    return rankChartData.reduce((acc, r) => acc + r.value, 0);
+  }, [rankChartData]);
+
   const categoryTabs = ["Departments", "Academic Ranks", "Courses"];
   const statusTabs = ["All", "Active", "Deactivated"];
 
@@ -533,6 +700,91 @@ export default function Curriculum() {
         ))}
       </StatGrid>
 
+      {/* --- VISUAL ANALYTICS & GRAPHS --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* Graph 1: Department Capacity & Course Load (Bar Chart) */}
+        <Card className="flex flex-col min-h-[300px]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 className="text-[14px] font-semibold text-[#111c14]">Department Capacity &amp; Course Load</h2>
+              <p className="text-[12px] text-[#8fa394]">Assigned faculty vs. cataloged courses across colleges</p>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] font-medium">
+              <span className="flex items-center gap-1.5 text-[#3d4a41]">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} /> Faculty
+              </span>
+              <span className="flex items-center gap-1.5 text-[#3d4a41]">
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#3f8ecc" }} /> Courses
+              </span>
+            </div>
+          </div>
+          <div className="flex-1 w-full min-h-[200px] mt-2">
+            <ResponsiveContainer width="100%" height={210}>
+              <BarChart data={deptChartData} margin={{ top: 10, right: 10, left: -24, bottom: 0 }}>
+                <XAxis dataKey="code" tick={{ fill: "#8fa394", fontSize: 11 }} axisLine={{ stroke: "#eef1ef" }} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fill: "#8fa394", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomBarTooltip />} />
+                <Bar dataKey="faculty" fill={BRAND} radius={[5, 5, 0, 0]} maxBarSize={24} />
+                <Bar dataKey="courses" fill="#3f8ecc" radius={[5, 5, 0, 0]} maxBarSize={24} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Graph 2: Academic Rank Distribution (Donut Chart) */}
+        <Card className="flex flex-col min-h-[300px]">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-[14px] font-semibold text-[#111c14]">Academic Rank Distribution</h2>
+              <p className="text-[12px] text-[#8fa394]">Faculty proportion across academic seniority tiers</p>
+            </div>
+          </div>
+          <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
+            <div className="relative w-full sm:w-1/2 h-[190px] flex items-center justify-center">
+              <ResponsiveContainer width="100%" height={190}>
+                <PieChart>
+                  <Tooltip content={<CustomPieTooltip />} />
+                  <Pie
+                    data={rankChartData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={52}
+                    outerRadius={78}
+                    paddingAngle={3}
+                  >
+                    {rankChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[20px] font-bold text-[#111c14] leading-none">
+                  {totalFacultyCount}
+                </span>
+                <span className="text-[10px] uppercase tracking-wide text-[#8fa394] mt-0.5 font-semibold">
+                  Faculty
+                </span>
+              </div>
+            </div>
+            <div className="w-full sm:w-1/2 space-y-2 pr-1">
+              {rankChartData.map((r) => (
+                <div key={r.name} className="flex items-center justify-between text-[12px]">
+                  <span className="flex items-center gap-2 truncate" style={{ color: "#3d4a41" }}>
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: r.color }} />
+                    <span className="truncate">{r.name}</span>
+                  </span>
+                  <span className="font-semibold text-[#111c14] ml-2 font-mono">
+                    {r.value} <span className="text-[#8fa394] text-[11px] font-normal">({totalFacultyCount ? Math.round((r.value / totalFacultyCount) * 100) : 0}%)</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* --- TABLE CARD --- */}
       <Card className="p-0 overflow-x-auto">
         {/* Top Control Bar matching Professors.tsx exactly */}
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
@@ -569,13 +821,13 @@ export default function Curriculum() {
         {activeTab === "Departments" && (
           <>
             <div
-              className="grid min-w-[1000px] grid-cols-[2.2fr_1.2fr_2fr_1.2fr_1.2fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+              className="grid min-w-[1050px] grid-cols-[2.2fr_1.1fr_2fr_1.3fr_1.1fr_0.8fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
               style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
               <span>Department / College</span>
               <span>Code</span>
               <span>Description</span>
-              <span>Faculty Assigned</span>
+              <span>No. of Users / State</span>
               <span>Status</span>
               <span className="text-right">Action</span>
             </div>
@@ -585,50 +837,61 @@ export default function Curriculum() {
                 No departments found matching your criteria.
               </div>
             ) : (
-              filteredDepartments.map((dept, i) => (
-                <div
-                  key={dept.id}
-                  onClick={() => openEditDept(dept)}
-                  className="grid min-w-[1000px] grid-cols-[2.2fr_1.2fr_2fr_1.2fr_1.2fr_1fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
-                  style={{ borderColor: "#f2f4f2" }}
-                >
-                  <button
-                    type="button"
-                    aria-label={`Edit ${dept.name}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openEditDept(dept);
-                    }}
-                    className="flex min-w-0 items-center gap-3 text-left"
+              filteredDepartments.map((dept, i) => {
+                const members = getDeptMembers(dept);
+                const total = members.length > 0 ? members.length : (dept.professor_count ?? 0);
+                const active = members.length > 0 ? members.filter((m) => m.active).length : (dept.is_active ? total : 0);
+                const inactive = total - active;
+
+                return (
+                  <div
+                    key={dept.id}
+                    onClick={() => setViewDeptMembers(dept)}
+                    className="grid min-w-[1050px] grid-cols-[2.2fr_1.1fr_2fr_1.3fr_1.1fr_0.8fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
+                    style={{ borderColor: "#f2f4f2" }}
                   >
-                    <Avatar initials={dept.code.slice(0, 2).toUpperCase()} color={initialsColor(i)} />
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
-                        {dept.name}
-                      </p>
-                      <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
-                        {dept.code} · Academic Department
-                      </p>
+                    <button
+                      type="button"
+                      aria-label={`View faculty in ${dept.name}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setViewDeptMembers(dept);
+                      }}
+                      className="flex min-w-0 items-center gap-3 text-left"
+                    >
+                      <Avatar initials={dept.code.slice(0, 2).toUpperCase()} color={initialsColor(i)} />
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
+                          {dept.name}
+                        </p>
+                        <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
+                          {dept.code} · Click to view faculty ({total})
+                        </p>
+                      </div>
+                    </button>
+
+                    <span className="text-[13px] font-mono font-medium" style={{ color: "#3d4a41" }}>
+                      {dept.code}
+                    </span>
+
+                    <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
+                      {dept.description || "—"}
+                    </span>
+
+                    <div className="flex flex-col">
+                      <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
+                        {total} {total === 1 ? "user" : "users"}
+                      </span>
+                      <span className="text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
+                        {active} active {inactive > 0 ? `· ${inactive} inactive` : ""}
+                      </span>
                     </div>
-                  </button>
 
-                  <span className="text-[13px] font-mono font-medium" style={{ color: "#3d4a41" }}>
-                    {dept.code}
-                  </span>
-
-                  <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
-                    {dept.description || "—"}
-                  </span>
-
-                  <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
-                    {dept.professor_count ?? 0} professors
-                  </span>
-
-                  <span>
-                    <Badge tone={dept.is_active ? "green" : "gray"} dot>
-                      {dept.is_active ? "Active" : "Deactivated"}
-                    </Badge>
-                  </span>
+                    <span>
+                      <Badge tone={dept.is_active ? "green" : "gray"} dot>
+                        {dept.is_active ? "Active" : "Deactivated"}
+                      </Badge>
+                    </span>
 
                   <span className="relative flex justify-end">
                     <button
@@ -652,6 +915,17 @@ export default function Curriculum() {
                         className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
                         style={{ borderColor: "#e2e8e4" }}
                       >
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setViewDeptMembers(dept);
+                            setOpenMenu(null);
+                          }}
+                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                        >
+                          View faculty
+                        </button>
                         <button
                           type="button"
                           onClick={(event) => {
@@ -699,8 +973,9 @@ export default function Curriculum() {
                     )}
                   </span>
                 </div>
-              ))
-            )}
+              );
+            })
+          )}
           </>
         )}
 
@@ -708,13 +983,14 @@ export default function Curriculum() {
         {activeTab === "Academic Ranks" && (
           <>
             <div
-              className="grid min-w-[1000px] grid-cols-[2.2fr_1fr_1fr_2fr_1.2fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+              className="grid min-w-[1050px] grid-cols-[2.2fr_1fr_0.9fr_1.8fr_1.3fr_1.1fr_0.8fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
               style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
               <span>Rank Title</span>
               <span>Code / Abbr</span>
               <span>Level</span>
               <span>Description</span>
+              <span>No. of Users / State</span>
               <span>Status</span>
               <span className="text-right">Action</span>
             </div>
@@ -724,50 +1000,65 @@ export default function Curriculum() {
                 No academic ranks found matching your criteria.
               </div>
             ) : (
-              filteredRanks.map((rank, i) => (
-                <div
-                  key={rank.id}
-                  onClick={() => openEditRank(rank)}
-                  className="grid min-w-[1000px] grid-cols-[2.2fr_1fr_1fr_2fr_1.2fr_1fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
-                  style={{ borderColor: "#f2f4f2" }}
-                >
-                  <button
-                    type="button"
-                    aria-label={`Edit ${rank.name}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openEditRank(rank);
-                    }}
-                    className="flex min-w-0 items-center gap-3 text-left"
+              filteredRanks.map((rank, i) => {
+                const members = getRankMembers(rank);
+                const total = members.length > 0 ? members.length : (rank.professor_count ?? 0);
+                const active = members.length > 0 ? members.filter((m) => m.active).length : (rank.is_active ? total : 0);
+                const inactive = total - active;
+
+                return (
+                  <div
+                    key={rank.id}
+                    onClick={() => setViewRankMembers(rank)}
+                    className="grid min-w-[1050px] grid-cols-[2.2fr_1fr_0.9fr_1.8fr_1.3fr_1.1fr_0.8fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
+                    style={{ borderColor: "#f2f4f2" }}
                   >
-                    <Avatar initials={`L${rank.hierarchy_level}`} color={initialsColor(i + 2)} />
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
-                        {rank.name}
-                      </p>
-                      <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
-                        {rank.code || "Faculty Rank"} · Level {rank.hierarchy_level}
-                      </p>
+                    <button
+                      type="button"
+                      aria-label={`View accounts with rank ${rank.name}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setViewRankMembers(rank);
+                      }}
+                      className="flex min-w-0 items-center gap-3 text-left"
+                    >
+                      <Avatar initials={`L${rank.hierarchy_level}`} color={initialsColor(i + 2)} />
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
+                          {rank.name}
+                        </p>
+                        <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
+                          Level {rank.hierarchy_level} · Click to view faculty ({total})
+                        </p>
+                      </div>
+                    </button>
+
+                    <span className="text-[13px] font-mono" style={{ color: "#3d4a41" }}>
+                      {rank.code || "—"}
+                    </span>
+
+                    <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
+                      Tier #{rank.hierarchy_level}
+                    </span>
+
+                    <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
+                      {rank.description || "—"}
+                    </span>
+
+                    <div className="flex flex-col">
+                      <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
+                        {total} {total === 1 ? "user" : "users"}
+                      </span>
+                      <span className="text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
+                        {active} active {inactive > 0 ? `· ${inactive} inactive` : ""}
+                      </span>
                     </div>
-                  </button>
 
-                  <span className="text-[13px] font-mono" style={{ color: "#3d4a41" }}>
-                    {rank.code || "—"}
-                  </span>
-
-                  <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
-                    Tier #{rank.hierarchy_level}
-                  </span>
-
-                  <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
-                    {rank.description || "—"}
-                  </span>
-
-                  <span>
-                    <Badge tone={rank.is_active ? "green" : "gray"} dot>
-                      {rank.is_active ? "Active" : "Deactivated"}
-                    </Badge>
-                  </span>
+                    <span>
+                      <Badge tone={rank.is_active ? "green" : "gray"} dot>
+                        {rank.is_active ? "Active" : "Deactivated"}
+                      </Badge>
+                    </span>
 
                   <span className="relative flex justify-end">
                     <button
@@ -791,6 +1082,17 @@ export default function Curriculum() {
                         className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
                         style={{ borderColor: "#e2e8e4" }}
                       >
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setViewRankMembers(rank);
+                            setOpenMenu(null);
+                          }}
+                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                        >
+                          View accounts
+                        </button>
                         <button
                           type="button"
                           onClick={(event) => {
@@ -838,8 +1140,9 @@ export default function Curriculum() {
                     )}
                   </span>
                 </div>
-              ))
-            )}
+              );
+            })
+          )}
           </>
         )}
 
@@ -847,7 +1150,7 @@ export default function Curriculum() {
         {activeTab === "Courses" && (
           <>
             <div
-              className="grid min-w-[1000px] grid-cols-[2.2fr_1fr_1.5fr_0.8fr_1.8fr_1.2fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+              className="grid min-w-[1050px] grid-cols-[2fr_0.9fr_1.3fr_0.7fr_1.6fr_1.3fr_1.1fr_0.8fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
               style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
               <span>Course Title</span>
@@ -855,6 +1158,7 @@ export default function Curriculum() {
               <span>Department</span>
               <span>Units</span>
               <span>Description</span>
+              <span>No. of Users / State</span>
               <span>Status</span>
               <span className="text-right">Action</span>
             </div>
@@ -864,54 +1168,69 @@ export default function Curriculum() {
                 No courses found matching your criteria.
               </div>
             ) : (
-              filteredCourses.map((course, i) => (
-                <div
-                  key={course.id}
-                  onClick={() => openEditCourse(course)}
-                  className="grid min-w-[1000px] grid-cols-[2.2fr_1fr_1.5fr_0.8fr_1.8fr_1.2fr_1fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
-                  style={{ borderColor: "#f2f4f2" }}
-                >
-                  <button
-                    type="button"
-                    aria-label={`Edit ${course.title}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openEditCourse(course);
-                    }}
-                    className="flex min-w-0 items-center gap-3 text-left"
+              filteredCourses.map((course, i) => {
+                const members = getCourseMembers(course);
+                const total = members.length > 0 ? members.length : (course.professor_count ?? 0);
+                const active = members.length > 0 ? members.filter((m) => m.active).length : (course.is_active ? total : 0);
+                const inactive = total - active;
+
+                return (
+                  <div
+                    key={course.id}
+                    onClick={() => setViewCourseMembers(course)}
+                    className="grid min-w-[1050px] grid-cols-[2fr_0.9fr_1.3fr_0.7fr_1.6fr_1.3fr_1.1fr_0.8fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
+                    style={{ borderColor: "#f2f4f2" }}
                   >
-                    <Avatar initials={course.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 4)} />
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
-                        {course.title}
-                      </p>
-                      <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
-                        {course.code} · {course.units} units
-                      </p>
+                    <button
+                      type="button"
+                      aria-label={`View faculty for ${course.title}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setViewCourseMembers(course);
+                      }}
+                      className="flex min-w-0 items-center gap-3 text-left"
+                    >
+                      <Avatar initials={course.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 4)} />
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
+                          {course.title}
+                        </p>
+                        <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
+                          {course.code} · Click to view faculty ({total})
+                        </p>
+                      </div>
+                    </button>
+
+                    <span className="text-[13px] font-mono font-medium" style={{ color: "#3d4a41" }}>
+                      {course.code}
+                    </span>
+
+                    <span className="text-[13px]" style={{ color: "#3d4a41" }}>
+                      {course.department_name || "Unassigned"}
+                    </span>
+
+                    <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
+                      {course.units}
+                    </span>
+
+                    <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
+                      {course.description || "—"}
+                    </span>
+
+                    <div className="flex flex-col">
+                      <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
+                        {total} {total === 1 ? "user" : "users"}
+                      </span>
+                      <span className="text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
+                        {active} active {inactive > 0 ? `· ${inactive} inactive` : ""}
+                      </span>
                     </div>
-                  </button>
 
-                  <span className="text-[13px] font-mono font-medium" style={{ color: "#3d4a41" }}>
-                    {course.code}
-                  </span>
-
-                  <span className="text-[13px]" style={{ color: "#3d4a41" }}>
-                    {course.department_name || "Unassigned"}
-                  </span>
-
-                  <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
-                    {course.units}
-                  </span>
-
-                  <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
-                    {course.description || "—"}
-                  </span>
-
-                  <span>
-                    <Badge tone={course.is_active ? "green" : "gray"} dot>
-                      {course.is_active ? "Active" : "Deactivated"}
-                    </Badge>
-                  </span>
+                    <span>
+                      <Badge tone={course.is_active ? "green" : "gray"} dot>
+                        {course.is_active ? "Active" : "Deactivated"}
+                      </Badge>
+                    </span>
 
                   <span className="relative flex justify-end">
                     <button
@@ -935,6 +1254,17 @@ export default function Curriculum() {
                         className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
                         style={{ borderColor: "#e2e8e4" }}
                       >
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setViewCourseMembers(course);
+                            setOpenMenu(null);
+                          }}
+                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                        >
+                          View faculty
+                        </button>
                         <button
                           type="button"
                           onClick={(event) => {
@@ -981,13 +1311,196 @@ export default function Curriculum() {
                     )}
                   </span>
                 </div>
-              ))
-            )}
+              );
+            })
+          )}
           </>
         )}
       </Card>
 
-      {/* MODAL: Department Add/Edit */}
+      {/* ============================================================== */}
+      {/* MODAL 1: Department Faculty Members List (on Row Click)       */}
+      {/* ============================================================== */}
+      <Modal
+        isOpen={Boolean(viewDeptMembers)}
+        onClose={() => setViewDeptMembers(null)}
+        title={viewDeptMembers ? `Faculty Members · ${viewDeptMembers.name}` : ""}
+        align="left"
+        size="lg"
+        actions={
+          <div className="flex w-full items-center justify-between pt-2">
+            <span className="text-[12px] text-[#8fa394]">
+              {deptMembersList.length} faculty member(s) found
+            </span>
+            <GhostButton onClick={() => setViewDeptMembers(null)}>Close</GhostButton>
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          <p className="text-[12.5px] text-[#8fa394]">
+            Faculty assigned to <strong>{viewDeptMembers?.name}</strong> ({viewDeptMembers?.code}).
+          </p>
+          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+            {deptMembersList.length === 0 ? (
+              <div className="py-8 text-center text-[#8fa394] bg-[#fafbfa] rounded-2xl border border-dashed border-[#e2e8e4]">
+                <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned yet</p>
+                <p className="text-[12px] mt-0.5">Faculty assigned to this department will appear here.</p>
+              </div>
+            ) : (
+              deptMembersList.map((p, idx) => (
+                <div
+                  key={p.email || p.id || idx}
+                  className="flex items-center justify-between p-3 rounded-2xl border border-[#eef1ef] bg-white hover:bg-[#fafbfa] transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar
+                      initials={p.name?.split(" ").slice(-1)[0].slice(0, 2).toUpperCase() || "PR"}
+                      color={initialsColor(idx)}
+                      size={38}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] font-medium text-[#111c14] truncate">{p.name}</p>
+                      <p className="text-[12px] text-[#8fa394] truncate">{p.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[12px] px-2.5 py-1 rounded-lg bg-[#f0f2f0] text-[#3d4a41] font-medium">
+                      {p.rank}
+                    </span>
+                    <Badge tone={p.active ? "green" : "gray"} dot>
+                      {p.active ? "Active" : "Deactivated"}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================================== */}
+      {/* MODAL 2: Academic Rank Accounts List (on Row Click)            */}
+      {/* ============================================================== */}
+      <Modal
+        isOpen={Boolean(viewRankMembers)}
+        onClose={() => setViewRankMembers(null)}
+        title={viewRankMembers ? `Faculty with Rank: ${viewRankMembers.name}` : ""}
+        align="left"
+        size="lg"
+        actions={
+          <div className="flex w-full items-center justify-between pt-2">
+            <span className="text-[12px] text-[#8fa394]">
+              {rankMembersList.length} faculty member(s) holding this rank
+            </span>
+            <GhostButton onClick={() => setViewRankMembers(null)}>Close</GhostButton>
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          <p className="text-[12.5px] text-[#8fa394]">
+            Faculty holding <strong>{viewRankMembers?.name}</strong> (Tier #{viewRankMembers?.hierarchy_level}).
+          </p>
+          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+            {rankMembersList.length === 0 ? (
+              <div className="py-8 text-center text-[#8fa394] bg-[#fafbfa] rounded-2xl border border-dashed border-[#e2e8e4]">
+                <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned this rank</p>
+                <p className="text-[12px] mt-0.5">Faculty appointed to this rank will appear here.</p>
+              </div>
+            ) : (
+              rankMembersList.map((p, idx) => (
+                <div
+                  key={p.email || p.id || idx}
+                  className="flex items-center justify-between p-3 rounded-2xl border border-[#eef1ef] bg-white hover:bg-[#fafbfa] transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar
+                      initials={p.name?.split(" ").slice(-1)[0].slice(0, 2).toUpperCase() || "PR"}
+                      color={initialsColor(idx + 1)}
+                      size={38}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] font-medium text-[#111c14] truncate">{p.name}</p>
+                      <p className="text-[12px] text-[#8fa394] truncate">{p.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[12px] px-2.5 py-1 rounded-lg bg-[#eaf4ee] text-[#2f7043] font-medium">
+                      {p.dept}
+                    </span>
+                    <Badge tone={p.active ? "green" : "gray"} dot>
+                      {p.active ? "Active" : "Deactivated"}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================================== */}
+      {/* MODAL 3: Course Assigned Faculty List (on Row Click)           */}
+      {/* ============================================================== */}
+      <Modal
+        isOpen={Boolean(viewCourseMembers)}
+        onClose={() => setViewCourseMembers(null)}
+        title={viewCourseMembers ? `Faculty for Course: ${viewCourseMembers.code}` : ""}
+        align="left"
+        size="lg"
+        actions={
+          <div className="flex w-full items-center justify-between pt-2">
+            <span className="text-[12px] text-[#8fa394]">
+              {courseMembersList.length} faculty member(s) eligible / assigned
+            </span>
+            <GhostButton onClick={() => setViewCourseMembers(null)}>Close</GhostButton>
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          <p className="text-[12.5px] text-[#8fa394]">
+            Faculty for <strong>{viewCourseMembers?.code} - {viewCourseMembers?.title}</strong> ({viewCourseMembers?.units} units · {viewCourseMembers?.department_name || "General Department"}).
+          </p>
+          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+            {courseMembersList.length === 0 ? (
+              <div className="py-8 text-center text-[#8fa394] bg-[#fafbfa] rounded-2xl border border-dashed border-[#e2e8e4]">
+                <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned yet</p>
+                <p className="text-[12px] mt-0.5">Faculty teaching or assigned to this course will appear here.</p>
+              </div>
+            ) : (
+              courseMembersList.map((p, idx) => (
+                <div
+                  key={p.email || p.id || idx}
+                  className="flex items-center justify-between p-3 rounded-2xl border border-[#eef1ef] bg-white hover:bg-[#fafbfa] transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar
+                      initials={p.name?.split(" ").slice(-1)[0].slice(0, 2).toUpperCase() || "PR"}
+                      color={initialsColor(idx + 3)}
+                      size={38}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] font-medium text-[#111c14] truncate">{p.name}</p>
+                      <p className="text-[12px] text-[#8fa394] truncate">{p.email} · {p.dept}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-[12px] px-2.5 py-1 rounded-lg bg-[#f0f2f0] text-[#3d4a41] font-medium">
+                      {p.rank}
+                    </span>
+                    <Badge tone={p.active ? "green" : "gray"} dot>
+                      {p.active ? "Active" : "Deactivated"}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================================== */}
+      {/* MODAL: Department Add/Edit                                     */}
+      {/* ============================================================== */}
       <Modal
         isOpen={deptModalOpen}
         onClose={() => setDeptModalOpen(false)}
@@ -1044,7 +1557,9 @@ export default function Curriculum() {
         </div>
       </Modal>
 
-      {/* MODAL: Rank Add/Edit */}
+      {/* ============================================================== */}
+      {/* MODAL: Rank Add/Edit                                           */}
+      {/* ============================================================== */}
       <Modal
         isOpen={rankModalOpen}
         onClose={() => setRankModalOpen(false)}
@@ -1113,7 +1628,9 @@ export default function Curriculum() {
         </div>
       </Modal>
 
-      {/* MODAL: Course Add/Edit */}
+      {/* ============================================================== */}
+      {/* MODAL: Course Add/Edit                                         */}
+      {/* ============================================================== */}
       <Modal
         isOpen={courseModalOpen}
         onClose={() => setCourseModalOpen(false)}
@@ -1202,7 +1719,7 @@ export default function Curriculum() {
         </div>
       </Modal>
 
-      {/* CONFIRM TOGGLE MODAL matching Professors.tsx */}
+      {/* CONFIRM TOGGLE MODAL */}
       <Modal
         isOpen={Boolean(pendingToggle)}
         onClose={() => setPendingToggle(null)}
@@ -1221,7 +1738,7 @@ export default function Curriculum() {
         )}
       </Modal>
 
-      {/* CONFIRM DELETE MODAL matching Professors.tsx */}
+      {/* CONFIRM DELETE MODAL */}
       <Modal
         isOpen={Boolean(pendingDelete)}
         onClose={() => setPendingDelete(null)}
