@@ -38,6 +38,15 @@ export default function SoftwareMonitoring() {
   const downCount = serviceData.filter((service) => service.status === "Down").length;
   const degradedCount = serviceData.filter((service) => service.status === "Degraded").length;
   const healthyCount = serviceData.filter((service) => service.status === "Healthy").length;
+
+  // Alert banner color: red if any service is down, amber if only degraded, green if all healthy
+  const alertTone =
+    downCount > 0
+      ? { bg: "#fbecec", border: "#f9d6d6", text: "#c0392b", dot: "#c0392b" } // red
+      : degradedCount > 0
+      ? { bg: "#fbf1de", border: "#f5e2b8", text: "#996515", dot: "#d99a2b" } // amber
+      : { bg: "#eaf4ee", border: "#cfe6d7", text: "#2f7043", dot: "#2f7043" }; // green
+
   const averageRequests =
     endpointData.length === 0
       ? 0
@@ -81,10 +90,22 @@ export default function SoftwareMonitoring() {
       </div>
 
       {/* Alert Banner */}
-      <div className="mb-4 p-3.5 rounded-2xl flex items-center gap-2.5 text-[13px] font-medium" style={{ background: "#fbecec", border: "1px solid #f9d6d6", color: "#c0392b" }}>
-        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "#c0392b" }} />
+      <div
+        className="mb-4 p-3.5 rounded-2xl flex items-center gap-2.5 text-[13px] font-medium"
+        style={{
+          background: alertTone.bg,
+          border: `1px solid ${alertTone.border}`,
+          color: alertTone.text,
+        }}
+      >
+        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: alertTone.dot }} />
         <span>
-          <strong>{downCount} service{downCount === 1 ? "" : "s"} down — {degradedCount} degraded</strong> — check Recent Errors for details.
+          <strong>
+            {downCount} service{downCount === 1 ? "" : "s"} down — {degradedCount} degraded
+          </strong>
+          {downCount > 0 || degradedCount > 0
+            ? " — check Recent Errors for details."
+            : " — all systems operational."}
         </span>
       </div>
 
