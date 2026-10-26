@@ -1,4 +1,4 @@
-export default function getBaseUrl() {
+export default function getBaseUrl(): string {
   const raw = import.meta.env.VITE_API_URL;
 
   if (raw && typeof raw === "string") {
