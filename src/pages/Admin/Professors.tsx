@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import ProfileDetailsModal from "@/components/ProfileDetailsModal";
+import ProfileDetailsModal, { ProfileModalData } from "@/components/ProfileDetailsModal";
 import { Card, PageTitle, PrimaryButton, GhostButton, SearchInput, Badge, Avatar, Tabs, StatCard, StatGrid, initialsColor, Modal } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
@@ -20,6 +20,8 @@ type Professor = {
   provider?: "local" | "google";
   active?: boolean;
   is_banned?: boolean;
+  phone?: string | null;
+  address?: string | null;
 };
 
 const people: Professor[] = [
@@ -39,13 +41,15 @@ export default function Professors() {
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("All departments");
   const [selected, setSelected] = useState<Professor | null>(null);
+  const [modalMode, setModalMode] = useState<"view" | "edit">("view");
   const [pendingToggle, setPendingToggle] = useState<Professor | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Professor | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const { data: resourceItems, setData: setResourceItems } = useResource<Professor[]>("/professors", people);
-  const { data: deptResources } = useResource<{ id: string; name: string }[]>("/curriculum/departments", []);
+  const { data: deptResources } = useResource<{ id: string; name: string }[]>("/curriculum/departments?active=true", []);
+  const { data: rankResources } = useResource<{ id: string; name: string }[]>("/curriculum/ranks?active=true", []);
 
   const items = resourceItems.map((person) => ({
     ...person,
@@ -54,9 +58,93 @@ export default function Professors() {
     rank: person.rank ?? person.position ?? "Professor",
     courses: person.courses ?? 0,
     active: person.active ?? !person.is_banned,
+    phone: person.phone ?? null,
+    address: person.address ?? null,
   }));
   const setItems = (nextItems: Professor[]) => setResourceItems(nextItems);
   const tabs = ["All", "Active", "Deactivated"];
+
+  const loadedDeptNames = Array.isArray(deptResources) && deptResources.length > 0
+    ? deptResources.map((d) => d.name)
+    : ["Engineering", "Computer Science", "Business", "Sciences", "Arts & Humanities"];
+  const departments = [...new Set(loadedDeptNames)].filter(Boolean);
+  const modalDepartments = selected?.dept && selected.dept !== "Unassigned" && !departments.includes(selected.dept)
+    ? [selected.dept, ...departments]
+    : departments;
+
+  const loadedRankNames = Array.isArray(rankResources) && rankResources.length > 0
+    ? rankResources.map((r) => r.name)
+    : ["Professor", "Associate Prof.", "Assistant Prof.", "Lecturer", "Adjunct"];
+  const ranksList = [...new Set(loadedRankNames)].filter(Boolean);
+  const modalRanksList = selected?.rank && !ranksList.includes(selected.rank)
+    ? [selected.rank, ...ranksList]
+    : ranksList;
+
+  const getProfessorModalData = (p: Professor | null): ProfileModalData | null => {
+    if (!p) return null;
+    let fn = p.firstname ?? "";
+    let mn = p.middlename ?? "";
+    let ln = p.lastname ?? "";
+    if (!fn && !ln && p.name) {
+      const parts = p.name.replace(/^(dr|prof)\.?\s+/i, "").trim().split(/\s+/);
+      fn = parts[0] || "";
+      ln = parts.length > 1 ? parts[parts.length - 1] : "";
+      mn = parts.length > 2 ? parts.slice(1, -1).join(" ") : "";
+    }
+    return {
+      id: p.id,
+      firstname: fn,
+      middlename: mn,
+      lastname: ln,
+      email: p.email,
+      department: p.dept ?? p.department ?? "",
+      roleOrRank: p.rank ?? p.position ?? "Professor",
+      status: p.active ? "Active" : "Deactivated",
+      phone: p.phone || "",
+      address: p.address || "",
+      oauthConnected: p.provider === "google",
+    };
+  };
+
+  const handleSaveProfessor = async (updatedData: ProfileModalData) => {
+    if (!selected?.id) throw new Error("This professor does not have a server ID.");
+    const isActive = updatedData.status === "Active";
+    const updated = await saveResource(`/professors/${selected.id}`, {
+      firstname: updatedData.firstname.trim(),
+      middlename: updatedData.middlename?.trim() || null,
+      lastname: updatedData.lastname.trim(),
+      email: updatedData.email.trim().toLowerCase(),
+      department: updatedData.department?.trim() || null,
+      position: updatedData.roleOrRank?.trim() || null,
+      phone: updatedData.phone?.trim() || null,
+      address: updatedData.address?.trim() || null,
+      active: isActive,
+    }, "PATCH");
+
+    const updatedFullName = [updatedData.firstname.trim(), updatedData.middlename?.trim(), updatedData.lastname.trim()]
+      .filter(Boolean)
+      .join(" ");
+
+    const updatedProf: Professor = {
+      ...selected,
+      ...updated,
+      firstname: updatedData.firstname.trim(),
+      middlename: updatedData.middlename?.trim() || null,
+      lastname: updatedData.lastname.trim(),
+      name: updatedFullName || selected.name,
+      email: updatedData.email.trim().toLowerCase(),
+      dept: updatedData.department?.trim() || "Unassigned",
+      department: updatedData.department?.trim() || null,
+      rank: updatedData.roleOrRank?.trim() || "Professor",
+      position: updatedData.roleOrRank?.trim() || null,
+      phone: updatedData.phone?.trim() || null,
+      address: updatedData.address?.trim() || null,
+      active: isActive,
+    };
+
+    setItems(items.map((item) => (item.id === selected.id ? updatedProf : item)));
+    setSelected(updatedProf);
+  };
 
   const toggle = async (person: Professor) => {
     const updatedItems = items.map((item) => item.email === person.email ? { ...item, active: !item.active } : item);
@@ -70,6 +158,7 @@ export default function Professors() {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update professor.");
     }
   };
+
   const deleteProfessor = async (person: Professor) => {
     setPendingDelete(null);
     try {
@@ -81,9 +170,6 @@ export default function Professors() {
       setSaveError(reason instanceof Error ? reason.message : "Unable to delete professor.");
     }
   };
-
-  const loadedDeptNames = Array.isArray(deptResources) ? deptResources.map((d) => d.name) : [];
-  const departments = [...new Set([...loadedDeptNames, ...items.map((person) => person.dept)])].filter(Boolean);
 
   const rows = items.filter((person) => {
     const matchesTab = tab === "All" || (tab === "Active" ? person.active : !person.active);
@@ -127,8 +213,8 @@ export default function Professors() {
           <span>Name</span><span>Department</span><span>Rank</span><span>Courses</span><span>Status</span><span>OAuth</span><span className="text-right">Action</span>
         </div>
         {rows.map((p, i) => (
-          <div key={p.email} onClick={() => setSelected(p)} className="grid min-w-[1000px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
-            <button type="button" aria-label={`View details for ${p.name}`} onClick={(event) => { event.stopPropagation(); setSelected(p); }} className="flex min-w-0 items-center gap-3 text-left">
+          <div key={p.email} onClick={() => { setSelected(p); setModalMode("view"); }} className="grid min-w-[1000px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
+            <button type="button" aria-label={`View details for ${p.name}`} onClick={(event) => { event.stopPropagation(); setSelected(p); setModalMode("view"); }} className="flex min-w-0 items-center gap-3 text-left">
               <Avatar initials={p.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} color={initialsColor(i)} />
               <div className="min-w-0">
                 <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{p.name}</p>
@@ -154,7 +240,8 @@ export default function Professors() {
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
               </button>
               {openMenu === p.email && <div className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
-                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(p); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(p); setModalMode("view"); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(p); setModalMode("edit"); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] text-[#2d4a36] font-medium hover:bg-[#f4f6f5]">Edit professor</button>
                 <button type="button" onClick={(event) => { event.stopPropagation(); setPendingToggle(p); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">{p.active ? "Deactivate" : "Reactivate"}</button>
                 <button type="button" onClick={(event) => { event.stopPropagation(); setPendingDelete(p); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]">Delete</button>
               </div>}
@@ -162,20 +249,24 @@ export default function Professors() {
           </div>
         ))}
       </Card>
+
+      {/* Unified Profile Details & Edit Modal */}
       <ProfileDetailsModal
         isOpen={Boolean(selected)}
         onClose={() => setSelected(null)}
         heading="Professor ID"
-        name={selected?.name ?? ""}
-        role="Professor"
-        fields={[
-          { label: "Email", value: selected?.email ?? "" },
-          { label: "OAuth account", value: selected?.provider === "google" ? "Connected via Google" : "Not connected" },
-          { label: "Department", value: selected?.dept ?? "" },
-          { label: "Phone", value: "Not provided" },
-          { label: "Address", value: "Not provided", wide: true },
+        initialMode={modalMode}
+        data={getProfessorModalData(selected)}
+        departmentOptions={modalDepartments}
+        roleOrRankOptions={modalRanksList}
+        roleOrRankLabel="Rank"
+        statusOptions={[
+          { label: "Active", value: "Active" },
+          { label: "Deactivated", value: "Deactivated" },
         ]}
+        onSave={handleSaveProfessor}
       />
+
       <Modal isOpen={Boolean(pendingToggle)} onClose={() => setPendingToggle(null)} title={pendingToggle?.active ? "Deactivate professor?" : "Reactivate professor?"} actions={<><GhostButton onClick={() => setPendingToggle(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingToggle && void toggle(pendingToggle)}>{pendingToggle?.active ? "Deactivate" : "Reactivate"}</PrimaryButton></>}>
         {pendingToggle && <>Are you sure you want to {pendingToggle.active ? "deactivate" : "reactivate"} {pendingToggle.name}?</>}
       </Modal>

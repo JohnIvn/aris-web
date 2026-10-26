@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import ProfileDetailsModal from "@/components/ProfileDetailsModal";
+import ProfileDetailsModal, { ProfileModalData } from "@/components/ProfileDetailsModal";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 import {
@@ -32,6 +32,8 @@ type StaffMember = {
   department?: string | null;
   status?: "Active" | "On Leave";
   is_banned?: boolean;
+  phone?: string | null;
+  address?: string | null;
 };
 
 const demoStaff: StaffMember[] = [
@@ -56,11 +58,15 @@ export default function Staff() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [selected, setSelected] = useState<StaffMember | null>(null);
+  const [modalMode, setModalMode] = useState<"view" | "edit">("view");
   const [pendingStatus, setPendingStatus] = useState<StaffMember | null>(null);
   const [pendingDelete, setPendingDelete] = useState<StaffMember | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
   const { data: resourceStaff, setData: setResourceStaff } = useResource<StaffMember[]>("/staff", demoStaff);
+  const { data: deptResources } = useResource<{ id: string; name: string }[]>("/curriculum/departments?active=true", []);
+
   const staff = resourceStaff.map((person) => ({
     ...person,
     id: person.id ?? person.employee_id ?? "",
@@ -68,15 +74,92 @@ export default function Staff() {
     role: person.role ?? person.position ?? "Staff",
     dept: person.dept ?? person.department ?? "Unassigned",
     status: person.status ?? (person.is_banned ? "On Leave" : "Active"),
+    phone: person.phone ?? null,
+    address: person.address ?? null,
   }));
   const setStaff = (nextStaff: StaffMember[]) => setResourceStaff(nextStaff);
   const tabs = ["All", "Checker", "Secretary", "HR", "Accounting"];
+
+  const loadedDeptNames = Array.isArray(deptResources) && deptResources.length > 0
+    ? deptResources.map((d) => d.name)
+    : ["Engineering", "Computer Science", "Business", "Sciences", "Arts & Humanities", "Human Resources", "Finance", "Payroll", "Registrar", "Dean's Office", "Attendance"];
+  const departments = [...new Set(loadedDeptNames)].filter(Boolean);
+  const modalDepartments = selected?.dept && selected.dept !== "Unassigned" && !departments.includes(selected.dept)
+    ? [selected.dept, ...departments]
+    : departments;
+
   const rows = staff.filter((person) => {
     const matchesRole = tab === "All" || person.role === tab;
     const matchesStatus = statusFilter === "All statuses" || person.status === statusFilter;
     const matchesSearch = `${person.name} ${person.email} ${person.id} ${person.role} ${person.dept}`.toLowerCase().includes(search.toLowerCase());
     return matchesRole && matchesStatus && matchesSearch;
   });
+
+  const getStaffModalData = (s: StaffMember | null): ProfileModalData | null => {
+    if (!s) return null;
+    let fn = s.firstname ?? "";
+    let mn = s.middlename ?? "";
+    let ln = s.lastname ?? "";
+    if (!fn && !ln && s.name) {
+      const parts = s.name.trim().split(/\s+/);
+      fn = parts[0] || "";
+      ln = parts.length > 1 ? parts[parts.length - 1] : "";
+      mn = parts.length > 2 ? parts.slice(1, -1).join(" ") : "";
+    }
+    return {
+      id: s.id,
+      firstname: fn,
+      middlename: mn,
+      lastname: ln,
+      email: s.email,
+      department: s.dept ?? s.department ?? "",
+      roleOrRank: s.role ?? s.position ?? "Checker",
+      status: s.status ?? "Active",
+      phone: s.phone || "",
+      address: s.address || "",
+    };
+  };
+
+  const handleSaveStaff = async (updatedData: ProfileModalData) => {
+    if (!selected?.id) throw new Error("This staff member does not have a server ID.");
+    const isActive = updatedData.status === "Active";
+    const updated = await saveResource(`/staff/${selected.id}`, {
+      firstname: updatedData.firstname.trim(),
+      middlename: updatedData.middlename?.trim() || null,
+      lastname: updatedData.lastname.trim(),
+      email: updatedData.email.trim().toLowerCase(),
+      position: updatedData.roleOrRank?.trim() || null,
+      department: updatedData.department?.trim() || null,
+      phone: updatedData.phone?.trim() || null,
+      address: updatedData.address?.trim() || null,
+      active: isActive,
+    }, "PATCH");
+
+    const updatedFullName = [updatedData.firstname.trim(), updatedData.middlename?.trim(), updatedData.lastname.trim()]
+      .filter(Boolean)
+      .join(" ");
+
+    const updatedStaff: StaffMember = {
+      ...selected,
+      ...updated,
+      firstname: updatedData.firstname.trim(),
+      middlename: updatedData.middlename?.trim() || null,
+      lastname: updatedData.lastname.trim(),
+      name: updatedFullName || selected.name,
+      email: updatedData.email.trim().toLowerCase(),
+      role: updatedData.roleOrRank,
+      position: updatedData.roleOrRank,
+      dept: updatedData.department?.trim() || "Unassigned",
+      department: updatedData.department?.trim() || null,
+      status: updatedData.status as "Active" | "On Leave",
+      phone: updatedData.phone?.trim() || null,
+      address: updatedData.address?.trim() || null,
+      is_banned: !isActive,
+    };
+
+    setStaff(staff.map((item) => (item.id === selected.id ? updatedStaff : item)));
+    setSelected(updatedStaff);
+  };
 
   const updateStatus = async (person: StaffMember) => {
     const updated = staff.map((item) => item.id === person.id ? { ...item, status: item.status === "Active" ? "On Leave" as const : "Active" as const } : item);
@@ -90,6 +173,7 @@ export default function Staff() {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update staff status.");
     }
   };
+
   const deleteStaff = async (person: StaffMember) => {
     setPendingDelete(null);
     try {
@@ -141,8 +225,8 @@ export default function Staff() {
           <span>Name</span><span>Staff ID</span><span>Role</span><span>Department</span><span>Status</span><span className="text-right">Action</span>
         </div>
         {rows.map((s) => (
-          <div key={s.id} onClick={() => setSelected(s)} className="grid min-w-[900px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr_0.7fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
-            <button type="button" aria-label={`View details for ${s.name}`} onClick={(event) => { event.stopPropagation(); setSelected(s); }} className="flex min-w-0 items-center gap-3 text-left">
+          <div key={s.id} onClick={() => { setSelected(s); setModalMode("view"); }} className="grid min-w-[900px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr_0.7fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
+            <button type="button" aria-label={`View details for ${s.name}`} onClick={(event) => { event.stopPropagation(); setSelected(s); setModalMode("view"); }} className="flex min-w-0 items-center gap-3 text-left">
               <Avatar initials={s.name.split(" ").map((w) => w[0]).join("").slice(0, 2)} color={roleColor[s.role]} />
               <div className="min-w-0">
                 <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{s.name}</p>
@@ -160,7 +244,8 @@ export default function Staff() {
                 <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
               </button>
               {openMenu === s.id && <div className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
-                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(s); setModalMode("view"); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(s); setModalMode("edit"); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] text-[#2d4a36] font-medium hover:bg-[#f4f6f5]">Edit staff</button>
                 <button type="button" onClick={(event) => { event.stopPropagation(); setPendingStatus(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">{s.status === "Active" ? "Set on leave" : "Reactivate"}</button>
                 <button type="button" onClick={(event) => { event.stopPropagation(); setPendingDelete(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]">Delete</button>
               </div>}
@@ -168,20 +253,24 @@ export default function Staff() {
           </div>
         ))}
       </Card>
+
+      {/* Unified Profile Details & Edit Modal */}
       <ProfileDetailsModal
         isOpen={Boolean(selected)}
         onClose={() => setSelected(null)}
         heading="Staff ID"
-        name={selected?.name ?? ""}
-        role={selected?.role ?? ""}
-        fields={[
-          { label: "Staff ID", value: selected?.id ?? "" },
-          { label: "Email", value: selected?.email ?? "" },
-          { label: "Department", value: selected?.dept ?? "" },
-          { label: "Phone", value: "Not provided" },
-          { label: "Address", value: "Not provided", wide: true },
+        initialMode={modalMode}
+        data={getStaffModalData(selected)}
+        departmentOptions={modalDepartments}
+        roleOrRankOptions={["Checker", "Secretary", "HR", "Accounting"]}
+        roleOrRankLabel="Role"
+        statusOptions={[
+          { label: "Active", value: "Active" },
+          { label: "On Leave", value: "On Leave" },
         ]}
+        onSave={handleSaveStaff}
       />
+
       <Modal isOpen={Boolean(pendingStatus)} onClose={() => setPendingStatus(null)} title={pendingStatus?.status === "Active" ? "Set staff member on leave?" : "Reactivate staff member?"} actions={<><GhostButton onClick={() => setPendingStatus(null)}>Cancel</GhostButton><PrimaryButton onClick={() => pendingStatus && void updateStatus(pendingStatus)}>{pendingStatus?.status === "Active" ? "Set on leave" : "Reactivate"}</PrimaryButton></>}>
         {pendingStatus && <>Confirm status change for {pendingStatus.name}?</>}
       </Modal>
