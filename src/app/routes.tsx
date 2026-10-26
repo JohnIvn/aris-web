@@ -1,4 +1,4 @@
-import { createHashRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { useAuth } from "@/app/authContext";
 import Root from "@/layouts/AdminLayout";
 import Dashboard from "@/pages/Admin/Dashboard";
@@ -20,6 +20,10 @@ import Tickets from "@/pages/Admin/Tickets";
 import HardwareMonitoring from "@/pages/Admin/HardwareMonitoring";
 import StaffDashboard from "@/pages/Staff/Dashboard";
 
+if (typeof window !== "undefined" && window.location.hash.startsWith("#/")) {
+  window.history.replaceState(null, "", window.location.hash.slice(1));
+}
+
 function RootWithAuth() {
   const { signOut, user } = useAuth();
   if (user.role === "staff") {
@@ -29,7 +33,7 @@ function RootWithAuth() {
   return <Root onSignOut={signOut} user={user} />;
 }
 
-export const router = createHashRouter([
+export const router = createBrowserRouter([
   {
     path: "/",
     Component: RootWithAuth,
