@@ -74,48 +74,70 @@ export default function UserSettings() {
     firstName: Array.isArray(apiProfile) ? defaultProfile.firstName : apiProfile.firstName ?? apiProfile.firstname ?? defaultProfile.firstName,
     lastName: Array.isArray(apiProfile) ? defaultProfile.lastName : apiProfile.lastName ?? apiProfile.lastname ?? defaultProfile.lastName,
   };
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileMessage, setProfileMessage] = useState<string | null>(null);
-  const [profileSaving, setProfileSaving] = useState(false);
   const { data: prefs, setData: setPrefs } = useResource("/users/me/preferences", defaultPreferences);
+
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showDiscard, setShowDiscard] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const photoInput = useRef<HTMLInputElement>(null);
-  const set = (k: keyof typeof prefs) =>
+
+  // Snapshot taken when editing starts, used to restore values on "Discard Changes"
+  const snapshot = useRef<{ profile: typeof profile; prefs: typeof prefs } | null>(null);
+
+  const set = (k: keyof typeof prefs) => {
+    if (!editing) return;
     setPrefs((p) => ({ ...p, [k]: !p[k] }));
+  };
 
   const updateProfile = (key: keyof typeof profile, value: string) => {
     setProfile((current) => ({ ...current, [key]: value }));
     setProfileMessage(null);
   };
 
-  const saveProfile = async () => {
-    setProfileSaving(true);
+  const startEditing = () => {
+    snapshot.current = { profile: { ...profile }, prefs: { ...prefs } };
+    setSaveError(null);
     setProfileMessage(null);
-    try {
-      await saveResource("/users/me/profile", profile, "PATCH");
-      setEditingProfile(false);
-      setProfileMessage("Information saved.");
-    } catch (reason) {
-      setProfileMessage(reason instanceof Error ? reason.message : "Unable to save profile information.");
-    } finally {
-      setProfileSaving(false);
-    }
+    setEditing(true);
   };
 
-  const savePassword = async () => {
-    setPasswordMessage(null);
+  const discardChanges = () => {
+    if (snapshot.current) {
+      setProfile(() => snapshot.current!.profile);
+      setPrefs(() => snapshot.current!.prefs);
+    }
+    setNewPassword("");
+    setConfirmPassword("");
+    setProfileMessage(null);
+    setSaveError(null);
+    setShowDiscard(false);
+    setEditing(false);
+  };
+
+  const saveChanges = async () => {
+    setSaving(true);
+    setSaveError(null);
     try {
-      await saveResource("/users/me/password", { password: newPassword, confirmPassword }, "POST");
+      await saveResource("/users/me/profile", profile, "PATCH");
+      await saveResource("/users/me/preferences", prefs, "PATCH");
+      if (newPassword || confirmPassword) {
+        await saveResource("/users/me/password", { password: newPassword, confirmPassword }, "POST");
+      }
       setNewPassword("");
       setConfirmPassword("");
-      setPasswordMessage("Password updated.");
+      setShowConfirm(false);
+      setEditing(false);
+      setShowSaved(true);
     } catch (reason) {
-      setPasswordMessage(reason instanceof Error ? reason.message : "Unable to update password.");
+      setSaveError(reason instanceof Error ? reason.message : "Unable to save changes.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -130,28 +152,31 @@ export default function UserSettings() {
     }
   };
 
-  const savePreferences = async () => {
-    try {
-      await saveResource("/users/me/preferences", prefs, "PATCH");
-      setShowConfirm(false);
-      setShowSaved(true);
-      setSaveError(null);
-    } catch (reason) {
-      setSaveError(reason instanceof Error ? reason.message : "Unable to save preferences.");
-    }
-  };
-
   return (
     <div className="pb-4">
       <PageTitle
         title="User Settings"
         subtitle="Manage your profile and preferences."
         action={
-          <PrimaryButton onClick={() => setShowConfirm(true)}>
-            Save Changes
-          </PrimaryButton>
+          editing ? (
+            <div className="flex items-center gap-2">
+              <GhostButton onClick={() => setShowDiscard(true)}>Discard Changes</GhostButton>
+              <PrimaryButton
+                onClick={() => {
+                  setSaveError(null);
+                  setShowConfirm(true);
+                }}
+              >
+                Save Changes
+              </PrimaryButton>
+            </div>
+          ) : (
+            <PrimaryButton onClick={startEditing}>Edit Information</PrimaryButton>
+          )
         }
       />
+
+      {/* Confirm save */}
       <Modal
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
@@ -174,8 +199,8 @@ export default function UserSettings() {
             <GhostButton onClick={() => setShowConfirm(false)}>
               No, Cancel
             </GhostButton>
-            <PrimaryButton onClick={savePreferences}>
-              Yes, Save
+            <PrimaryButton onClick={() => void saveChanges()}>
+              {saving ? "Saving..." : "Yes, Save"}
             </PrimaryButton>
           </>
         }
@@ -183,6 +208,39 @@ export default function UserSettings() {
         {saveError ?? "Are you sure you want to save these changes?"}
       </Modal>
 
+      {/* Confirm discard */}
+      <Modal
+        isOpen={showDiscard}
+        onClose={() => setShowDiscard(false)}
+        title="Discard Changes"
+        icon={
+          <div className="w-14 h-14 rounded-full flex items-center justify-center bg-[#fbecec] text-[#c0392b]">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="w-7 h-7"
+            >
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+        }
+        actions={
+          <>
+            <GhostButton onClick={() => setShowDiscard(false)}>
+              Keep Editing
+            </GhostButton>
+            <PrimaryButton onClick={discardChanges}>
+              Yes, Discard
+            </PrimaryButton>
+          </>
+        }
+      >
+        Your unsaved changes will be lost. Do you want to discard them?
+      </Modal>
+
+      {/* Saved */}
       <Modal
         isOpen={showSaved}
         onClose={() => setShowSaved(false)}
@@ -277,21 +335,16 @@ export default function UserSettings() {
         {/* Right column */}
         <div className="flex flex-col gap-4 min-h-0">
           <Card>
-            <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="mb-4">
               <p className="text-[15px] font-semibold" style={{ color: "#111c14" }}>Profile</p>
-              <PrimaryButton onClick={() => editingProfile ? void saveProfile() : setEditingProfile(true)}>
-                {profileSaving ? "Saving..." : editingProfile ? "Save information" : "Edit information"}
-              </PrimaryButton>
             </div>
-            {profileMessage && <p role="status" className="mb-3 text-[12px]" style={{ color: profileMessage === "Information saved." ? "#2f7043" : "#c0392b" }}>{profileMessage}</p>}
+            {profileMessage && <p role="status" className="mb-3 text-[12px]" style={{ color: "#c0392b" }}>{profileMessage}</p>}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="First name" value={profile.firstName} disabled={!editingProfile} onChange={(value) => updateProfile("firstName", value)} />
-              <Field label="Last name" value={profile.lastName} disabled={!editingProfile} onChange={(value) => updateProfile("lastName", value)} />
-              <Field label="Email" value={profile.email} disabled={!editingProfile} onChange={(value) => updateProfile("email", value)} />
-              <Field label="Phone" value={profile.phone} disabled={!editingProfile} onChange={(value) => updateProfile("phone", value)} />
+              <Field label="First name" value={profile.firstName} disabled={!editing} onChange={(value) => updateProfile("firstName", value)} />
+              <Field label="Last name" value={profile.lastName} disabled={!editing} onChange={(value) => updateProfile("lastName", value)} />
+              <Field label="Email" value={profile.email} disabled={!editing} onChange={(value) => updateProfile("email", value)} />
+              <Field label="Phone" value={profile.phone} disabled={!editing} onChange={(value) => updateProfile("phone", value)} />
             </div>
-            {passwordMessage && <p role="status" className="mt-3 text-[12px]" style={{ color: passwordMessage === "Password updated." ? "#2f7043" : "#c0392b" }}>{passwordMessage}</p>}
-            <div className="mt-3 flex justify-end"><PrimaryButton onClick={() => void savePassword()}>Update password</PrimaryButton></div>
           </Card>
 
           <Card>
@@ -312,9 +365,10 @@ export default function UserSettings() {
                 <input
                   type="password"
                   value={newPassword}
+                  disabled={!editing}
                   onChange={(event) => setNewPassword(event.target.value)}
                   placeholder="••••••••"
-                  className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]"
+                  className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e] disabled:bg-[#f7f9f8] disabled:text-[#738176]"
                   style={{ borderColor: "#e2e8e4" }}
                 />
               </div>
@@ -328,9 +382,10 @@ export default function UserSettings() {
                 <input
                   type="password"
                   value={confirmPassword}
+                  disabled={!editing}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="••••••••"
-                  className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]"
+                  className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e] disabled:bg-[#f7f9f8] disabled:text-[#738176]"
                   style={{ borderColor: "#e2e8e4" }}
                 />
               </div>
