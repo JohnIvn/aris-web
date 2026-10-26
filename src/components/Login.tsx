@@ -216,14 +216,6 @@ export default function Login({
                 >
                   Password
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setDialog("forgot")}
-                  className="text-[12.5px] font-medium transition-opacity hover:opacity-70"
-                  style={{ color: BRAND }}
-                >
-                  Forgot?
-                </button>
               </div>
               <div className="mt-1.5 relative">
                 <input
@@ -272,34 +264,45 @@ export default function Login({
               </div>
             </label>
 
-            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <label className="flex items-center justify-between">
+              <div className="flex w-fit items-center gap-2.5 cursor-pointer select-none">
+                <button
+                  type="button"
+                  onClick={() => setRemember((r) => !r)}
+                  className="w-[18px] h-[18px] cursor-pointer rounded-md flex items-center justify-center border transition-colors flex-shrink-0"
+                  style={{
+                    background: remember ? BRAND : "#fff",
+                    borderColor: remember ? BRAND : "#cdd8d0",
+                  }}
+                  aria-pressed={remember}
+                >
+                  {remember && (
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#fff"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3 h-3"
+                    >
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  )}
+                </button>
+                <span className="text-[13px]" style={{ color: "#5a6b5e" }}>
+                  Remember me
+                </span>
+              </div>
+              
               <button
                 type="button"
-                onClick={() => setRemember((r) => !r)}
-                className="w-[18px] h-[18px] rounded-md flex items-center justify-center border transition-colors flex-shrink-0"
-                style={{
-                  background: remember ? BRAND : "#fff",
-                  borderColor: remember ? BRAND : "#cdd8d0",
-                }}
-                aria-pressed={remember}
+                onClick={() => setDialog("forgot")}
+                className="text-[12.5px] font-medium transition-opacity hover:opacity-70"
+                style={{ color: BRAND }}
               >
-                {remember && (
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#fff"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="w-3 h-3"
-                  >
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                )}
+                Forgot password?
               </button>
-              <span className="text-[13px]" style={{ color: "#5a6b5e" }}>
-                Keep me signed in
-              </span>
             </label>
 
             <button
