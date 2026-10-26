@@ -10,7 +10,7 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 
 # Build arguments for Railway variables (public backend URL for browser)
-ARG VITE_API_URL=https://nutribin-user-backend-production.up.railway.app
+ARG VITE_API_URL=https://aris-server.up.railway.app/
 ARG VITE_GOOGLE_CLIENT_ID
 
 # Build the React/Vite app to ./dist
