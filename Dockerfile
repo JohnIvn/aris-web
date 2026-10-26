@@ -7,11 +7,7 @@ COPY package*.json ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Copy project files
-COPY vite.config.js ./
-COPY jsconfig.json ./
-COPY index.html ./
-COPY src ./src
-COPY public ./public
+COPY . .
 
 # Build arguments for Railway variables (public backend URL for browser)
 ARG VITE_API_URL=https://nutribin-user-backend-production.up.railway.app
