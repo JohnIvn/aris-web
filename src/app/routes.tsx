@@ -4,6 +4,7 @@ import Root from "@/layouts/AdminLayout";
 import Dashboard from "@/pages/Admin/Dashboard";
 import Announcements from "@/pages/Admin/Announcements";
 import NewReminder from "@/pages/Admin/NewReminder";
+import Curriculum from "@/pages/Admin/Curriculum";
 import Professors from "@/pages/Admin/Professors";
 import AddProfessor from "@/pages/Admin/AddProfessor";
 import Staff from "@/pages/Admin/Staff";
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
           </>
         ),
       },
+      { path: "curriculum", Component: Curriculum },
       { path: "professors", Component: Professors },
       {
         path: "professors/new",

@@ -1,16 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { BRAND } from "@/config/navigation";
 import { PrimaryButton, GhostButton, Toggle } from "@/components/ui";
 import { saveResource } from "@/services/dataSource";
+import { useResource } from "@/hooks/useResource";
 import GoogleOAuthButton from "@/components/GoogleOAuthButton";
 
-const depts = ["Engineering", "Computer Science", "Business", "Sciences", "Arts & Humanities"];
-const ranks = ["Professor", "Associate Prof.", "Assistant Prof.", "Lecturer", "Adjunct"];
+type DeptItem = { id?: string; name: string; is_active?: boolean };
+type RankItem = { id?: string; name: string; is_active?: boolean };
+
+const fallbackDepts: DeptItem[] = [
+  { name: "Engineering" },
+  { name: "Computer Science" },
+  { name: "Business" },
+  { name: "Sciences" },
+  { name: "Arts & Humanities" },
+];
+
+const fallbackRanks: RankItem[] = [
+  { name: "Professor" },
+  { name: "Associate Prof." },
+  { name: "Assistant Prof." },
+  { name: "Lecturer" },
+  { name: "Adjunct" },
+];
 
 export default function AddProfessor() {
   const navigate = useNavigate();
   const close = () => navigate("/professors");
+
+  const { data: deptData } = useResource<DeptItem[]>("/curriculum/departments?active=true", fallbackDepts);
+  const { data: rankData } = useResource<RankItem[]>("/curriculum/ranks?active=true", fallbackRanks);
+
+  const depts = (deptData && deptData.length > 0 ? deptData : fallbackDepts).map((d) => d.name);
+  const ranks = (rankData && rankData.length > 0 ? rankData : fallbackRanks).map((r) => r.name);
 
   const [employeeId, setEmployeeId] = useState("");
   const [username, setUsername] = useState("");
@@ -18,12 +41,24 @@ export default function AddProfessor() {
   const [middlename, setMiddlename] = useState("");
   const [lastname, setLastname] = useState("");
   const [email, setEmail] = useState("");
-  const [dept, setDept] = useState(depts[0]);
-  const [rank, setRank] = useState(ranks[0]);
+  const [dept, setDept] = useState("");
+  const [rank, setRank] = useState("");
   const [password, setPassword] = useState("");
   const [oauthToken, setOauthToken] = useState("");
   const [active, setActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!dept && depts.length > 0) {
+      setDept(depts[0]);
+    }
+  }, [dept, depts]);
+
+  useEffect(() => {
+    if (!rank && ranks.length > 0) {
+      setRank(ranks[0]);
+    }
+  }, [rank, ranks]);
 
   const submit = async () => {
     if (!employeeId.trim() || !username.trim() || !firstname.trim() || !lastname.trim() || !email.trim() || (!oauthToken && !password)) {
@@ -32,7 +67,6 @@ export default function AddProfessor() {
     }
     try {
       await saveResource("/professors", {
-
         employee_id: employeeId.trim(),
         username: username.trim(),
         firstname: firstname.trim(),
@@ -40,8 +74,8 @@ export default function AddProfessor() {
         lastname: lastname.trim(),
         email: email.trim().toLowerCase(),
         ...(password ? { password } : {}),
-        department: dept,
-        position: rank,
+        department: dept || depts[0],
+        position: rank || ranks[0],
         ...(oauthToken ? { provider: "google", oauth_id_token: oauthToken } : {}),
         active,
       });

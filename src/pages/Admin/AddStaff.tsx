@@ -3,9 +3,10 @@ import { useNavigate } from "react-router";
 import { BRAND } from "@/config/navigation";
 import { PrimaryButton, GhostButton } from "@/components/ui";
 import { saveResource } from "@/services/dataSource";
+import { useResource } from "@/hooks/useResource";
 import GoogleOAuthButton from "@/components/GoogleOAuthButton";
 
-// Role → Staff ID prefix, matching the Staff Management page.
+// Role -> Staff ID prefix, matching the Staff Management page.
 const roles = [
   { key: "Checker", prefix: "CHK", color: "#3a7d4e" },
   { key: "Secretary", prefix: "SEC", color: "#3f8ecc" },
@@ -16,6 +17,8 @@ const roles = [
 export default function AddStaff() {
   const navigate = useNavigate();
   const close = () => navigate("/staff");
+
+  const { data: deptResources } = useResource<{ id: string; name: string }[]>("/curriculum/departments?active=true", []);
 
   const [employeeId, setEmployeeId] = useState("");
   const [username, setUsername] = useState("");
@@ -110,8 +113,20 @@ export default function AddStaff() {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Department</label>
-              <input value={dept} onChange={(e) => setDept(e.target.value)} placeholder="e.g. Attendance" className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
+              <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Department / Office</label>
+              <input
+                list="staff-departments-list"
+                value={dept}
+                onChange={(e) => setDept(e.target.value)}
+                placeholder="e.g. Attendance, Computer Science, Registrar"
+                className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e]"
+                style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+              />
+              <datalist id="staff-departments-list">
+                {Array.isArray(deptResources) && deptResources.map((d) => (
+                  <option key={d.id} value={d.name} />
+                ))}
+              </datalist>
             </div>
           </div>
           <div>

@@ -43,7 +43,10 @@ export default function Professors() {
   const [pendingDelete, setPendingDelete] = useState<Professor | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
   const { data: resourceItems, setData: setResourceItems } = useResource<Professor[]>("/professors", people);
+  const { data: deptResources } = useResource<{ id: string; name: string }[]>("/curriculum/departments", []);
+
   const items = resourceItems.map((person) => ({
     ...person,
     name: person.name ?? ([person.firstname, person.middlename, person.lastname].filter(Boolean).join(" ") || "Unknown professor"),
@@ -78,7 +81,10 @@ export default function Professors() {
       setSaveError(reason instanceof Error ? reason.message : "Unable to delete professor.");
     }
   };
-  const departments = [...new Set(items.map((person) => person.dept))];
+
+  const loadedDeptNames = Array.isArray(deptResources) ? deptResources.map((d) => d.name) : [];
+  const departments = [...new Set([...loadedDeptNames, ...items.map((person) => person.dept)])].filter(Boolean);
+
   const rows = items.filter((person) => {
     const matchesTab = tab === "All" || (tab === "Active" ? person.active : !person.active);
     const matchesDepartment = department === "All departments" || person.dept === department;
@@ -87,11 +93,16 @@ export default function Professors() {
   });
 
   const activeCount = items.filter((p) => p.active).length;
-  const stats = [["Total Faculty", String(items.length)], ["Active", String(activeCount)], ["Deactivated", String(items.length - activeCount)], ["Colleges", "6"]];
+  const stats = [
+    ["Total Faculty", String(items.length)],
+    ["Active", String(activeCount)],
+    ["Deactivated", String(items.length - activeCount)],
+    ["Colleges", String(departments.length || 6)],
+  ];
 
   return (
     <div className="pb-2">
-      <PageTitle title="Professor Management" subtitle="312 faculty across 6 colleges." action={<PrimaryButton onClick={() => navigate("/professors/new")}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>Add Professor</PrimaryButton>} />
+      <PageTitle title="Professor Management" subtitle={`${items.length} faculty across ${departments.length || 6} colleges.`} action={<PrimaryButton onClick={() => navigate("/professors/new")}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>Add Professor</PrimaryButton>} />
       {saveError && <p role="alert" className="mb-3 text-[12px] text-red-700">{saveError}</p>}
 
       <StatGrid className="mb-4">
