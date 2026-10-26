@@ -5,9 +5,12 @@ import { PrimaryButton, GhostButton, Toggle } from "@/components/ui";
 import { saveResource } from "@/services/dataSource";
 import { useResource } from "@/hooks/useResource";
 import GoogleOAuthButton from "@/components/GoogleOAuthButton";
+import PasswordField, { isPasswordValid } from "@/components/PasswordField";
 
 type DeptItem = { id?: string; name: string; is_active?: boolean };
 type RankItem = { id?: string; name: string; is_active?: boolean };
+type Toast = { id: number; message: string };
+type NameKey = "firstname" | "middlename" | "lastname";
 
 const fallbackDepts: DeptItem[] = [
   { name: "Engineering" },
@@ -25,6 +28,12 @@ const fallbackRanks: RankItem[] = [
   { name: "Adjunct" },
 ];
 
+// Letters (any language), spaces, apostrophes, hyphens and periods only. No digits.
+const cleanName = (value: string) => value.replace(/[^\p{L}\s.'-]/gu, "");
+const digitsOnly = (value: string) => value.replace(/\D/g, "");
+
+const NAME_HINT = "Numbers and special characters are not allowed.";
+
 export default function AddProfessor() {
   const navigate = useNavigate();
   const close = () => navigate("/professors");
@@ -35,18 +44,20 @@ export default function AddProfessor() {
   const depts = (deptData && deptData.length > 0 ? deptData : fallbackDepts).map((d) => d.name);
   const ranks = (rankData && rankData.length > 0 ? rankData : fallbackRanks).map((r) => r.name);
 
-  const [employeeId, setEmployeeId] = useState("");
+  const [employeeNumber, setEmployeeNumber] = useState(""); // "PROF-" is a fixed prefix
   const [username, setUsername] = useState("");
-  const [firstname, setFirstname] = useState("");
-  const [middlename, setMiddlename] = useState("");
-  const [lastname, setLastname] = useState("");
+  const [names, setNames] = useState<Record<NameKey, string>>({ firstname: "", middlename: "", lastname: "" });
+  const [nameErrors, setNameErrors] = useState<Partial<Record<NameKey, string>>>({});
   const [email, setEmail] = useState("");
   const [dept, setDept] = useState("");
   const [rank, setRank] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [oauthToken, setOauthToken] = useState("");
   const [active, setActive] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
     if (!dept && depts.length > 0) {
@@ -60,33 +71,88 @@ export default function AddProfessor() {
     }
   }, [rank, ranks]);
 
+  // Escape closes the modal (replaces the removed X button for keyboard users).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const pushToast = (message: string) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message }]);
+    window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
+  };
+
+  // Live name validation: invalid characters are removed as the user types,
+  // and a hint shows under that field.
+  const onName = (key: NameKey) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value;
+    const cleaned = cleanName(raw);
+    setNames((prev) => ({ ...prev, [key]: cleaned }));
+    setNameErrors((prev) => ({ ...prev, [key]: cleaned !== raw ? NAME_HINT : undefined }));
+  };
+
   const submit = async () => {
-    if (!employeeId.trim() || !username.trim() || !firstname.trim() || !lastname.trim() || !email.trim() || (!oauthToken && !password)) {
-      setError(`Employee ID, username, first name, last name, email, and ${oauthToken ? "a verified OAuth account" : "password"} are required.`);
+    if (submitting) return;
+    const errors: string[] = [];
+    if (!employeeNumber) errors.push("Employee ID number is required.");
+    if (!username.trim()) errors.push("Username is required.");
+    if (!names.firstname.trim()) errors.push("First name is required.");
+    if (!names.lastname.trim()) errors.push("Last name is required.");
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.push("Enter a valid email address.");
+    if (!oauthToken && !password) errors.push("Password is required (or connect a Google account).");
+    if (!oauthToken && password && !isPasswordValid(password)) {
+      errors.push("Password needs 8–15 characters with a capital letter, a number and a symbol.");
+    }
+    if (phone && !/^\d{10,11}$/.test(phone)) errors.push("Phone number must be 10–11 digits.");
+
+    if (errors.length) {
+      errors.forEach(pushToast);
       return;
     }
+
+    setSubmitting(true);
     try {
       await saveResource("/professors", {
-        employee_id: employeeId.trim(),
+        employee_id: `PROF-${employeeNumber}`,
         username: username.trim(),
-        firstname: firstname.trim(),
-        middlename: middlename.trim() || undefined,
-        lastname: lastname.trim(),
+        firstname: names.firstname.trim(),
+        middlename: names.middlename.trim() || undefined,
+        lastname: names.lastname.trim(),
         email: email.trim().toLowerCase(),
         ...(password ? { password } : {}),
         department: dept || depts[0],
         position: rank || ranks[0],
+        ...(phone ? { phone } : {}),
+        ...(address.trim() ? { address: address.trim() } : {}),
         ...(oauthToken ? { provider: "google", oauth_id_token: oauthToken } : {}),
         active,
       });
       close();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to add professor.");
+      pushToast(reason instanceof Error ? reason.message : "Unable to add professor.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  const nameBorder = (key: NameKey) => (nameErrors[key] ? "#f1a5a5" : "#e2e8e4");
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(13,26,16,0.45)", backdropFilter: "blur(2px)", fontFamily: "'DM Sans', 'Inter', system-ui, sans-serif" }} onClick={close}>
+      {/* Toast notifications, top-right */}
+      <div className="fixed right-4 top-4 z-[60] flex w-[min(360px,calc(100vw-2rem))] flex-col gap-2" aria-live="assertive" onClick={(e) => e.stopPropagation()}>
+        {toasts.map((toast) => (
+          <div key={toast.id} role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] text-red-800 shadow-lg">
+            <span>{toast.message}</span>
+            <button type="button" aria-label="Dismiss notification" onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))} className="text-red-700 hover:text-red-900">✕</button>
+          </div>
+        ))}
+      </div>
+
       <div className="w-full max-w-lg rounded-3xl bg-white overflow-hidden" style={{ boxShadow: "0 24px 60px rgba(13,26,16,0.35)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b" style={{ borderColor: "#eef1ef" }}>
           <div className="flex items-center gap-3">
@@ -98,45 +164,84 @@ export default function AddProfessor() {
               <p className="text-[12.5px] mt-0.5" style={{ color: "#8fa394" }}>Register a new faculty member.</p>
             </div>
           </div>
-          <button onClick={close} aria-label="Close" className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-[#f4f6f5]" style={{ color: "#8fa394" }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4.5 h-4.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
-          </button>
         </div>
 
         <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
           <div>
-            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Employee ID</label>
-            <input value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} placeholder="e.g. PROF-0001" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <label htmlFor="employee-number" className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Employee ID</label>
+            <div className="flex">
+              <span className="flex h-10 items-center rounded-l-xl border border-r-0 bg-[#f4f6f5] px-3.5 text-[13.5px] font-medium" style={{ borderColor: "#e2e8e4", color: "#536258" }}>PROF-</span>
+              <input
+                id="employee-number"
+                inputMode="numeric"
+                value={employeeNumber}
+                onChange={(e) => setEmployeeNumber(digitsOnly(e.target.value))}
+                placeholder="0001"
+                className="w-full h-10 px-3.5 rounded-r-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]"
+                style={{ borderColor: "#e2e8e4" }}
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <input aria-label="Username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
-            <input aria-label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={oauthToken ? "Not needed for Google" : "Password (8+ characters)"} disabled={Boolean(oauthToken)} className="h-10 px-3.5 rounded-xl border text-[13.5px] disabled:bg-[#f4f6f5] disabled:text-[#8fa394]" style={{ borderColor: "#e2e8e4" }} />
+
+          <div>
+            <input aria-label="Username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4" }} />
           </div>
+
+          {oauthToken ? (
+            <div>
+              <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Password</label>
+              <input aria-label="Password" disabled placeholder="Not needed for Google" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] bg-[#f4f6f5] text-[#8fa394]" style={{ borderColor: "#e2e8e4" }} />
+            </div>
+          ) : (
+            <PasswordField value={password} onChange={setPassword} />
+          )}
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <input aria-label="First name" value={firstname} onChange={(e) => setFirstname(e.target.value)} placeholder="First name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
-            <input aria-label="Middle name" value={middlename} onChange={(e) => setMiddlename(e.target.value)} placeholder="Middle name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
-            <input aria-label="Last name" value={lastname} onChange={(e) => setLastname(e.target.value)} placeholder="Last name" className="h-10 px-3.5 rounded-xl border text-[13.5px]" style={{ borderColor: "#e2e8e4" }} />
+            <div>
+              <input aria-label="First name" value={names.firstname} onChange={onName("firstname")} placeholder="First name" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: nameBorder("firstname") }} />
+              {nameErrors.firstname && <p className="mt-1 pl-0.5 text-[11px] text-red-700">{nameErrors.firstname}</p>}
+            </div>
+            <div>
+              <input aria-label="Middle name" value={names.middlename} onChange={onName("middlename")} placeholder="Middle name" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: nameBorder("middlename") }} />
+              {nameErrors.middlename && <p className="mt-1 pl-0.5 text-[11px] text-red-700">{nameErrors.middlename}</p>}
+            </div>
+            <div>
+              <input aria-label="Last name" value={names.lastname} onChange={onName("lastname")} placeholder="Last name" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: nameBorder("lastname") }} />
+              {nameErrors.lastname && <p className="mt-1 pl-0.5 text-[11px] text-red-700">{nameErrors.lastname}</p>}
+            </div>
           </div>
+
           <div>
             <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Email</label>
             <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@aris.edu.ph" disabled={Boolean(oauthToken)} className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e] disabled:bg-[#f4f6f5] disabled:text-[#8fa394]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
           </div>
+
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Phone number <span style={{ color: "#8fa394" }}>(optional)</span></label>
+            <input inputMode="numeric" maxLength={11} value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} placeholder="9171234567" autoComplete="tel" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4" }} />
+          </div>
+
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Address <span style={{ color: "#8fa394" }}>(optional)</span></label>
+            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, city, province" autoComplete="street-address" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4" }} />
+          </div>
+
           <div>
             <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>OAuth account <span style={{ color: "#8fa394" }}>(optional)</span></label>
             <GoogleOAuthButton
               token={oauthToken}
               onVerified={(token, profile) => {
                 setOauthToken(token);
-                setFirstname(profile.firstname);
-                setLastname(profile.lastname);
+                setNames((prev) => ({ ...prev, firstname: cleanName(profile.firstname), lastname: cleanName(profile.lastname) }));
+                setNameErrors({});
                 setEmail(profile.email);
                 setUsername(profile.email.split("@")[0]);
                 setPassword("");
-                setError(null);
               }}
               onClear={() => setOauthToken("")}
             />
           </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Department</label>
@@ -151,6 +256,7 @@ export default function AddProfessor() {
               </select>
             </div>
           </div>
+
           <div className="flex items-center justify-between pt-1">
             <div>
               <p className="text-[13px] font-medium" style={{ color: "#111c14" }}>Active on creation</p>
@@ -158,14 +264,13 @@ export default function AddProfessor() {
             </div>
             <Toggle on={active} onChange={setActive} />
           </div>
-          {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t" style={{ borderColor: "#eef1ef", background: "#fafbfa" }}>
           <GhostButton onClick={close}>Cancel</GhostButton>
-          <PrimaryButton onClick={submit}>
+          <PrimaryButton onClick={() => void submit()}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>
-            Add Professor
+            {submitting ? "Saving…" : "Add Professor"}
           </PrimaryButton>
         </div>
       </div>
