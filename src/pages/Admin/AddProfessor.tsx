@@ -33,6 +33,8 @@ const cleanName = (value: string) => value.replace(/[^\p{L}\s.'-]/gu, "");
 const digitsOnly = (value: string) => value.replace(/\D/g, "");
 
 const NAME_HINT = "Numbers and special characters are not allowed.";
+const EMAIL_HINT = "Enter a valid email address.";
+const isValidEmail = (value: string) => /^\S+@\S+\.\S+$/.test(value.trim());
 
 export default function AddProfessor() {
   const navigate = useNavigate();
@@ -49,6 +51,7 @@ export default function AddProfessor() {
   const [names, setNames] = useState<Record<NameKey, string>>({ firstname: "", middlename: "", lastname: "" });
   const [nameErrors, setNameErrors] = useState<Partial<Record<NameKey, string>>>({});
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | undefined>();
   const [dept, setDept] = useState("");
   const [rank, setRank] = useState("");
   const [phone, setPhone] = useState("");
@@ -102,7 +105,10 @@ export default function AddProfessor() {
     if (!username.trim()) errors.push("Username is required.");
     if (!names.firstname.trim()) errors.push("First name is required.");
     if (!names.lastname.trim()) errors.push("Last name is required.");
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) errors.push("Enter a valid email address.");
+    if (!isValidEmail(email)) {
+      errors.push(EMAIL_HINT);
+      setEmailError(EMAIL_HINT);
+    }
     if (!oauthToken && !password) errors.push("Password is required (or connect a Google account).");
     if (!oauthToken && password && !isPasswordValid(password)) {
       errors.push("Password needs 8–15 characters with a capital letter, a number and a symbol.");
@@ -212,13 +218,26 @@ export default function AddProfessor() {
           </div>
 
           <div>
-            <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Email</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@aris.edu.ph" disabled={Boolean(oauthToken)} className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e] disabled:bg-[#f4f6f5] disabled:text-[#8fa394]" style={{ borderColor: "#e2e8e4", color: "#111c14" }} />
+            <label htmlFor="staff-email" className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Email</label>
+            <input
+              id="staff-email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setEmailError(undefined);
+              }}
+              onBlur={() => setEmailError(email && !isValidEmail(email) ? EMAIL_HINT : undefined)}
+              placeholder="name@aris.edu.ph"
+              disabled={Boolean(oauthToken)}
+              className="w-full h-10 px-3.5 rounded-xl bg-white border text-[13.5px] outline-none focus:border-[#3a7d4e] disabled:bg-[#f4f6f5] disabled:text-[#8fa394]"
+              style={{ borderColor: emailError ? "#f1a5a5" : "#e2e8e4", color: "#111c14" }}
+            />
+            {emailError && <p className="mt-1 pl-0.5 text-[11px] text-red-700">{emailError}</p>}
           </div>
 
           <div>
             <label className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>Phone number <span style={{ color: "#8fa394" }}>(optional)</span></label>
-            <input inputMode="numeric" maxLength={11} value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} placeholder="9171234567" autoComplete="tel" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4" }} />
+            <input inputMode="numeric" maxLength={11} value={phone} onChange={(e) => setPhone(digitsOnly(e.target.value))} placeholder="09123456789" autoComplete="tel" className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]" style={{ borderColor: "#e2e8e4" }} />
           </div>
 
           <div>
