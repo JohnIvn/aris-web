@@ -33,6 +33,8 @@ export default function Tickets() {
   const [statusFilter, setStatusFilter] = useState<"All" | Ticket["status"]>("All");
   const [reply, setReply] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const filteredTickets = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -58,6 +60,16 @@ export default function Tickets() {
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Unable to save ticket changes.");
     }
+  };
+
+  const nextStatus: Ticket["status"] = selectedTicket?.status === "Open" ? "Closed" : "Open";
+
+  const confirmStatusChange = async () => {
+    if (!selectedTicket) return;
+    setSaving(true);
+    await updateTicket({ ...selectedTicket, status: nextStatus });
+    setSaving(false);
+    setConfirmOpen(false);
   };
 
   const sendReply = async (event: FormEvent<HTMLFormElement>) => {
@@ -117,7 +129,7 @@ export default function Tickets() {
               <button
                 key={ticket.id}
                 type="button"
-                onClick={() => { setSelectedId(ticket.id); setSaveError(null); }}
+                onClick={() => { setSelectedId(ticket.id); setSaveError(null); setConfirmOpen(false); }}
                 aria-pressed={selectedTicket?.id === ticket.id}
                 className={`w-full rounded-xl border p-2 text-left transition-colors ${selectedTicket?.id === ticket.id ? "border-[#b9d4c0] bg-[#f4f8f4]" : "border-[#edf0ed] bg-white hover:bg-[#f8faf8]"}`}
               >
@@ -156,7 +168,7 @@ export default function Tickets() {
                 </div>
                 {isAdmin && <button
                   type="button"
-                  onClick={() => void updateTicket({ ...selectedTicket, status: selectedTicket.status === "Open" ? "Closed" : "Open" })}
+                  onClick={() => setConfirmOpen(true)}
                   className="h-9 rounded-xl bg-[#397c4d] px-4 text-[12px] font-semibold text-white transition hover:bg-[#2e6c41]"
                 >
                   {selectedTicket.status === "Open" ? "Close Ticket" : "Reopen Ticket"}
@@ -164,16 +176,21 @@ export default function Tickets() {
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-5">
-                {selectedTicket.messages.map((message) => (
-                  <div key={message.id} className={`flex items-start gap-2 ${message.author === "admin" ? "justify-end" : ""}`}>
-                    {message.author === "requester" && <Avatar initials={selectedTicket.requester.slice(0, 2).toUpperCase()} size={28} color="#687d6e" />}
-                    <div className={`max-w-[82%] ${message.author === "admin" ? "text-right" : ""}`}>
-                      <p className={`rounded-2xl px-3 py-2.5 text-[12px] leading-relaxed ${message.author === "admin" ? "bg-[#347849] text-white" : "bg-[#f1f4f1] text-[#405347]"}`}>{message.text}</p>
-                      <span className="mt-1 block px-1 text-[9px] text-[#8fa394]">{message.time}</span>
+                {selectedTicket.messages.map((message) => {
+                  const fromAdmin = message.author === "admin";
+                  return (
+                    <div key={message.id} className={`flex items-end gap-2 ${fromAdmin ? "justify-end" : "justify-start"}`}>
+                      {!fromAdmin && <Avatar initials={selectedTicket.requester.slice(0, 2).toUpperCase()} size={28} color="#687d6e" />}
+                      <div className={`flex min-w-0 max-w-[82%] flex-col ${fromAdmin ? "items-end" : "items-start"}`}>
+                        <p className={`w-fit max-w-full whitespace-pre-wrap break-words rounded-2xl px-3 py-2.5 text-left text-[12px] leading-relaxed ${fromAdmin ? "bg-[#347849] text-white" : "bg-[#f1f4f1] text-[#405347]"}`}>
+                          {message.text}
+                        </p>
+                        <span className="mt-1 px-1 text-[9px] text-[#8fa394]">{message.time}</span>
+                      </div>
+                      {fromAdmin && <Avatar initials="AD" size={28} />}
                     </div>
-                    {message.author === "admin" && <Avatar initials="AD" size={28} />}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <form onSubmit={sendReply} className="flex gap-2 border-t border-[#edf0ed] p-3 sm:p-4">
@@ -199,6 +216,50 @@ export default function Tickets() {
           )}
         </Card>
       </div>
+
+      {confirmOpen && selectedTicket && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => !saving && setConfirmOpen(false)}
+          onKeyDown={(event) => { if (event.key === "Escape" && !saving) setConfirmOpen(false); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-title"
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+          >
+            <h3 id="confirm-title" className="text-[15px] font-semibold text-[#18251c]">
+              {nextStatus === "Closed" ? "Close this ticket?" : "Reopen this ticket?"}
+            </h3>
+            <p className="mt-2 text-[12px] leading-relaxed text-[#5a6b5e]">
+              {nextStatus === "Closed"
+                ? `"${selectedTicket.title}" will be marked as closed and replies will be disabled.`
+                : `"${selectedTicket.title}" will be marked as open and replies will be enabled again.`}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                autoFocus
+                disabled={saving}
+                onClick={() => setConfirmOpen(false)}
+                className="h-9 rounded-xl border border-[#e2e8e4] bg-white px-4 text-[12px] font-semibold text-[#5a6b5e] transition hover:bg-[#f8faf8] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void confirmStatusChange()}
+                className="h-9 rounded-xl bg-[#397c4d] px-4 text-[12px] font-semibold text-white transition hover:bg-[#2e6c41] disabled:opacity-50"
+              >
+                {saving ? "Saving..." : nextStatus === "Closed" ? "Yes, close" : "Yes, reopen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
