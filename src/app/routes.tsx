@@ -1,6 +1,9 @@
 import { createBrowserRouter, Navigate, useRouteError } from "react-router";
 import { useAuth } from "@/app/authContext";
 import Root from "@/layouts/AdminLayout";
+import Login from "@/components/Login";
+import TermsOfService from "@/pages/TermsOfService";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import Dashboard from "@/pages/Admin/Dashboard";
 import Announcements from "@/pages/Admin/Announcements";
 import NewReminder from "@/pages/Admin/NewReminder";
@@ -62,15 +65,53 @@ function RouteErrorBoundary() {
 }
 
 function RootWithAuth() {
-  const { signOut, user } = useAuth();
+  const { signOut, user, signIn, isAuthenticated } = useAuth();
+  if (!isAuthenticated) {
+    return <Login onSignIn={signIn} />;
+  }
   if (user.role === "staff") {
     return <StaffDashboard onSignOut={signOut} />;
   }
-  if (user.role !== "administrator" && user.role !== "admin") return <Navigate to="/" replace />;
+  if (user.role !== "administrator" && user.role !== "admin") {
+    return <Login onSignIn={signIn} />;
+  }
   return <Root onSignOut={signOut} user={user} />;
 }
 
+function LoginPage() {
+  const { signIn, isAuthenticated } = useAuth();
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  return <Login onSignIn={signIn} />;
+}
+
 export const router = createBrowserRouter([
+  {
+    path: "/terms",
+    Component: TermsOfService,
+    ErrorBoundary: RouteErrorBoundary,
+  },
+  {
+    path: "/terms-of-service",
+    Component: TermsOfService,
+    ErrorBoundary: RouteErrorBoundary,
+  },
+  {
+    path: "/privacy",
+    Component: PrivacyPolicy,
+    ErrorBoundary: RouteErrorBoundary,
+  },
+  {
+    path: "/privacy-policy",
+    Component: PrivacyPolicy,
+    ErrorBoundary: RouteErrorBoundary,
+  },
+  {
+    path: "/login",
+    Component: LoginPage,
+    ErrorBoundary: RouteErrorBoundary,
+  },
   {
     path: "/",
     Component: RootWithAuth,

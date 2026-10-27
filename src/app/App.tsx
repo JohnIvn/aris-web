@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { RouterProvider } from "react-router";
-import Login from "@/components/Login";
-import { AuthContext } from "@/app/authContext";
+import { AuthContext, EMPTY_USER } from "@/app/authContext";
 import { router } from "@/app/routes";
 import type { UserAccount } from "@/data/demoAccounts";
 import { signIn as authenticate } from "@/services/authService";
@@ -26,19 +25,28 @@ export default function App() {
     }
     sessionStorage.setItem("aris-user", JSON.stringify(session.user));
     if (session.token) sessionStorage.setItem("aris-token", session.token);
-    await router.navigate("/");
     setUser(session.user);
+    await router.navigate("/");
   };
+
   const signOut = () => {
     sessionStorage.removeItem("aris-user");
     sessionStorage.removeItem("aris-token");
     setUser(null);
+    router.navigate("/");
   };
 
-  if (!user) return <Login onSignIn={signIn} />;
+  const isAuthenticated = Boolean(user?.id && user?.email);
 
   return (
-    <AuthContext.Provider value={{ signOut, user }}>
+    <AuthContext.Provider
+      value={{
+        signOut,
+        signIn,
+        user: user ?? EMPTY_USER,
+        isAuthenticated,
+      }}
+    >
       <RouterProvider router={router} />
     </AuthContext.Provider>
   );

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import { Link } from "react-router"
 import { Mail } from "lucide-react"
 import arisLogo from "@/assets/brand/image.png"
 import { GhostButton, Modal, PrimaryButton } from "@/components/ui"
@@ -139,21 +140,45 @@ export default function Login({
           </p>
         </div>
 
-        <div
-          className="relative flex items-center gap-6 text-[13px]"
-          style={{ color: "#527a5e" }}
-        >
-          <span>4,821 students</span>
-          <span
-            className="w-1 h-1 rounded-full"
-            style={{ background: "#2c4433" }}
-          />
-          <span>312 faculty</span>
-          <span
-            className="w-1 h-1 rounded-full"
-            style={{ background: "#2c4433" }}
-          />
-          <span>6 departments</span>
+        <div className="relative space-y-4">
+          <div
+            className="flex items-center gap-6 text-[13px]"
+            style={{ color: "#527a5e" }}
+          >
+            <span>4,821 students</span>
+            <span
+              className="w-1 h-1 rounded-full"
+              style={{ background: "#2c4433" }}
+            />
+            <span>312 faculty</span>
+            <span
+              className="w-1 h-1 rounded-full"
+              style={{ background: "#2c4433" }}
+            />
+            <span>6 departments</span>
+          </div>
+
+          <div
+            className="pt-4 border-t border-[#ffffff15] flex items-center justify-between text-[11.5px]"
+            style={{ color: "#527a5e" }}
+          >
+            <span>ARIS • UCC</span>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/terms"
+                className="hover:text-[#8fb69b] transition-colors underline-offset-2 hover:underline"
+              >
+                Terms of Service
+              </Link>
+              <span>•</span>
+              <Link
+                to="/privacy"
+                className="hover:text-[#8fb69b] transition-colors underline-offset-2 hover:underline"
+              >
+                Privacy Policy
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 

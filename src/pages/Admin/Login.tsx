@@ -45,10 +45,17 @@ function Login({ onLogin, onCampusSso, error }: AdminLoginProps) {
             </p>
           </div>
 
-          <div className="relative z-10 hidden items-center gap-5 text-[10px] text-[#9cb29f] sm:flex">
-            <span>4,821 students</span><span className="h-1 w-1 rounded-full bg-[#75a57b]" />
-            <span>32 faculty</span><span className="h-1 w-1 rounded-full bg-[#75a57b]" />
-            <span>6 departments</span>
+          <div className="relative z-10 space-y-3">
+            <div className="hidden items-center gap-5 text-[10px] text-[#9cb29f] sm:flex">
+              <span>4,821 students</span><span className="h-1 w-1 rounded-full bg-[#75a57b]" />
+              <span>32 faculty</span><span className="h-1 w-1 rounded-full bg-[#75a57b]" />
+              <span>6 departments</span>
+            </div>
+            <div className="border-t border-[#ffffff15] pt-3 flex items-center gap-3 text-[10px] text-[#7da383]">
+              <a href="/terms" className="hover:text-white transition">Terms of Service</a>
+              <span>•</span>
+              <a href="/privacy" className="hover:text-white transition">Privacy Policy</a>
+            </div>
           </div>
         </section>
 
@@ -72,7 +79,7 @@ function Login({ onLogin, onCampusSso, error }: AdminLoginProps) {
                     type="email"
                     autoComplete="username"
                     required
-                    placeholder="admin@uc.edu.ph"
+                    placeholder="admin@ucc.edu.ph"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     className="h-10 w-full rounded-md border border-[#e3e8e3] bg-white pl-9 pr-3 text-xs text-[#233128] outline-none transition focus:border-[#438158] focus:ring-2 focus:ring-[#438158]/15 placeholder:text-[#aab1ab]"
