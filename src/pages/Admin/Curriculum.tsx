@@ -732,7 +732,8 @@ export default function Curriculum() {
         </Card>
 
         {/* Graph 2: Academic Rank Distribution (Donut Chart) */}
-        <Card className="flex flex-col min-h-[300px]">
+        {/* Graph 2: Academic Rank Distribution (Donut Chart) */}
+        <Card className="relative z-10 flex flex-col min-h-[300px]">
           <div className="flex items-center justify-between mb-2">
             <div>
               <h2 className="text-[14px] font-semibold text-[#111c14]">Academic Rank Distribution</h2>
@@ -741,32 +742,31 @@ export default function Curriculum() {
           </div>
           <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
             <div className="relative w-full sm:w-1/2 h-[190px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={190}>
-                <PieChart>
-                  <Tooltip content={<CustomPieTooltip />} />
-                  <Pie
-                    data={rankChartData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={52}
-                    outerRadius={78}
-                    paddingAngle={3}
-                  >
-                    {rankChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[20px] font-bold text-[#111c14] leading-none">
-                  {totalFacultyCount}
-                </span>
-                <span className="text-[10px] uppercase tracking-wide text-[#8fa394] mt-0.5 font-semibold">
-                  Faculty
-                </span>
+              {/* center label: behind the chart */}
+              <div className="absolute inset-0 z-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-[20px] font-bold text-[#111c14] leading-none">{totalFacultyCount}</span>
+                <span className="text-[10px] uppercase tracking-wide text-[#8fa394] mt-0.5 font-semibold">Faculty</span>
+              </div>
+
+              {/* chart: in front */}
+              <div className="relative z-10 h-full w-full">
+                <ResponsiveContainer width="100%" height={190}>
+                  <PieChart>
+                    <Tooltip
+                      content={<CustomPieTooltip />}
+                      allowEscapeViewBox={{ x: true, y: true }}
+                      wrapperStyle={{ zIndex: 1000, pointerEvents: "none" }}
+                    />
+                    <Pie data={rankChartData} dataKey="value" nameKey="name" innerRadius={52} outerRadius={78} paddingAngle={3}>
+                      {rankChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </div>
+
             <div className="w-full sm:w-1/2 space-y-2 pr-1">
               {rankChartData.map((r) => (
                 <div key={r.name} className="flex items-center justify-between text-[12px]">
@@ -775,7 +775,10 @@ export default function Curriculum() {
                     <span className="truncate">{r.name}</span>
                   </span>
                   <span className="font-semibold text-[#111c14] ml-2 font-mono">
-                    {r.value} <span className="text-[#8fa394] text-[11px] font-normal">({totalFacultyCount ? Math.round((r.value / totalFacultyCount) * 100) : 0}%)</span>
+                    {r.value}{" "}
+                    <span className="text-[#8fa394] text-[11px] font-normal">
+                      ({totalFacultyCount ? Math.round((r.value / totalFacultyCount) * 100) : 0}%)
+                    </span>
                   </span>
                 </div>
               ))}
@@ -893,89 +896,89 @@ export default function Curriculum() {
                       </Badge>
                     </span>
 
-                  <span className="relative flex justify-end">
-                    <button
-                      type="button"
-                      aria-label={`Actions for ${dept.name}`}
-                      aria-expanded={openMenu === dept.id}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setOpenMenu(openMenu === dept.id ? null : dept.id);
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                        <circle cx="5" cy="12" r="1.8" />
-                        <circle cx="12" cy="12" r="1.8" />
-                        <circle cx="19" cy="12" r="1.8" />
-                      </svg>
-                    </button>
-                    {openMenu === dept.id && (
-                      <div
-                        className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
-                        style={{ borderColor: "#e2e8e4" }}
+                    <span className="relative flex justify-end">
+                      <button
+                        type="button"
+                        aria-label={`Actions for ${dept.name}`}
+                        aria-expanded={openMenu === dept.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenMenu(openMenu === dept.id ? null : dept.id);
+                        }}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
                       >
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setViewDeptMembers(dept);
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                          <circle cx="5" cy="12" r="1.8" />
+                          <circle cx="12" cy="12" r="1.8" />
+                          <circle cx="19" cy="12" r="1.8" />
+                        </svg>
+                      </button>
+                      {openMenu === dept.id && (
+                        <div
+                          className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
+                          style={{ borderColor: "#e2e8e4" }}
                         >
-                          View faculty
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openEditDept(dept);
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                        >
-                          Edit details
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setPendingToggle({
-                              type: "department",
-                              id: dept.id,
-                              name: dept.name,
-                              active: dept.is_active,
-                            });
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                        >
-                          {dept.is_active ? "Deactivate" : "Reactivate"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setPendingDelete({
-                              type: "department",
-                              id: dept.id,
-                              name: dept.name,
-                              count: dept.professor_count,
-                            });
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </span>
-                </div>
-              );
-            })
-          )}
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setViewDeptMembers(dept);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            View faculty
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEditDept(dept);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            Edit details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPendingToggle({
+                                type: "department",
+                                id: dept.id,
+                                name: dept.name,
+                                active: dept.is_active,
+                              });
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            {dept.is_active ? "Deactivate" : "Reactivate"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPendingDelete({
+                                type: "department",
+                                id: dept.id,
+                                name: dept.name,
+                                count: dept.professor_count,
+                              });
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </>
         )}
 
@@ -1060,89 +1063,89 @@ export default function Curriculum() {
                       </Badge>
                     </span>
 
-                  <span className="relative flex justify-end">
-                    <button
-                      type="button"
-                      aria-label={`Actions for ${rank.name}`}
-                      aria-expanded={openMenu === rank.id}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setOpenMenu(openMenu === rank.id ? null : rank.id);
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                        <circle cx="5" cy="12" r="1.8" />
-                        <circle cx="12" cy="12" r="1.8" />
-                        <circle cx="19" cy="12" r="1.8" />
-                      </svg>
-                    </button>
-                    {openMenu === rank.id && (
-                      <div
-                        className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
-                        style={{ borderColor: "#e2e8e4" }}
+                    <span className="relative flex justify-end">
+                      <button
+                        type="button"
+                        aria-label={`Actions for ${rank.name}`}
+                        aria-expanded={openMenu === rank.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenMenu(openMenu === rank.id ? null : rank.id);
+                        }}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
                       >
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setViewRankMembers(rank);
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                          <circle cx="5" cy="12" r="1.8" />
+                          <circle cx="12" cy="12" r="1.8" />
+                          <circle cx="19" cy="12" r="1.8" />
+                        </svg>
+                      </button>
+                      {openMenu === rank.id && (
+                        <div
+                          className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
+                          style={{ borderColor: "#e2e8e4" }}
                         >
-                          View accounts
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openEditRank(rank);
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                        >
-                          Edit details
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setPendingToggle({
-                              type: "rank",
-                              id: rank.id,
-                              name: rank.name,
-                              active: rank.is_active,
-                            });
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                        >
-                          {rank.is_active ? "Deactivate" : "Reactivate"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setPendingDelete({
-                              type: "rank",
-                              id: rank.id,
-                              name: rank.name,
-                              count: rank.professor_count,
-                            });
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </span>
-                </div>
-              );
-            })
-          )}
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setViewRankMembers(rank);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            View accounts
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEditRank(rank);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            Edit details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPendingToggle({
+                                type: "rank",
+                                id: rank.id,
+                                name: rank.name,
+                                active: rank.is_active,
+                              });
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            {rank.is_active ? "Deactivate" : "Reactivate"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPendingDelete({
+                                type: "rank",
+                                id: rank.id,
+                                name: rank.name,
+                                count: rank.professor_count,
+                              });
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </>
         )}
 
@@ -1232,88 +1235,88 @@ export default function Curriculum() {
                       </Badge>
                     </span>
 
-                  <span className="relative flex justify-end">
-                    <button
-                      type="button"
-                      aria-label={`Actions for ${course.title}`}
-                      aria-expanded={openMenu === course.id}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setOpenMenu(openMenu === course.id ? null : course.id);
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                        <circle cx="5" cy="12" r="1.8" />
-                        <circle cx="12" cy="12" r="1.8" />
-                        <circle cx="19" cy="12" r="1.8" />
-                      </svg>
-                    </button>
-                    {openMenu === course.id && (
-                      <div
-                        className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
-                        style={{ borderColor: "#e2e8e4" }}
+                    <span className="relative flex justify-end">
+                      <button
+                        type="button"
+                        aria-label={`Actions for ${course.title}`}
+                        aria-expanded={openMenu === course.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenMenu(openMenu === course.id ? null : course.id);
+                        }}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
                       >
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setViewCourseMembers(course);
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                          <circle cx="5" cy="12" r="1.8" />
+                          <circle cx="12" cy="12" r="1.8" />
+                          <circle cx="19" cy="12" r="1.8" />
+                        </svg>
+                      </button>
+                      {openMenu === course.id && (
+                        <div
+                          className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
+                          style={{ borderColor: "#e2e8e4" }}
                         >
-                          View faculty
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openEditCourse(course);
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                        >
-                          Edit details
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setPendingToggle({
-                              type: "course",
-                              id: course.id,
-                              name: course.title,
-                              active: course.is_active,
-                            });
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                        >
-                          {course.is_active ? "Deactivate" : "Reactivate"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setPendingDelete({
-                              type: "course",
-                              id: course.id,
-                              name: course.title,
-                            });
-                            setOpenMenu(null);
-                          }}
-                          className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </span>
-                </div>
-              );
-            })
-          )}
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setViewCourseMembers(course);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            View faculty
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEditCourse(course);
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            Edit details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPendingToggle({
+                                type: "course",
+                                id: course.id,
+                                name: course.title,
+                                active: course.is_active,
+                              });
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
+                          >
+                            {course.is_active ? "Deactivate" : "Reactivate"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPendingDelete({
+                                type: "course",
+                                id: course.id,
+                                name: course.title,
+                              });
+                              setOpenMenu(null);
+                            }}
+                            className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </span>
+                  </div>
+                );
+              })
+            )}
           </>
         )}
       </Card>
