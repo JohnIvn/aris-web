@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router";
 import { BRAND } from "@/config/navigation";
 import {
   Card,
@@ -93,6 +93,7 @@ const formatPublishedAt = (value: string | null | undefined) => {
 
 export default function Announcements() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Data fetching
   const { data: rawPosts, setData: setPosts, loading, error, reload } =
@@ -166,6 +167,19 @@ export default function Announcements() {
   ).length;
 
   // Handlers for Create / Edit Modal
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    if (location.pathname.endsWith("/new")) {
+      navigate("/announcements", { replace: true });
+    }
+  };
+
+  useEffect(() => {
+    if (location.pathname.endsWith("/new")) {
+      openCreateModal();
+    }
+  }, [location.pathname]);
+
   const openCreateModal = () => {
     setFormMode("create");
     setFormId(null);
@@ -221,7 +235,7 @@ export default function Announcements() {
         setPosts(posts.map((p) => (p.id === formId ? { ...p, ...updated } : p)));
         setActionNotice("Announcement updated successfully.");
       }
-      setEditModalOpen(false);
+      closeEditModal();
       reload();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Failed to save announcement.");
@@ -268,20 +282,12 @@ export default function Announcements() {
         title="Announcements"
         subtitle="Create, edit, and broadcast system notifications and announcements to staff and faculty."
         action={
-          <div className="flex items-center gap-2">
-            <GhostButton onClick={() => navigate("/announcements/new")}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              New Reminder (Form)
-            </GhostButton>
-            <PrimaryButton onClick={openCreateModal}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              New Announcement
-            </PrimaryButton>
-          </div>
+          <PrimaryButton onClick={openCreateModal}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            New Announcement
+          </PrimaryButton>
         }
       />
 
@@ -692,13 +698,13 @@ export default function Announcements() {
       {/* CREATE / EDIT MODAL */}
       <Modal
         isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
+        onClose={closeEditModal}
         title={formMode === "create" ? "New Announcement" : "Edit Announcement"}
         size="lg"
         align="left"
         actions={
           <div className="flex items-center justify-end gap-2 w-full">
-            <GhostButton onClick={() => setEditModalOpen(false)}>Cancel</GhostButton>
+            <GhostButton onClick={closeEditModal}>Cancel</GhostButton>
             <PrimaryButton onClick={saveAnnouncement}>
               {saving ? (
                 <span>Saving…</span>

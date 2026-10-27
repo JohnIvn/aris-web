@@ -6,7 +6,6 @@ import TermsOfService from "@/pages/TermsOfService";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import Dashboard from "@/pages/Admin/Dashboard";
 import Announcements from "@/pages/Admin/Announcements";
-import NewReminder from "@/pages/Admin/NewReminder";
 import Curriculum from "@/pages/Admin/Curriculum";
 import Professors from "@/pages/Admin/Professors";
 import AddProfessor from "@/pages/Admin/AddProfessor";
@@ -119,26 +118,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Dashboard },
       { path: "notifications", Component: Announcements },
-      {
-        path: "notifications/new",
-        Component: () => (
-          <>
-            <Announcements />
-            <NewReminder />
-          </>
-        ),
-      },
+      { path: "notifications/new", Component: Announcements },
       { path: "approvals", Component: () => null },
       { path: "announcements", Component: Announcements },
-      {
-        path: "announcements/new",
-        Component: () => (
-          <>
-            <Announcements />
-            <NewReminder />
-          </>
-        ),
-      },
+      { path: "announcements/new", Component: Announcements },
       { path: "curriculum", Component: Curriculum },
       { path: "professors", Component: Professors },
       {
