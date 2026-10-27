@@ -654,7 +654,7 @@ export default function Approvals() {
   };
 
   return (
-    <div className="pb-4 space-y-3">
+    <div className="pb-4">
       {/* Page Title with Search and Export */}
       <PageTitle
         title="Approvals"
@@ -732,7 +732,7 @@ export default function Approvals() {
       />
 
       {/* Role / Stage Selection Banner */}
-      <Card className="p-4">
+      <Card className="p-4 mb-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
             <span
@@ -777,7 +777,7 @@ export default function Approvals() {
 
       {flash && (
         <div
-          className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl text-[12.5px] font-medium"
+          className="mb-4 flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl text-[12.5px] font-medium"
           style={{ background: "#eaf4ee", color: "#2f7043" }}
         >
           <span className="flex items-center gap-2">

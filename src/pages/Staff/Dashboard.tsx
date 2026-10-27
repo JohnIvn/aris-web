@@ -30,6 +30,7 @@ import Approvals, {
   STAGE_OWNER,
 } from "./Approvals";
 import Announcements from "./Announcements";
+import UserSettings from "./UserSettings";
 import Tickets from "../Admin/Tickets";
 import Support from "../Admin/Support";
 
@@ -51,7 +52,13 @@ type StaffAnnouncement = {
   publishedAt?: string | null;
 };
 
-const staffNavigation = [
+type StaffNavItem = {
+  path: string;
+  label: string;
+  icon: ReactNode;
+};
+
+const staffMainNav: StaffNavItem[] = [
   {
     path: "/",
     label: "Dashboard",
@@ -64,6 +71,9 @@ const staffNavigation = [
       </>
     ),
   },
+];
+
+const staffManagementNav: StaffNavItem[] = [
   {
     path: "/notifications",
     label: "Announcements",
@@ -76,6 +86,9 @@ const staffNavigation = [
     label: "Approvals",
     icon: <path d="M5 12l4 4L19 6" />,
   },
+];
+
+const staffSupportNav: StaffNavItem[] = [
   {
     path: "/tickets",
     label: "Tickets",
@@ -88,6 +101,23 @@ const staffNavigation = [
     label: "New Ticket",
     icon: <path d="M12 5v14M5 12h14" />,
   },
+];
+
+const staffSettingsNav: StaffNavItem[] = [
+  {
+    path: "/settings/user",
+    label: "User Settings",
+    icon: (
+      <path d="M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+    ),
+  },
+];
+
+const staffNavigation: StaffNavItem[] = [
+  ...staffMainNav,
+  ...staffManagementNav,
+  ...staffSupportNav,
+  ...staffSettingsNav,
 ];
 
 function StaffIcon({ children }: { children: ReactNode }) {
@@ -185,7 +215,12 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
 
   const displayName =
     [profile.firstname, profile.lastname].filter(Boolean).join(" ") || user.name;
-  const allowedPath = staffNavigation.some((item) => item.path === location.pathname);
+
+  const allowedPath =
+    staffNavigation.some((item) => item.path === location.pathname) ||
+    location.pathname === "/settings" ||
+    location.pathname === "/settings/user" ||
+    location.pathname === "/announcements";
 
   useEffect(() => {
     if (!allowedPath) navigate("/", { replace: true });
@@ -205,8 +240,11 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
     " · " +
     currentTime.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
-  const NavButton = ({ item }: { item: (typeof staffNavigation)[number] }) => {
-    const active = location.pathname === item.path;
+  const NavButton = ({ item }: { item: StaffNavItem }) => {
+    const active =
+      location.pathname === item.path ||
+      (item.path === "/notifications" && location.pathname === "/announcements") ||
+      (item.path === "/settings/user" && location.pathname === "/settings");
     return (
       <button
         type="button"
@@ -308,7 +346,9 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           </button>
         </div>
 
+        {/* Grouped Navigation */}
         <nav className="flex-1 overflow-y-auto px-3">
+          {/* Main */}
           {!sidebarCollapsed && (
             <p
               className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-2 pb-1.5"
@@ -317,7 +357,46 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
               Main
             </p>
           )}
-          {staffNavigation.map((item) => (
+          {staffMainNav.map((item) => (
+            <NavButton key={item.path} item={item} />
+          ))}
+
+          {/* Management */}
+          {!sidebarCollapsed && (
+            <p
+              className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
+              style={{ color: "#b6c3ba" }}
+            >
+              Management
+            </p>
+          )}
+          {staffManagementNav.map((item) => (
+            <NavButton key={item.path} item={item} />
+          ))}
+
+          {/* Support */}
+          {!sidebarCollapsed && (
+            <p
+              className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
+              style={{ color: "#b6c3ba" }}
+            >
+              Support
+            </p>
+          )}
+          {staffSupportNav.map((item) => (
+            <NavButton key={item.path} item={item} />
+          ))}
+
+          {/* Settings */}
+          {!sidebarCollapsed && (
+            <p
+              className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
+              style={{ color: "#b6c3ba" }}
+            >
+              Settings
+            </p>
+          )}
+          {staffSettingsNav.map((item) => (
             <NavButton key={item.path} item={item} />
           ))}
         </nav>
@@ -325,8 +404,24 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
         <div className="p-3">
           {!sidebarCollapsed && (
             <div
-              className="flex items-center gap-3 p-2 rounded-2xl"
-              style={{ background: "#f4f6f5" }}
+              onClick={() => navigate("/settings/user")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate("/settings/user");
+                }
+              }}
+              title="Click to view and edit User Settings"
+              className="flex items-center gap-3 p-2 rounded-2xl cursor-pointer hover:bg-[#eaf4ee] transition-colors"
+              style={{
+                background:
+                  location.pathname === "/settings" ||
+                  location.pathname === "/settings/user"
+                    ? "#eaf4ee"
+                    : "#f4f6f5",
+              }}
             >
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
@@ -345,6 +440,15 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                   {profile.position || user.email}
                 </p>
               </div>
+              <svg
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="#8fa394"
+                strokeWidth="1.6"
+                className="w-3.5 h-3.5 flex-shrink-0 opacity-70"
+              >
+                <path d="M6 12l4-4-4-4" />
+              </svg>
             </div>
           )}
           <button
@@ -467,8 +571,18 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
               onClick={() => navigate(item.path)}
               className="flex h-9 flex-shrink-0 items-center gap-2 rounded-lg px-3 text-[12px] font-medium"
               style={{
-                background: location.pathname === item.path ? "#e6f1e9" : "#fff",
-                color: location.pathname === item.path ? BRAND : "#5a6b5e",
+                background:
+                  location.pathname === item.path ||
+                  (item.path === "/notifications" && location.pathname === "/announcements") ||
+                  (item.path === "/settings/user" && location.pathname === "/settings")
+                    ? "#e6f1e9"
+                    : "#fff",
+                color:
+                  location.pathname === item.path ||
+                  (item.path === "/notifications" && location.pathname === "/announcements") ||
+                  (item.path === "/settings/user" && location.pathname === "/settings")
+                    ? BRAND
+                    : "#5a6b5e",
               }}
             >
               <StaffIcon>{item.icon}</StaffIcon>
@@ -484,6 +598,8 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           {location.pathname === "/approvals" && <StaffApprovals />}
           {location.pathname === "/tickets" && <Tickets />}
           {location.pathname === "/support" && <Support />}
+          {(location.pathname === "/settings" ||
+            location.pathname === "/settings/user") && <StaffUserSettings />}
         </main>
       </div>
 
@@ -1021,9 +1137,9 @@ function StaffNotifications() {
 }
 
 function StaffApprovals() {
-  return (
-    <div className="mx-auto max-w-6xl py-5">
-      <Approvals />
-    </div>
-  );
+  return <Approvals />;
+}
+
+function StaffUserSettings() {
+  return <UserSettings />;
 }
