@@ -418,7 +418,7 @@ export default function Announcements() {
             {loading && (
               <Card className="text-center py-10">
                 <p className="text-[13px]" style={{ color: "#8fa394" }}>
-                  Loading notifications & announcements…
+                  Loading announcements…
                 </p>
               </Card>
             )}

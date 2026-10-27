@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { BRAND } from "@/config/navigation";
 import {
   Card,
   PageTitle,
   GhostButton,
+  PrimaryButton,
   SearchInput,
   Badge,
   Avatar,
   Tabs,
   Modal,
   Toggle,
+  initialsColor,
   arTable,
   dtrTable,
   SubmissionDetail,
@@ -37,6 +39,13 @@ const STAGE_COLOR: Record<StageRole, string> = {
   Secretary: "#3f8ecc",
   HR: "#8a63c4",
   Accounting: "#d99a2b",
+};
+
+const statusTone: Record<string, "green" | "amber" | "red" | "gray" | "blue"> = {
+  Approved: "green",
+  Pending: "amber",
+  Disapproved: "red",
+  Flagged: "red",
 };
 
 /** The next stage in the routing order, or undefined at the final stage. */
@@ -248,25 +257,26 @@ const approvalQueue: ApprovalItem[] = [
         dtrTable("DTR — August 11–22, 2026", "21 duty days logged", [
           ["Aug 11", "8:02 AM", "5:07 PM", 8.1],
           ["Aug 12", "—", "5:03 PM", 0],
-          ["Aug 13", "8:11 AM", "5:00 PM", 7.8],
+          ["Aug 13", "8:00 AM", "5:02 PM", 8.0],
         ]),
       ],
-      attachment: "DTR_Garcia_AugCycle2.xlsx · 79 KB",
+      attachment: "DTR_Garcia_AugCycle2.xlsx · 80 KB",
       reviewer: "Ana Bautista (HR)",
-      reviewedAt: "Aug 23, 2026 · 11:12 AM",
+      reviewedAt: "Aug 24, 2026 · 11:15 AM",
       remark:
-        "Disapproved: three biometric entries were logged under an unregistered employee number. Refile with corrected entries.",
+        "Disapproved: missing time-in record on August 12. Returned to faculty for correction.",
     },
   },
 ];
 
-/** How a submission reads from the acting role's point of view. */
+/** Where an item sits relative to the role looking at it. */
 function stageStatus(
   it: ApprovalItem,
   role: StageRole,
 ): { label: string; tone: "green" | "amber" | "red" | "gray"; note: string } {
-  const mine = STAGES.indexOf(role);
   const at = STAGES.indexOf(it.stage);
+  const mine = STAGES.indexOf(role);
+
   if (it.status === "Disapproved") {
     return { label: "Disapproved", tone: "red", note: `at ${it.stage}` };
   }
@@ -367,10 +377,6 @@ function StageProgress({ item }: { item: ApprovalItem }) {
   );
 }
 
-/* ─── Page ─────────────────────────────────────────────────────────────────── */
-
-/* ─── Page ─────────────────────────────────────────────────────────────────── */
-
 function QueueCard({
   item,
   role,
@@ -393,7 +399,7 @@ function QueueCard({
     <button
       type="button"
       onClick={onOpen}
-      className="w-full text-left bg-white rounded-2xl p-3 border transition-all hover:shadow-md"
+      className="w-full text-left bg-white rounded-2xl p-3 border transition-all hover:shadow-md cursor-pointer"
       style={{
         borderColor: decided
           ? item.status === "Approved"
@@ -462,33 +468,78 @@ function QueueCard({
 export default function Approvals() {
   const [role, setRole] = useState<StageRole>("Secretary");
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState("All");
+  const [viewMode, setViewMode] = useState<"table" | "board">("table");
   const [showDecided, setShowDecided] = useState(true);
   const [queue, setQueue] = useState<ApprovalItem[]>(approvalQueue);
   const [openId, setOpenId] = useState<string | null>(null);
   const [remark, setRemark] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
+  const [showExportConfirm, setShowExportConfirm] = useState(false);
+  const [showExportSuccess, setShowExportSuccess] = useState(false);
+
+  const tabs = ["All", "Pending", "Approved", "Disapproved"];
 
   const open = queue.find((it) => it.id === openId) ?? null;
   const openStatus = open ? stageStatus(open, role) : null;
   const canAct = !!open && open.status === "Pending" && open.stage === role;
   const next = open ? nextStageOf(open.stage) : undefined;
 
-  const q = query.trim().toLowerCase();
-  const visible = queue.filter((it) => {
-    if (!showDecided && it.status !== "Pending") return false;
-    if (!q) return true;
-    return (
-      it.faculty.toLowerCase().includes(q) ||
-      it.reference.toLowerCase().includes(q) ||
-      it.period.toLowerCase().includes(q)
-    );
-  });
-  const column = (s: StageRole) => visible.filter((it) => it.stage === s);
-
   const awaiting = queue.filter(
     (it) => it.status === "Pending" && it.stage === role,
   ).length;
   const inPipeline = queue.filter((it) => it.status === "Pending").length;
+
+  // Filtered rows for the Table (EXACT SystemLogs format)
+  const filteredQueue = useMemo(() => {
+    return queue.filter((it) => {
+      if (tab === "Pending" && it.status !== "Pending") return false;
+      if (tab === "Approved" && it.status !== "Approved") return false;
+      if (tab === "Disapproved" && it.status !== "Disapproved" && it.status !== "Flagged") return false;
+
+      if (query.trim()) {
+        const q = query.trim().toLowerCase();
+        const matchesFaculty = it.faculty.toLowerCase().includes(q);
+        const matchesNumber = it.facultyNumber.toLowerCase().includes(q);
+        const matchesRef = it.reference.toLowerCase().includes(q);
+        const matchesType = it.type.toLowerCase().includes(q);
+        const matchesPeriod = it.period.toLowerCase().includes(q);
+        const matchesStage = it.stage.toLowerCase().includes(q);
+        const matchesEvent = it.event.toLowerCase().includes(q);
+        const matchesCollege = (it.record?.college || "").toLowerCase().includes(q);
+
+        if (
+          !matchesFaculty &&
+          !matchesNumber &&
+          !matchesRef &&
+          !matchesType &&
+          !matchesPeriod &&
+          !matchesStage &&
+          !matchesEvent &&
+          !matchesCollege
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [queue, tab, query]);
+
+  // Board visibility filtering
+  const visibleForBoard = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return queue.filter((it) => {
+      if (!showDecided && it.status !== "Pending") return false;
+      if (!q) return true;
+      return (
+        it.faculty.toLowerCase().includes(q) ||
+        it.reference.toLowerCase().includes(q) ||
+        it.period.toLowerCase().includes(q)
+      );
+    });
+  }, [queue, showDecided, query]);
+
+  const column = (s: StageRole) => visibleForBoard.filter((it) => it.stage === s);
 
   const decide = (item: ApprovalItem, action: "Approve" | "Disapprove") => {
     const reviewer = `${STAGE_OWNER[role]} (${role})`;
@@ -543,24 +594,145 @@ export default function Approvals() {
     setRemark("");
   };
 
+  const handleExportCsv = () => {
+    if (filteredQueue.length === 0) return;
+
+    const headers = [
+      "Reference ID",
+      "Type",
+      "Faculty Name",
+      "Faculty Number",
+      "College / Dept",
+      "Coverage Period",
+      "Current Stage",
+      "Stage Reviewer",
+      "Status",
+      "Submitted At",
+      "Reviewer Remark",
+    ];
+
+    const escapeCsv = (val: string | null | undefined) => {
+      if (val === null || val === undefined) return '""';
+      const s = String(val).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const csvContent = [
+      headers.join(","),
+      ...filteredQueue.map((r) =>
+        [
+          escapeCsv(r.reference),
+          escapeCsv(r.type),
+          escapeCsv(r.faculty),
+          escapeCsv(r.facultyNumber),
+          escapeCsv(r.record?.college),
+          escapeCsv(r.period),
+          escapeCsv(r.stage),
+          escapeCsv(STAGE_OWNER[r.stage]),
+          escapeCsv(r.status),
+          escapeCsv(r.submitted),
+          escapeCsv(r.record?.remark),
+        ].join(",")
+      ),
+    ].join("\r\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `aris-approvals-report-${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setShowExportConfirm(false);
+    setShowExportSuccess(true);
+  };
+
   return (
-    <div className="pb-2">
+    <div className="pb-4 space-y-3">
+      {/* Page Title with Search and Export */}
       <PageTitle
         title="Approvals"
         subtitle={`${awaiting} submission${
           awaiting === 1 ? "" : "s"
         } awaiting your action · ${inPipeline} in the pipeline`}
         action={
-          <SearchInput
-            placeholder="Search faculty, reference or period"
-            value={query}
-            onChange={setQuery}
-            className="w-60"
-          />
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-1 p-0.5 rounded-xl border"
+              style={{ borderColor: "#e2e8e4", background: "#f7f9f8" }}
+            >
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+                style={{
+                  background: viewMode === "table" ? "#fff" : "transparent",
+                  color: viewMode === "table" ? "#111c14" : "#5a6b5e",
+                  boxShadow:
+                    viewMode === "table" ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                }}
+              >
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  className="w-3.5 h-3.5"
+                >
+                  <rect x="2" y="2" width="12" height="12" rx="1.5" />
+                  <path d="M2 6h12M6 2v12" />
+                </svg>
+                Table View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("board")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+                style={{
+                  background: viewMode === "board" ? "#fff" : "transparent",
+                  color: viewMode === "board" ? "#111c14" : "#5a6b5e",
+                  boxShadow:
+                    viewMode === "board" ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                }}
+              >
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  className="w-3.5 h-3.5"
+                >
+                  <rect x="2" y="2" width="3.5" height="12" rx="1" />
+                  <rect x="6.25" y="2" width="3.5" height="12" rx="1" />
+                  <rect x="10.5" y="2" width="3.5" height="12" rx="1" />
+                </svg>
+                Pipeline Board
+              </button>
+            </div>
+            <GhostButton onClick={() => setShowExportConfirm(true)}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                className="w-4 h-4"
+              >
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              Export
+            </GhostButton>
+          </div>
         }
       />
 
-      <Card className="mb-3">
+      {/* Role / Stage Selection Banner */}
+      <Card className="p-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
             <span
@@ -577,18 +749,20 @@ export default function Approvals() {
                 Acting as {role}
               </p>
               <p className="text-[11.5px]" style={{ color: "#8fa394" }}>
-                {STAGE_OWNER[role]} · {awaiting} to review
+                {STAGE_OWNER[role]} · {awaiting} submission(s) awaiting your action
               </p>
             </div>
           </div>
           <div className="flex items-center gap-5 flex-wrap">
-            <label
-              className="flex items-center gap-2 text-[12px] font-medium select-none cursor-pointer"
-              style={{ color: "#5a6b5e" }}
-            >
-              <Toggle on={showDecided} onChange={setShowDecided} />
-              Show decided
-            </label>
+            {viewMode === "board" && (
+              <label
+                className="flex items-center gap-2 text-[12px] font-medium select-none cursor-pointer"
+                style={{ color: "#5a6b5e" }}
+              >
+                <Toggle on={showDecided} onChange={setShowDecided} />
+                Show decided
+              </label>
+            )}
             <Tabs
               tabs={[...STAGES]}
               value={role}
@@ -603,7 +777,7 @@ export default function Approvals() {
 
       {flash && (
         <div
-          className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl mb-3 text-[12.5px] font-medium"
+          className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl text-[12.5px] font-medium"
           style={{ background: "#eaf4ee", color: "#2f7043" }}
         >
           <span className="flex items-center gap-2">
@@ -624,7 +798,7 @@ export default function Approvals() {
             type="button"
             onClick={() => setFlash(null)}
             aria-label="Dismiss"
-            className="transition-opacity hover:opacity-60"
+            className="transition-opacity hover:opacity-60 cursor-pointer"
           >
             <svg
               viewBox="0 0 24 24"
@@ -640,83 +814,295 @@ export default function Approvals() {
         </div>
       )}
 
-      {/* Pipeline board — one column per stage */}
-      <div className="grid grid-cols-4 gap-3 items-start">
-        {STAGES.map((s) => {
-          const cards = column(s);
-          const isMine = s === role;
-          return (
+      {/* ─── TABLE VIEW: EXACT SYSTEM LOGS FORMAT ────────────────────────────── */}
+      {viewMode === "table" && (
+        <Card className="p-0 overflow-x-auto">
+          {/* Table Toolbar */}
+          <div
+            className="flex items-center justify-between p-4 border-b flex-wrap gap-3"
+            style={{ borderColor: "#eef1ef" }}
+          >
+            <Tabs tabs={tabs} value={tab} onChange={setTab} />
+            <div className="flex gap-2 items-center">
+              <SearchInput
+                placeholder="Search by faculty, type, reference..."
+                value={query}
+                onChange={setQuery}
+                className="w-64"
+              />
+            </div>
+          </div>
+
+          {/* Column Header matching SystemLogs */}
+          <div
+            className="grid min-w-[960px] grid-cols-[1.8fr_0.8fr_1.4fr_1.4fr_1.4fr_0.9fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+            style={{ color: "#b6c3ba", background: "#fafbfa" }}
+          >
+            <span>Faculty / Submitter</span>
+            <span>Type</span>
+            <span>Reference ID</span>
+            <span>Review Stage</span>
+            <span>Submitted Date & Time</span>
+            <span className="text-right">Status</span>
+          </div>
+
+          {/* Empty State */}
+          {filteredQueue.length === 0 && (
+            <p className="py-8 text-center text-[12.5px] text-[#8fa394]">
+              {query || tab !== "All"
+                ? "No matching submissions found."
+                : "No submissions recorded in this queue."}
+            </p>
+          )}
+
+          {/* Table Rows matching SystemLogs */}
+          {filteredQueue.map((item, idx) => (
             <div
-              key={s}
-              className="rounded-3xl p-2.5 min-h-[440px] flex flex-col"
-              style={{
-                background: isMine ? "#f0f7f2" : "#f4f6f5",
-                boxShadow: isMine ? `inset 0 0 0 1.5px ${BRAND}33` : "none",
+              key={item.id || idx}
+              onClick={() => {
+                setOpenId(item.id);
+                setRemark("");
+                setFlash(null);
               }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOpenId(item.id);
+                  setRemark("");
+                  setFlash(null);
+                }
+              }}
+              className="grid min-w-[960px] grid-cols-[1.8fr_0.8fr_1.4fr_1.4fr_1.4fr_0.9fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#f6f9f7] active:bg-[#edf3ef] cursor-pointer"
+              style={{ borderColor: "#f2f4f2" }}
+              title="Click to review submission"
             >
-              <div className="flex items-center justify-between gap-2 px-1.5 pt-1">
-                <div className="flex items-center gap-1.5 min-w-0">
+              {/* 1. Faculty / Submitter */}
+              <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                <Avatar
+                  initials={initialsOf(item.faculty)}
+                  color={initialsColor(idx)}
+                  size={32}
+                />
+                <div className="flex flex-col min-w-0">
                   <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: STAGE_COLOR[s] }}
-                  />
-                  <p
-                    className="text-[12.5px] font-bold truncate"
-                    style={{ color: "#111c14" }}
+                    className="text-[13px] font-semibold truncate text-[#111c14]"
+                    title={item.faculty}
                   >
-                    {s}
-                  </p>
-                  {isMine && (
-                    <span
-                      className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white flex-shrink-0"
-                      style={{ color: BRAND }}
-                    >
-                      YOU
-                    </span>
-                  )}
+                    {item.faculty}
+                  </span>
+                  <span className="text-[11px] text-[#8fa394] truncate">
+                    #{item.facultyNumber} · {item.record.college || "Faculty Member"}
+                  </span>
                 </div>
-                <span
-                  className="text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded-md bg-white flex-shrink-0"
-                  style={{ color: "#8fa394" }}
-                >
-                  {cards.length}
+              </div>
+
+              {/* 2. Type */}
+              <div>
+                <Badge tone={item.type === "AR" ? "blue" : "green"}>
+                  {item.type}
+                </Badge>
+              </div>
+
+              {/* 3. Reference ID */}
+              <div className="flex flex-col min-w-0">
+                <span className="text-[12.5px] font-mono font-medium text-[#111c14] truncate">
+                  {item.reference}
+                </span>
+                <span className="text-[11px] text-[#8fa394]">
+                  {item.period}
                 </span>
               </div>
-              <p
-                className="text-[10.5px] px-1.5 pt-0.5 pb-2.5 truncate"
-                style={{ color: "#b6c3ba" }}
-              >
-                {STAGE_OWNER[s]}
-              </p>
 
-              <div className="space-y-2 overflow-y-auto max-h-[520px] pr-0.5">
-                {cards.map((it) => (
-                  <QueueCard
-                    key={it.id}
-                    item={it}
-                    role={role}
-                    onOpen={() => {
-                      setOpenId(it.id);
-                      setRemark("");
-                      setFlash(null);
-                    }}
-                  />
-                ))}
-                {cards.length === 0 && (
-                  <div
-                    className="text-center text-[11.5px] py-10 rounded-2xl border border-dashed"
-                    style={{ color: "#b6c3ba", borderColor: "#e2e8e4" }}
-                  >
-                    Empty
-                  </div>
-                )}
+              {/* 4. Review Stage */}
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: STAGE_COLOR[item.stage] }}
+                />
+                <span className="text-[12.5px] font-medium text-[#2d3830] truncate">
+                  {item.stage}
+                </span>
+                <span className="text-[11px] text-[#8fa394] truncate">
+                  ({STAGE_OWNER[item.stage]})
+                </span>
               </div>
-            </div>
-          );
-        })}
-      </div>
 
-      {/* Review + decide */}
+              {/* 5. Submitted Date & Time */}
+              <div className="flex flex-col text-[12px] leading-tight min-w-0">
+                <span className="font-medium text-[#2d3830] truncate">
+                  {item.submitted.split(" · ")[0]}
+                </span>
+                <span className="text-[11px] text-[#8fa394] font-mono">
+                  {item.submitted.split(" · ")[1] || "—"}
+                </span>
+              </div>
+
+              {/* 6. Status + Arrow */}
+              <span className="flex justify-end items-center gap-2">
+                <Badge tone={statusTone[item.status] || "gray"} dot>
+                  {item.status}
+                </Badge>
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="#b6c3ba"
+                  strokeWidth="1.6"
+                  className="w-3.5 h-3.5 opacity-60"
+                >
+                  <path d="M6 12l4-4-4-4" />
+                </svg>
+              </span>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* ─── BOARD VIEW: KANBAN COLUMNS ──────────────────────────────────────── */}
+      {viewMode === "board" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
+          {STAGES.map((s) => {
+            const cards = column(s);
+            const isMine = s === role;
+            return (
+              <div
+                key={s}
+                className="rounded-3xl p-2.5 min-h-[440px] flex flex-col"
+                style={{
+                  background: isMine ? "#f0f7f2" : "#f4f6f5",
+                  boxShadow: isMine ? `inset 0 0 0 1.5px ${BRAND}33` : "none",
+                }}
+              >
+                <div className="flex items-center justify-between gap-2 px-1.5 pt-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ background: STAGE_COLOR[s] }}
+                    />
+                    <p
+                      className="text-[12.5px] font-bold truncate"
+                      style={{ color: "#111c14" }}
+                    >
+                      {s}
+                    </p>
+                    {isMine && (
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white flex-shrink-0"
+                        style={{ color: BRAND }}
+                      >
+                        YOU
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className="text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded-md bg-white flex-shrink-0"
+                    style={{ color: "#8fa394" }}
+                  >
+                    {cards.length}
+                  </span>
+                </div>
+                <p
+                  className="text-[10.5px] px-1.5 pt-0.5 pb-2.5 truncate"
+                  style={{ color: "#b6c3ba" }}
+                >
+                  {STAGE_OWNER[s]}
+                </p>
+
+                <div className="space-y-2 overflow-y-auto max-h-[520px] pr-0.5">
+                  {cards.map((it) => (
+                    <QueueCard
+                      key={it.id}
+                      item={it}
+                      role={role}
+                      onOpen={() => {
+                        setOpenId(it.id);
+                        setRemark("");
+                        setFlash(null);
+                      }}
+                    />
+                  ))}
+                  {cards.length === 0 && (
+                    <div
+                      className="text-center text-[11.5px] py-10 rounded-2xl border border-dashed"
+                      style={{ color: "#b6c3ba", borderColor: "#e2e8e4" }}
+                    >
+                      Empty
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Confirmation Modal for Export */}
+      <Modal
+        isOpen={showExportConfirm}
+        onClose={() => setShowExportConfirm(false)}
+        title="Confirm Export"
+        icon={
+          <div className="w-14 h-14 rounded-full flex items-center justify-center bg-[#e7f1fa] text-[#2b6ca3]">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="w-7 h-7"
+            >
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+          </div>
+        }
+        actions={
+          <>
+            <GhostButton onClick={() => setShowExportConfirm(false)}>
+              Cancel
+            </GhostButton>
+            <PrimaryButton onClick={handleExportCsv}>
+              Yes, Export
+            </PrimaryButton>
+          </>
+        }
+      >
+        Export {filteredQueue.length}{" "}
+        {filteredQueue.length === 1 ? "submission" : "submissions"} matching current
+        filters to a CSV file?
+      </Modal>
+
+      {/* Success Modal for Export */}
+      <Modal
+        isOpen={showExportSuccess}
+        onClose={() => setShowExportSuccess(false)}
+        title="Export Successful"
+        icon={
+          <div className="w-14 h-14 rounded-full flex items-center justify-center bg-[#eaf4ee] text-[#2f7043]">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="w-7 h-7"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+        }
+        actions={
+          <PrimaryButton onClick={() => setShowExportSuccess(false)}>
+            OK
+          </PrimaryButton>
+        }
+      >
+        The approvals report has been successfully exported and downloaded to your computer.
+      </Modal>
+
+      {/* Review & Decide Modal */}
       <Modal
         isOpen={!!open}
         onClose={close}
@@ -748,7 +1134,7 @@ export default function Approvals() {
                   <button
                     type="button"
                     onClick={() => decide(open, "Disapprove")}
-                    className="h-9 px-4 rounded-xl text-[13px] font-semibold border transition-colors hover:bg-[#fdf3f2]"
+                    className="h-9 px-4 rounded-xl text-[13px] font-semibold border transition-colors hover:bg-[#fdf3f2] cursor-pointer"
                     style={{
                       borderColor: "#edc9c5",
                       color: "#c0392b",
@@ -760,7 +1146,7 @@ export default function Approvals() {
                   <button
                     type="button"
                     onClick={() => decide(open, "Approve")}
-                    className="h-9 px-4 rounded-xl text-[13px] font-semibold text-white transition-transform active:scale-[0.99]"
+                    className="h-9 px-4 rounded-xl text-[13px] font-semibold text-white transition-transform active:scale-[0.99] cursor-pointer"
                     style={{ background: BRAND }}
                   >
                     {next ? "Approve & forward" : "Approve & clear"}
@@ -844,3 +1230,6 @@ export default function Approvals() {
     </div>
   );
 }
+
+export { STAGES, STAGE_COLOR, STAGE_OWNER, approvalQueue };
+export type { StageRole, ApprovalItem };
