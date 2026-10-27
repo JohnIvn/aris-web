@@ -1,4 +1,13 @@
-import { useState, useMemo } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+  type ReactNode,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   ResponsiveContainer,
   BarChart,
@@ -92,13 +101,15 @@ type CurriculumOverview = {
     total_professors: number;
   };
 };
-type MemberView = Professor & { 
-  name: string; 
-  dept: string; 
-  rank: string; 
-  active: boolean 
+
+type MemberView = Professor & {
+  name: string;
+  dept: string;
+  rank: string;
+  active: boolean;
 };
 
+type EntityType = "department" | "rank" | "course";
 
 const initialOverview: CurriculumOverview = {
   departments: [
@@ -143,6 +154,10 @@ const defaultProfessors: Professor[] = [
   { name: "Prof. Daniel Ong", email: "d.ong@aris.edu.ph", dept: "Business", rank: "Associate Prof.", courses: 3, active: false },
 ];
 
+/* ------------------------------------------------------------------ */
+/* Chart tooltips                                                      */
+/* ------------------------------------------------------------------ */
+
 function CustomBarTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -180,6 +195,14 @@ function CustomPieTooltip({ active, payload }: any) {
   return null;
 }
 
+/* ------------------------------------------------------------------ */
+/* Members modal pieces                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Uses flex-wrap (not a viewport breakpoint) so the chips drop under the
+ * name whenever the *modal* is too narrow, not only on small screens.
+ */
 function MemberRow({
   p, colorIndex, chip, chipClass, subtitle,
 }: {
@@ -190,8 +213,8 @@ function MemberRow({
   subtitle?: string;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-[#eef1ef] bg-white p-3 transition-colors hover:bg-[#fafbfa] sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl border border-[#eef1ef] bg-white p-3 transition-colors hover:bg-[#fafbfa]">
+      <div className="flex min-w-[180px] flex-1 items-center gap-3">
         <Avatar
           initials={p.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase() || "PR"}
           color={initialsColor(colorIndex)}
@@ -202,8 +225,7 @@ function MemberRow({
           <p className="truncate text-[12px] text-[#8fa394]">{subtitle ?? p.email}</p>
         </div>
       </div>
-      {/* 50px = avatar 38 + gap 12, so chips line up under the name on mobile */}
-      <div className="flex flex-wrap items-center gap-2 pl-[50px] sm:flex-shrink-0 sm:pl-0">
+      <div className="flex flex-wrap items-center gap-2">
         <span className={`max-w-full truncate rounded-lg px-2.5 py-1 text-[12px] font-medium ${chipClass}`}>
           {chip}
         </span>
@@ -223,6 +245,295 @@ function MembersFooter({ text, onClose }: { text: string; onClose: () => void })
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Row action menu                                                     */
+/* Rendered in a portal with fixed positioning so the table's          */
+/* scroll container can never clip it (and it flips up near the        */
+/* bottom of the screen).                                              */
+/* ------------------------------------------------------------------ */
+
+type MenuItem = { label: string; onClick: () => void; danger?: boolean };
+
+function RowMenu({ label, items }: { label: string; items: MenuItem[] }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const close = useCallback(() => setPos(null), []);
+
+  useEffect(() => {
+    if (!pos) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      close();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [pos, close]);
+
+  const toggle = (e: ReactMouseEvent) => {
+    e.stopPropagation();
+    if (pos) {
+      close();
+      return;
+    }
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const menuHeight = items.length * 36 + 8;
+    const right = Math.max(8, window.innerWidth - rect.right);
+    const openUp = rect.bottom + menuHeight + 8 > window.innerHeight && rect.top > menuHeight + 8;
+    setPos(
+      openUp
+        ? { bottom: window.innerHeight - rect.top + 4, right }
+        : { top: rect.bottom + 4, right },
+    );
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={Boolean(pos)}
+        onClick={toggle}
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0] active:bg-[#e8ece9]"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+          <circle cx="5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="19" cy="12" r="1.8" />
+        </svg>
+      </button>
+      {pos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-[60] min-w-40 rounded-lg border bg-white p-1 shadow-lg"
+            style={{ borderColor: "#e2e8e4", top: pos.top, bottom: pos.bottom, right: pos.right }}
+          >
+            {items.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  close();
+                  item.onClick();
+                }}
+                className={`block h-9 w-full rounded-md px-3 text-left text-[12.5px] ${
+                  item.danger ? "text-red-700 hover:bg-[#fbecec]" : "text-[#111c14] hover:bg-[#f4f6f5]"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive data table                                               */
+/* - lg+ : grid table. Only the table body scrolls sideways (the       */
+/*         toolbar stays put), with a sensible min width.              */
+/* - <lg : each row becomes a card, no horizontal scrolling at all.    */
+/* ------------------------------------------------------------------ */
+
+type TableColumn<T> = {
+  header: string;
+  /** CSS grid track, e.g. "80px" or "minmax(0,2fr)" */
+  width: string;
+  cell: (row: T) => ReactNode;
+  /** On mobile cards, let this field span the full card width */
+  full?: boolean;
+};
+
+function DataTable<T extends { id: string }>({
+  rows,
+  minWidth,
+  primaryHeader,
+  primaryWidth,
+  renderPrimary,
+  columns,
+  getMenu,
+  menuLabel,
+  rowLabel,
+  onRowClick,
+  emptyText,
+}: {
+  rows: T[];
+  minWidth: number;
+  primaryHeader: string;
+  primaryWidth: string;
+  renderPrimary: (row: T, index: number) => ReactNode;
+  columns: TableColumn<T>[];
+  getMenu: (row: T) => MenuItem[];
+  menuLabel: (row: T) => string;
+  rowLabel: (row: T) => string;
+  onRowClick: (row: T) => void;
+  emptyText: string;
+}) {
+  const gridStyle = {
+    gridTemplateColumns: `${primaryWidth} ${columns.map((c) => c.width).join(" ")} 56px`,
+  };
+
+  if (rows.length === 0) {
+    return (
+      <div className="px-4 py-12 text-center text-[13px]" style={{ color: "#8fa394" }}>
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Desktop table */}
+      <div className="hidden overflow-x-auto lg:block">
+        <div style={{ minWidth }}>
+          <div
+            className="grid items-center gap-x-4 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide [&>span]:truncate"
+            style={{ ...gridStyle, color: "#b6c3ba", background: "#fafbfa" }}
+          >
+            <span>{primaryHeader}</span>
+            {columns.map((c) => (
+              <span key={c.header}>{c.header}</span>
+            ))}
+            <span className="text-right">Action</span>
+          </div>
+
+          {rows.map((row, i) => (
+            <div
+              key={row.id}
+              onClick={() => onRowClick(row)}
+              className="grid cursor-pointer items-center gap-x-4 border-t px-5 py-3 transition-colors hover:bg-[#fafbfa]"
+              style={{ ...gridStyle, borderColor: "#f2f4f2" }}
+            >
+              <button
+                type="button"
+                aria-label={rowLabel(row)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRowClick(row);
+                }}
+                className="flex min-w-0 items-center gap-3 text-left"
+              >
+                {renderPrimary(row, i)}
+              </button>
+              {columns.map((c) => (
+                <div key={c.header} className="min-w-0 truncate text-[13px]" style={{ color: "#3d4a41" }}>
+                  {c.cell(row)}
+                </div>
+              ))}
+              <div className="flex justify-end">
+                <RowMenu label={menuLabel(row)} items={getMenu(row)} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile / tablet cards */}
+      <div className="lg:hidden">
+        {rows.map((row, i) => (
+          <div
+            key={row.id}
+            onClick={() => onRowClick(row)}
+            className="cursor-pointer border-t p-4 transition-colors first:border-t-0 active:bg-[#fafbfa]"
+            style={{ borderColor: "#f2f4f2" }}
+          >
+            <div className="flex items-start gap-2">
+              <button
+                type="button"
+                aria-label={rowLabel(row)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRowClick(row);
+                }}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                {renderPrimary(row, i)}
+              </button>
+              <RowMenu label={menuLabel(row)} items={getMenu(row)} />
+            </div>
+
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+              {columns.map((c) => (
+                <div key={c.header} className={`min-w-0 ${c.full ? "col-span-2" : ""}`}>
+                  <dt className="text-[10.5px] font-semibold uppercase tracking-wide" style={{ color: "#b6c3ba" }}>
+                    {c.header}
+                  </dt>
+                  <dd className="mt-0.5 break-words text-[13px]" style={{ color: "#3d4a41" }}>
+                    {c.cell(row)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/* Small shared cells */
+
+function UsersState({ total, active }: { total: number; active: number }) {
+  const inactive = total - active;
+  return (
+    <div className="flex min-w-0 flex-col">
+      <span className="truncate text-[13px] font-medium" style={{ color: "#111c14" }}>
+        {total} {total === 1 ? "user" : "users"}
+      </span>
+      <span className="truncate text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
+        {active} active{inactive > 0 ? ` · ${inactive} inactive` : ""}
+      </span>
+    </div>
+  );
+}
+
+function StatusBadge({ active }: { active: boolean }) {
+  return (
+    <Badge tone={active ? "green" : "gray"} dot>
+      {active ? "Active" : "Deactivated"}
+    </Badge>
+  );
+}
+
+function PrimaryText({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="truncate text-[13.5px] font-medium" style={{ color: "#111c14" }}>
+        {title}
+      </p>
+      <p className="truncate text-[12px]" style={{ color: "#8fa394" }}>
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
 
 export default function Curriculum() {
   const { data: overview, setData: setOverview, reload } = useResource<CurriculumOverview>(
@@ -245,7 +556,6 @@ export default function Curriculum() {
   const [activeTab, setActiveTab] = useState<"Departments" | "Academic Ranks" | "Courses">("Departments");
   const [tab, setTab] = useState<"All" | "Active" | "Deactivated">("All");
   const [search, setSearch] = useState("");
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   // Row Click Members Modals
   const [viewDeptMembers, setViewDeptMembers] = useState<Department | null>(null);
@@ -279,16 +589,9 @@ export default function Curriculum() {
   const [courseDesc, setCourseDesc] = useState("");
   const [courseActive, setCourseActive] = useState(true);
 
-  const DEPT_GRID =
-    "grid min-w-[960px] grid-cols-[minmax(0,2.2fr)_88px_minmax(0,2fr)_minmax(0,1.2fr)_120px_64px] items-center gap-x-4 px-5";
-  const RANK_GRID =
-    "grid min-w-[1050px] grid-cols-[minmax(0,2.2fr)_110px_80px_minmax(0,1.8fr)_minmax(0,1.2fr)_120px_64px] items-center gap-x-4 px-5";
-  const COURSE_GRID =
-    "grid min-w-[1150px] grid-cols-[minmax(0,2fr)_90px_minmax(0,1.3fr)_64px_minmax(0,1.6fr)_minmax(0,1.2fr)_120px_64px] items-center gap-x-4 px-5";
-
   // Toggle Confirm Modal
   const [pendingToggle, setPendingToggle] = useState<{
-    type: "department" | "rank" | "course";
+    type: EntityType;
     id: string;
     name: string;
     active: boolean;
@@ -296,7 +599,7 @@ export default function Curriculum() {
 
   // Delete Confirm Modal
   const [pendingDelete, setPendingDelete] = useState<{
-    type: "department" | "rank" | "course";
+    type: EntityType;
     id: string;
     name: string;
     count?: number;
@@ -333,21 +636,25 @@ export default function Curriculum() {
     });
   };
 
+  const countsFor = (members: MemberView[], fallbackTotal: number, isActive: boolean) => {
+    const total = members.length > 0 ? members.length : fallbackTotal;
+    const active = members.length > 0 ? members.filter((m) => m.active).length : isActive ? total : 0;
+    return { total, active };
+  };
+
   // Members lists filtered for detail modals
-  const deptMembersList = useMemo(() => {
-    if (!viewDeptMembers) return [];
-    return getDeptMembers(viewDeptMembers);
-  }, [viewDeptMembers, professors]);
-
-  const rankMembersList = useMemo(() => {
-    if (!viewRankMembers) return [];
-    return getRankMembers(viewRankMembers);
-  }, [viewRankMembers, professors]);
-
-  const courseMembersList = useMemo(() => {
-    if (!viewCourseMembers) return [];
-    return getCourseMembers(viewCourseMembers);
-  }, [viewCourseMembers, professors]);
+  const deptMembersList = useMemo(
+    () => (viewDeptMembers ? getDeptMembers(viewDeptMembers) : []),
+    [viewDeptMembers, professors],
+  );
+  const rankMembersList = useMemo(
+    () => (viewRankMembers ? getRankMembers(viewRankMembers) : []),
+    [viewRankMembers, professors],
+  );
+  const courseMembersList = useMemo(
+    () => (viewCourseMembers ? getCourseMembers(viewCourseMembers) : []),
+    [viewCourseMembers, professors],
+  );
 
   // --- Department Actions ---
   const openAddDept = () => {
@@ -422,7 +729,7 @@ export default function Curriculum() {
     }
   };
 
-  const executeToggle = async (item: { type: "department" | "rank" | "course"; id: string; active: boolean }) => {
+  const executeToggle = async (item: { type: EntityType; id: string; active: boolean }) => {
     const nextState = !item.active;
     setPendingToggle(null);
     try {
@@ -617,7 +924,7 @@ export default function Curriculum() {
   };
 
   // --- Delete Handler ---
-  const executeDelete = async (item: { type: "department" | "rank" | "course"; id: string; name: string }) => {
+  const executeDelete = async (item: { type: EntityType; id: string; name: string }) => {
     setPendingDelete(null);
     try {
       if (item.type === "department") {
@@ -668,7 +975,7 @@ export default function Curriculum() {
   const deptChartData = useMemo(() => {
     return overview.departments.map((dept) => {
       const courseCount = overview.courses.filter(
-        (c) => (c.department_name || "").toLowerCase().trim() === dept.name.toLowerCase().trim()
+        (c) => (c.department_name || "").toLowerCase().trim() === dept.name.toLowerCase().trim(),
       ).length;
       return {
         name: dept.name,
@@ -698,8 +1005,6 @@ export default function Curriculum() {
   const statusTabs = ["All", "Active", "Deactivated"];
 
   const activeDeptCount = overview.departments.filter((d) => d.is_active).length;
-  const activeRankCount = overview.ranks.filter((r) => r.is_active).length;
-  const activeCourseCount = overview.courses.filter((c) => c.is_active).length;
 
   const stats = [
     ["Colleges / Departments", String(overview.departments.length)],
@@ -708,13 +1013,63 @@ export default function Curriculum() {
     ["Cataloged Courses", String(overview.courses.length)],
   ];
 
+  /* ---------------- Table definitions ---------------- */
+
+  const deptColumns: TableColumn<Department>[] = [
+    { header: "Code", width: "80px", cell: (d) => <span className="font-mono font-medium">{d.code}</span> },
+    { header: "Description", width: "minmax(0,2fr)", full: true, cell: (d) => d.description || "—" },
+    {
+      header: "Users / State",
+      width: "minmax(0,1.3fr)",
+      cell: (d) => {
+        const { total, active } = countsFor(getDeptMembers(d), d.professor_count ?? 0, d.is_active);
+        return <UsersState total={total} active={active} />;
+      },
+    },
+    { header: "Status", width: "120px", cell: (d) => <StatusBadge active={d.is_active} /> },
+  ];
+
+  const rankColumns: TableColumn<AcademicRank>[] = [
+    { header: "Code", width: "100px", cell: (r) => <span className="font-mono">{r.code || "—"}</span> },
+    { header: "Level", width: "80px", cell: (r) => <span className="font-medium" style={{ color: "#111c14" }}>Tier #{r.hierarchy_level}</span> },
+    { header: "Description", width: "minmax(0,1.8fr)", full: true, cell: (r) => r.description || "—" },
+    {
+      header: "Users / State",
+      width: "minmax(0,1.3fr)",
+      cell: (r) => {
+        const { total, active } = countsFor(getRankMembers(r), r.professor_count ?? 0, r.is_active);
+        return <UsersState total={total} active={active} />;
+      },
+    },
+    { header: "Status", width: "120px", cell: (r) => <StatusBadge active={r.is_active} /> },
+  ];
+
+  const courseColumns: TableColumn<Course>[] = [
+    { header: "Code", width: "90px", cell: (c) => <span className="font-mono font-medium">{c.code}</span> },
+    { header: "Department", width: "minmax(0,1.3fr)", cell: (c) => c.department_name || "Unassigned" },
+    { header: "Units", width: "56px", cell: (c) => <span className="font-medium" style={{ color: "#111c14" }}>{c.units}</span> },
+    { header: "Description", width: "minmax(0,1.6fr)", full: true, cell: (c) => c.description || "—" },
+    {
+      header: "Users / State",
+      width: "minmax(0,1.3fr)",
+      cell: (c) => {
+        const { total, active } = countsFor(getCourseMembers(c), c.professor_count ?? 0, c.is_active);
+        return <UsersState total={total} active={active} />;
+      },
+    },
+    { header: "Status", width: "120px", cell: (c) => <StatusBadge active={c.is_active} /> },
+  ];
+
+  // Scrollable tab strips so labels never wrap/clip on narrow screens
+  const tabStrip = "max-w-full overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap";
+
   return (
     <div className="pb-2">
       <PageTitle
         title="Curriculum Management"
         subtitle={`${overview.departments.length} departments, ${overview.ranks.length} ranks, and ${overview.courses.length} cataloged courses.`}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <GhostButton onClick={reload}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                 <path d="M23 4v6h-6M1 20v-6h6" />
@@ -790,7 +1145,6 @@ export default function Curriculum() {
         </Card>
 
         {/* Graph 2: Academic Rank Distribution (Donut Chart) */}
-        {/* Graph 2: Academic Rank Distribution (Donut Chart) */}
         <Card className="relative z-10 flex flex-col min-h-[300px]">
           <div className="flex items-center justify-between mb-2">
             <div>
@@ -807,7 +1161,7 @@ export default function Curriculum() {
               </div>
 
               {/* chart: in front */}
-              <div className="relative z-1 h-full w-full">
+              <div className="relative z-[1] h-full w-full">
                 <ResponsiveContainer width="100%" height={190}>
                   <PieChart>
                     <Tooltip
@@ -846,541 +1200,146 @@ export default function Curriculum() {
       </div>
 
       {/* --- TABLE CARD --- */}
-      <Card className="p-0 overflow-x-auto">
-        {/* Top Control Bar matching Professors.tsx exactly */}
-        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs
-              tabs={categoryTabs}
-              value={activeTab}
-              onChange={(v) => {
-                setActiveTab(v as any);
-                setSearch("");
-                setOpenMenu(null);
-              }}
-            />
-            <Tabs
-              tabs={statusTabs}
-              value={tab}
-              onChange={(v) => {
-                setTab(v as any);
-                setOpenMenu(null);
-              }}
-            />
+      {/* Card never scrolls itself: the toolbar stays fixed and only the table body scrolls on lg+. */}
+      <Card className="min-w-0 overflow-hidden p-0">
+        <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center lg:justify-between" style={{ borderColor: "#eef1ef" }}>
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className={tabStrip}>
+              <Tabs
+                tabs={categoryTabs}
+                value={activeTab}
+                onChange={(v) => {
+                  setActiveTab(v as any);
+                  setSearch("");
+                }}
+              />
+            </div>
+            <div className={tabStrip}>
+              <Tabs tabs={statusTabs} value={tab} onChange={(v) => setTab(v as any)} />
+            </div>
           </div>
-          <div className="flex gap-2">
-            <SearchInput
-              placeholder={`Search ${activeTab.toLowerCase()}`}
-              value={search}
-              onChange={setSearch}
-              className="w-48 sm:w-60"
-            />
-          </div>
+          <SearchInput
+            placeholder={`Search ${activeTab.toLowerCase()}`}
+            value={search}
+            onChange={setSearch}
+            className="w-full lg:w-60"
+          />
         </div>
 
-        {/* --- DEPARTMENTS TABLE --- */}
+        {/* --- DEPARTMENTS --- */}
         {activeTab === "Departments" && (
-          <>
-            <div
-              className={`${DEPT_GRID} py-2.5 text-[11px] uppercase tracking-wide font-semibold [&>span]:truncate`}
-              style={{ color: "#b6c3ba", background: "#fafbfa" }}
-            >
-              <span>Department / College</span>
-              <span>Code</span>
-              <span>Description</span>
-              <span>Users / State</span>
-              <span>Status</span>
-              <span className="text-right">Action</span>
-            </div>
-
-            {filteredDepartments.length === 0 ? (
-              <div className="py-12 text-center text-[13px]" style={{ color: "#8fa394" }}>
-                No departments found matching your criteria.
-              </div>
-            ) : (
-              filteredDepartments.map((dept, i) => {
-                const members = getDeptMembers(dept);
-                const total = members.length > 0 ? members.length : (dept.professor_count ?? 0);
-                const active = members.length > 0 ? members.filter((m) => m.active).length : (dept.is_active ? total : 0);
-                const inactive = total - active;
-
-                return (
-                  <div
-                    key={dept.id}
-                    onClick={() => setViewDeptMembers(dept)}
-                    className={`${DEPT_GRID} py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer`}
-                    style={{ borderColor: "#f2f4f2" }}
-                  >
-                    <button
-                      type="button"
-                      aria-label={`View faculty in ${dept.name}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setViewDeptMembers(dept);
-                      }}
-                      className="flex min-w-0 items-center gap-3 text-left"
-                    >
-                      <Avatar initials={dept.code.slice(0, 2).toUpperCase()} color={initialsColor(i)} />
-                      <div className="min-w-0">
-                        <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
-                          {dept.name}
-                        </p>
-                        <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
-                          {dept.code} · Click to view faculty ({total})
-                        </p>
-                      </div>
-                    </button>
-
-                    <span className="whitespace-nowrap text-[13px] font-mono font-medium" style={{ color: "#3d4a41" }}>
-                      {dept.code}
-                    </span>
-
-                    <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
-                      {dept.description || "—"}
-                    </span>
-
-                    <div className="flex min-w-0 flex-col">
-                      <span className="truncate text-[13px] font-medium" style={{ color: "#111c14" }}>
-                        {total} {total === 1 ? "user" : "users"}
-                      </span>
-                      <span className="truncate text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
-                        {active} active {inactive > 0 ? `· ${inactive} inactive` : ""}
-                      </span>
-                    </div>
-
-                    <span>
-                      <Badge tone={dept.is_active ? "green" : "gray"} dot>
-                        {dept.is_active ? "Active" : "Deactivated"}
-                      </Badge>
-                    </span>
-
-                    <span className="relative flex justify-end">
-                      <button
-                        type="button"
-                        aria-label={`Actions for ${dept.name}`}
-                        aria-expanded={openMenu === dept.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setOpenMenu(openMenu === dept.id ? null : dept.id);
-                        }}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
-                      >
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                          <circle cx="5" cy="12" r="1.8" />
-                          <circle cx="12" cy="12" r="1.8" />
-                          <circle cx="19" cy="12" r="1.8" />
-                        </svg>
-                      </button>
-                      {openMenu === dept.id && (
-                        <div
-                          className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
-                          style={{ borderColor: "#e2e8e4" }}
-                        >
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setViewDeptMembers(dept);
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            View faculty
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openEditDept(dept);
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            Edit details
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setPendingToggle({
-                                type: "department",
-                                id: dept.id,
-                                name: dept.name,
-                                active: dept.is_active,
-                              });
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            {dept.is_active ? "Deactivate" : "Reactivate"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setPendingDelete({
-                                type: "department",
-                                id: dept.id,
-                                name: dept.name,
-                                count: dept.professor_count,
-                              });
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </>
+          <DataTable<Department>
+            rows={filteredDepartments}
+            minWidth={820}
+            primaryHeader="Department / College"
+            primaryWidth="minmax(0,2.2fr)"
+            columns={deptColumns}
+            emptyText="No departments found matching your criteria."
+            onRowClick={setViewDeptMembers}
+            rowLabel={(d) => `View faculty in ${d.name}`}
+            menuLabel={(d) => `Actions for ${d.name}`}
+            renderPrimary={(dept, i) => {
+              const { total } = countsFor(getDeptMembers(dept), dept.professor_count ?? 0, dept.is_active);
+              return (
+                <>
+                  <Avatar initials={dept.code.slice(0, 2).toUpperCase()} color={initialsColor(i)} />
+                  <PrimaryText title={dept.name} subtitle={`${dept.code} · ${total} faculty`} />
+                </>
+              );
+            }}
+            getMenu={(dept) => [
+              { label: "View faculty", onClick: () => setViewDeptMembers(dept) },
+              { label: "Edit details", onClick: () => openEditDept(dept) },
+              {
+                label: dept.is_active ? "Deactivate" : "Reactivate",
+                onClick: () => setPendingToggle({ type: "department", id: dept.id, name: dept.name, active: dept.is_active }),
+              },
+              {
+                label: "Delete",
+                danger: true,
+                onClick: () => setPendingDelete({ type: "department", id: dept.id, name: dept.name, count: dept.professor_count }),
+              },
+            ]}
+          />
         )}
 
-        {/* --- ACADEMIC RANKS TABLE --- */}
+        {/* --- ACADEMIC RANKS --- */}
         {activeTab === "Academic Ranks" && (
-          <>
-            <div
-              className="grid min-w-[1050px] grid-cols-[2.2fr_1fr_0.9fr_1.8fr_1.3fr_1.1fr_0.8fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
-              style={{ color: "#b6c3ba", background: "#fafbfa" }}
-            >
-              <span>Rank Title</span>
-              <span>Code / Abbr</span>
-              <span>Level</span>
-              <span>Description</span>
-              <span>No. of Users / State</span>
-              <span>Status</span>
-              <span className="text-right">Action</span>
-            </div>
-
-            {filteredRanks.length === 0 ? (
-              <div className="py-12 text-center text-[13px]" style={{ color: "#8fa394" }}>
-                No academic ranks found matching your criteria.
-              </div>
-            ) : (
-              filteredRanks.map((rank, i) => {
-                const members = getRankMembers(rank);
-                const total = members.length > 0 ? members.length : (rank.professor_count ?? 0);
-                const active = members.length > 0 ? members.filter((m) => m.active).length : (rank.is_active ? total : 0);
-                const inactive = total - active;
-
-                return (
-                  <div
-                    key={rank.id}
-                    onClick={() => setViewRankMembers(rank)}
-                    className="grid min-w-[1050px] grid-cols-[2.2fr_1fr_0.9fr_1.8fr_1.3fr_1.1fr_0.8fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
-                    style={{ borderColor: "#f2f4f2" }}
-                  >
-                    <button
-                      type="button"
-                      aria-label={`View accounts with rank ${rank.name}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setViewRankMembers(rank);
-                      }}
-                      className="flex min-w-0 items-center gap-3 text-left"
-                    >
-                      <Avatar initials={`L${rank.hierarchy_level}`} color={initialsColor(i + 2)} />
-                      <div className="min-w-0">
-                        <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
-                          {rank.name}
-                        </p>
-                        <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
-                          Level {rank.hierarchy_level} · Click to view faculty ({total})
-                        </p>
-                      </div>
-                    </button>
-
-                    <span className="whitespace-nowrap text-[13px] font-mono" style={{ color: "#3d4a41" }}>
-                      {rank.code || "—"}
-                    </span>
-
-                    <span className="whitespace-nowrap text-[13px] font-medium" style={{ color: "#111c14" }}>
-                      Tier #{rank.hierarchy_level}
-                    </span>
-
-                    <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
-                      {rank.description || "—"}
-                    </span>
-
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
-                        {total} {total === 1 ? "user" : "users"}
-                      </span>
-                      <span className="text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
-                        {active} active {inactive > 0 ? `· ${inactive} inactive` : ""}
-                      </span>
-                    </div>
-
-                    <span>
-                      <Badge tone={rank.is_active ? "green" : "gray"} dot>
-                        {rank.is_active ? "Active" : "Deactivated"}
-                      </Badge>
-                    </span>
-
-                    <span className="relative flex justify-end">
-                      <button
-                        type="button"
-                        aria-label={`Actions for ${rank.name}`}
-                        aria-expanded={openMenu === rank.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setOpenMenu(openMenu === rank.id ? null : rank.id);
-                        }}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
-                      >
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                          <circle cx="5" cy="12" r="1.8" />
-                          <circle cx="12" cy="12" r="1.8" />
-                          <circle cx="19" cy="12" r="1.8" />
-                        </svg>
-                      </button>
-                      {openMenu === rank.id && (
-                        <div
-                          className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
-                          style={{ borderColor: "#e2e8e4" }}
-                        >
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setViewRankMembers(rank);
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            View accounts
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openEditRank(rank);
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            Edit details
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setPendingToggle({
-                                type: "rank",
-                                id: rank.id,
-                                name: rank.name,
-                                active: rank.is_active,
-                              });
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            {rank.is_active ? "Deactivate" : "Reactivate"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setPendingDelete({
-                                type: "rank",
-                                id: rank.id,
-                                name: rank.name,
-                                count: rank.professor_count,
-                              });
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </>
+          <DataTable<AcademicRank>
+            rows={filteredRanks}
+            minWidth={940}
+            primaryHeader="Rank Title"
+            primaryWidth="minmax(0,2fr)"
+            columns={rankColumns}
+            emptyText="No academic ranks found matching your criteria."
+            onRowClick={setViewRankMembers}
+            rowLabel={(r) => `View accounts with rank ${r.name}`}
+            menuLabel={(r) => `Actions for ${r.name}`}
+            renderPrimary={(rank, i) => {
+              const { total } = countsFor(getRankMembers(rank), rank.professor_count ?? 0, rank.is_active);
+              return (
+                <>
+                  <Avatar initials={`L${rank.hierarchy_level}`} color={initialsColor(i + 2)} />
+                  <PrimaryText title={rank.name} subtitle={`Level ${rank.hierarchy_level} · ${total} faculty`} />
+                </>
+              );
+            }}
+            getMenu={(rank) => [
+              { label: "View accounts", onClick: () => setViewRankMembers(rank) },
+              { label: "Edit details", onClick: () => openEditRank(rank) },
+              {
+                label: rank.is_active ? "Deactivate" : "Reactivate",
+                onClick: () => setPendingToggle({ type: "rank", id: rank.id, name: rank.name, active: rank.is_active }),
+              },
+              {
+                label: "Delete",
+                danger: true,
+                onClick: () => setPendingDelete({ type: "rank", id: rank.id, name: rank.name, count: rank.professor_count }),
+              },
+            ]}
+          />
         )}
 
-        {/* --- COURSES TABLE --- */}
+        {/* --- COURSES --- */}
         {activeTab === "Courses" && (
-          <>
-            <div
-              className="grid min-w-[1050px] grid-cols-[2fr_0.9fr_1.3fr_0.7fr_1.6fr_1.3fr_1.1fr_0.8fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
-              style={{ color: "#b6c3ba", background: "#fafbfa" }}
-            >
-              <span>Course Title</span>
-              <span>Code</span>
-              <span>Department</span>
-              <span>Units</span>
-              <span>Description</span>
-              <span>No. of Users / State</span>
-              <span>Status</span>
-              <span className="text-right">Action</span>
-            </div>
-
-            {filteredCourses.length === 0 ? (
-              <div className="py-12 text-center text-[13px]" style={{ color: "#8fa394" }}>
-                No courses found matching your criteria.
-              </div>
-            ) : (
-              filteredCourses.map((course, i) => {
-                const members = getCourseMembers(course);
-                const total = members.length > 0 ? members.length : (course.professor_count ?? 0);
-                const active = members.length > 0 ? members.filter((m) => m.active).length : (course.is_active ? total : 0);
-                const inactive = total - active;
-
-                return (
-                  <div
-                    key={course.id}
-                    onClick={() => setViewCourseMembers(course)}
-                    className="grid min-w-[1050px] grid-cols-[2fr_0.9fr_1.3fr_0.7fr_1.6fr_1.3fr_1.1fr_0.8fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
-                    style={{ borderColor: "#f2f4f2" }}
-                  >
-                    <button
-                      type="button"
-                      aria-label={`View faculty for ${course.title}`}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setViewCourseMembers(course);
-                      }}
-                      className="flex min-w-0 items-center gap-3 text-left"
-                    >
-                      <Avatar initials={course.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 4)} />
-                      <div className="min-w-0">
-                        <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>
-                          {course.title}
-                        </p>
-                        <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>
-                          {course.code} · Click to view faculty ({total})
-                        </p>
-                      </div>
-                    </button>
-
-                    <span className="text-[13px] font-mono font-medium" style={{ color: "#3d4a41" }}>
-                      {course.code}
-                    </span>
-
-                    <span className="text-[13px]" style={{ color: "#3d4a41" }}>
-                      {course.department_name || "Unassigned"}
-                    </span>
-
-                    <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
-                      {course.units}
-                    </span>
-
-                    <span className="text-[13px] truncate pr-4" style={{ color: "#3d4a41" }}>
-                      {course.description || "—"}
-                    </span>
-
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
-                        {total} {total === 1 ? "user" : "users"}
-                      </span>
-                      <span className="text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
-                        {active} active {inactive > 0 ? `· ${inactive} inactive` : ""}
-                      </span>
-                    </div>
-
-                    <span>
-                      <Badge tone={course.is_active ? "green" : "gray"} dot>
-                        {course.is_active ? "Active" : "Deactivated"}
-                      </Badge>
-                    </span>
-
-                    <span className="relative flex justify-end">
-                      <button
-                        type="button"
-                        aria-label={`Actions for ${course.title}`}
-                        aria-expanded={openMenu === course.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setOpenMenu(openMenu === course.id ? null : course.id);
-                        }}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]"
-                      >
-                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                          <circle cx="5" cy="12" r="1.8" />
-                          <circle cx="12" cy="12" r="1.8" />
-                          <circle cx="19" cy="12" r="1.8" />
-                        </svg>
-                      </button>
-                      {openMenu === course.id && (
-                        <div
-                          className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg"
-                          style={{ borderColor: "#e2e8e4" }}
-                        >
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setViewCourseMembers(course);
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            View faculty
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openEditCourse(course);
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            Edit details
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setPendingToggle({
-                                type: "course",
-                                id: course.id,
-                                name: course.title,
-                                active: course.is_active,
-                              });
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]"
-                          >
-                            {course.is_active ? "Deactivate" : "Reactivate"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setPendingDelete({
-                                type: "course",
-                                id: course.id,
-                                name: course.title,
-                              });
-                              setOpenMenu(null);
-                            }}
-                            className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </>
+          <DataTable<Course>
+            rows={filteredCourses}
+            minWidth={1040}
+            primaryHeader="Course Title"
+            primaryWidth="minmax(0,2fr)"
+            columns={courseColumns}
+            emptyText="No courses found matching your criteria."
+            onRowClick={setViewCourseMembers}
+            rowLabel={(c) => `View faculty for ${c.title}`}
+            menuLabel={(c) => `Actions for ${c.title}`}
+            renderPrimary={(course, i) => {
+              const { total } = countsFor(getCourseMembers(course), course.professor_count ?? 0, course.is_active);
+              return (
+                <>
+                  <Avatar initials={course.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 4)} />
+                  <PrimaryText title={course.title} subtitle={`${course.code} · ${total} faculty`} />
+                </>
+              );
+            }}
+            getMenu={(course) => [
+              { label: "View faculty", onClick: () => setViewCourseMembers(course) },
+              { label: "Edit details", onClick: () => openEditCourse(course) },
+              {
+                label: course.is_active ? "Deactivate" : "Reactivate",
+                onClick: () => setPendingToggle({ type: "course", id: course.id, name: course.title, active: course.is_active }),
+              },
+              {
+                label: "Delete",
+                danger: true,
+                onClick: () => setPendingDelete({ type: "course", id: course.id, name: course.title }),
+              },
+            ]}
+          />
         )}
       </Card>
 
       {/* ============================================================== */}
-      {/* MODAL 1: Department Faculty Members List (on Row Click)       */}
+      {/* MODAL 1: Department Faculty Members List                       */}
       {/* ============================================================== */}
       <Modal
         isOpen={Boolean(viewDeptMembers)}
@@ -1421,7 +1380,7 @@ export default function Curriculum() {
       </Modal>
 
       {/* ============================================================== */}
-      {/* MODAL 2: Academic Rank Accounts List (on Row Click)            */}
+      {/* MODAL 2: Academic Rank Accounts List                           */}
       {/* ============================================================== */}
       <Modal
         isOpen={Boolean(viewRankMembers)}
@@ -1430,50 +1389,31 @@ export default function Curriculum() {
         align="left"
         size="lg"
         actions={
-          <div className="flex w-full items-center justify-between pt-2">
-            <span className="text-[12px] text-[#8fa394]">
-              {rankMembersList.length} faculty member(s) holding this rank
-            </span>
-            <GhostButton onClick={() => setViewRankMembers(null)}>Close</GhostButton>
-          </div>
+          <MembersFooter
+            text={`${rankMembersList.length} faculty member(s) holding this rank`}
+            onClose={() => setViewRankMembers(null)}
+          />
         }
       >
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
             Faculty holding <strong>{viewRankMembers?.name}</strong> (Tier #{viewRankMembers?.hierarchy_level}).
           </p>
-          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
             {rankMembersList.length === 0 ? (
-              <div className="py-8 text-center text-[#8fa394] bg-[#fafbfa] rounded-2xl border border-dashed border-[#e2e8e4]">
+              <div className="rounded-2xl border border-dashed border-[#e2e8e4] bg-[#fafbfa] py-8 text-center text-[#8fa394]">
                 <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned this rank</p>
-                <p className="text-[12px] mt-0.5">Faculty appointed to this rank will appear here.</p>
+                <p className="mt-0.5 text-[12px]">Faculty appointed to this rank will appear here.</p>
               </div>
             ) : (
               rankMembersList.map((p, idx) => (
-                <div
+                <MemberRow
                   key={p.email || p.id || idx}
-                  className="flex items-center justify-between p-3 rounded-2xl border border-[#eef1ef] bg-white hover:bg-[#fafbfa] transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar
-                      initials={p.name?.split(" ").slice(-1)[0].slice(0, 2).toUpperCase() || "PR"}
-                      color={initialsColor(idx + 1)}
-                      size={38}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] font-medium text-[#111c14] truncate">{p.name}</p>
-                      <p className="text-[12px] text-[#8fa394] truncate">{p.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[12px] px-2.5 py-1 rounded-lg bg-[#eaf4ee] text-[#2f7043] font-medium">
-                      {p.dept}
-                    </span>
-                    <Badge tone={p.active ? "green" : "gray"} dot>
-                      {p.active ? "Active" : "Deactivated"}
-                    </Badge>
-                  </div>
-                </div>
+                  p={p}
+                  colorIndex={idx + 1}
+                  chip={p.dept}
+                  chipClass="bg-[#eaf4ee] text-[#2f7043]"
+                />
               ))
             )}
           </div>
@@ -1481,7 +1421,7 @@ export default function Curriculum() {
       </Modal>
 
       {/* ============================================================== */}
-      {/* MODAL 3: Course Assigned Faculty List (on Row Click)           */}
+      {/* MODAL 3: Course Assigned Faculty List                          */}
       {/* ============================================================== */}
       <Modal
         isOpen={Boolean(viewCourseMembers)}
@@ -1490,50 +1430,32 @@ export default function Curriculum() {
         align="left"
         size="lg"
         actions={
-          <div className="flex w-full items-center justify-between pt-2">
-            <span className="text-[12px] text-[#8fa394]">
-              {courseMembersList.length} faculty member(s) eligible / assigned
-            </span>
-            <GhostButton onClick={() => setViewCourseMembers(null)}>Close</GhostButton>
-          </div>
+          <MembersFooter
+            text={`${courseMembersList.length} faculty member(s) eligible / assigned`}
+            onClose={() => setViewCourseMembers(null)}
+          />
         }
       >
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
             Faculty for <strong>{viewCourseMembers?.code} - {viewCourseMembers?.title}</strong> ({viewCourseMembers?.units} units · {viewCourseMembers?.department_name || "General Department"}).
           </p>
-          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
             {courseMembersList.length === 0 ? (
-              <div className="py-8 text-center text-[#8fa394] bg-[#fafbfa] rounded-2xl border border-dashed border-[#e2e8e4]">
+              <div className="rounded-2xl border border-dashed border-[#e2e8e4] bg-[#fafbfa] py-8 text-center text-[#8fa394]">
                 <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned yet</p>
-                <p className="text-[12px] mt-0.5">Faculty teaching or assigned to this course will appear here.</p>
+                <p className="mt-0.5 text-[12px]">Faculty teaching or assigned to this course will appear here.</p>
               </div>
             ) : (
               courseMembersList.map((p, idx) => (
-                <div
+                <MemberRow
                   key={p.email || p.id || idx}
-                  className="flex items-center justify-between p-3 rounded-2xl border border-[#eef1ef] bg-white hover:bg-[#fafbfa] transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar
-                      initials={p.name?.split(" ").slice(-1)[0].slice(0, 2).toUpperCase() || "PR"}
-                      color={initialsColor(idx + 3)}
-                      size={38}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] font-medium text-[#111c14] truncate">{p.name}</p>
-                      <p className="text-[12px] text-[#8fa394] truncate">{p.email} · {p.dept}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[12px] px-2.5 py-1 rounded-lg bg-[#f0f2f0] text-[#3d4a41] font-medium">
-                      {p.rank}
-                    </span>
-                    <Badge tone={p.active ? "green" : "gray"} dot>
-                      {p.active ? "Active" : "Deactivated"}
-                    </Badge>
-                  </div>
-                </div>
+                  p={p}
+                  colorIndex={idx + 3}
+                  chip={p.rank}
+                  chipClass="bg-[#f0f2f0] text-[#3d4a41]"
+                  subtitle={`${p.email} · ${p.dept}`}
+                />
               ))
             )}
           </div>
