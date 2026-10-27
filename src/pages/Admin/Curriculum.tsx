@@ -749,7 +749,7 @@ export default function Curriculum() {
               </div>
 
               {/* chart: in front */}
-              <div className="relative z-10 h-full w-full">
+              <div className="w-full sm:w-1/2 h-[190px]">
                 <ResponsiveContainer width="100%" height={190}>
                   <PieChart>
                     <Tooltip
@@ -757,10 +757,33 @@ export default function Curriculum() {
                       allowEscapeViewBox={{ x: true, y: true }}
                       wrapperStyle={{ zIndex: 1000, pointerEvents: "none" }}
                     />
-                    <Pie data={rankChartData} dataKey="value" nameKey="name" innerRadius={52} outerRadius={78} paddingAngle={3}>
+                    <Pie
+                      data={rankChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={52}
+                      outerRadius={78}
+                      paddingAngle={3}
+                    >
                       {rankChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
+                      <Label
+                        position="center"
+                        content={({ viewBox }) => {
+                          const { cx, cy } = viewBox as { cx: number; cy: number };
+                          return (
+                            <g>
+                              <text x={cx} y={cy - 2} textAnchor="middle" fontSize={20} fontWeight={700} fill="#111c14">
+                                {totalFacultyCount}
+                              </text>
+                              <text x={cx} y={cy + 14} textAnchor="middle" fontSize={10} fontWeight={600} letterSpacing="0.05em" fill="#8fa394">
+                                FACULTY
+                              </text>
+                            </g>
+                          );
+                        }}
+                      />
                     </Pie>
                   </PieChart>
                 </ResponsiveContainer>
