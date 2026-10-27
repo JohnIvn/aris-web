@@ -13,5 +13,4 @@ export interface DemoAccount extends UserAccount {
 }
 
 export const demoAccounts: DemoAccount[] = [];
-
 export const demoAccounts: DemoAccount[] = [];

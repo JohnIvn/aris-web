@@ -4,6 +4,7 @@ import { useAuth } from "@/app/authContext";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 import getBaseUrl from "@/utils/GetBaseUrl";
+import PhotoCropModal from "@/components/PhotoCropModal";
 import {
   Card,
   PageTitle,
@@ -86,6 +87,8 @@ export default function UserSettings() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const photoInput = useRef<HTMLInputElement>(null);
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState<File | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
 
   // Snapshot taken when editing starts, used to restore values on "Discard Changes"
   const snapshot = useRef<{ profile: typeof profile; prefs: typeof prefs } | null>(null);
@@ -156,7 +159,9 @@ export default function UserSettings() {
         window.dispatchEvent(new Event("aris-user-updated"));
       } catch {}
     } catch (reason) {
-      setProfileMessage(reason instanceof Error ? reason.message : "Unable to update photo.");
+      const message = reason instanceof Error ? reason.message : "Unable to update photo.";
+      setProfileMessage(message);
+      throw new Error(message);
     }
   };
 
@@ -279,6 +284,16 @@ export default function UserSettings() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
         {/* Profile summary */}
+      <PhotoCropModal
+        isOpen={showCropModal}
+        onClose={() => {
+          setShowCropModal(false);
+          setSelectedPhotoFile(null);
+        }}
+        imageFile={selectedPhotoFile}
+        onCropAndUpload={uploadPhoto}
+      />
+
         <Card className="flex flex-col items-center text-center overflow-hidden">
           {profile.avatar_url ? (
             <img
@@ -321,7 +336,10 @@ export default function UserSettings() {
             </GhostButton>
             <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => {
               const file = event.target.files?.[0];
-              if (file) void uploadPhoto(file);
+              if (file) {
+                setSelectedPhotoFile(file);
+                setShowCropModal(true);
+              }
               event.target.value = "";
             }} />
           </div>
