@@ -330,9 +330,8 @@ function RowMenu({ label, items }: { label: string; items: MenuItem[] }) {
                   close();
                   item.onClick();
                 }}
-                className={`block h-9 w-full rounded-md px-3 text-left text-[12.5px] ${
-                  item.danger ? "text-red-700 hover:bg-[#fbecec]" : "text-[#111c14] hover:bg-[#f4f6f5]"
-                }`}
+                className={`block h-9 w-full rounded-md px-3 text-left text-[12.5px] ${item.danger ? "text-red-700 hover:bg-[#fbecec]" : "text-[#111c14] hover:bg-[#f4f6f5]"
+                  }`}
               >
                 {item.label}
               </button>
@@ -1209,16 +1208,20 @@ export default function Curriculum() {
           style={{ borderColor: "#eef1ef" }}
         >
           {/* Both tab groups share one horizontally scrolling row */}
-          <div className="flex min-w-0 items-center gap-2 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
-            <Tabs
-              tabs={categoryTabs}
-              value={activeTab}
-              onChange={(v) => {
-                setActiveTab(v as any);
-                setSearch("");
-              }}
-            />
-            <Tabs tabs={statusTabs} value={tab} onChange={(v) => setTab(v as any)} />
+          <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center">
+            <div className="min-w-0 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
+              <Tabs
+                tabs={categoryTabs}
+                value={activeTab}
+                onChange={(v) => {
+                  setActiveTab(v as any);
+                  setSearch("");
+                }}
+              />
+            </div>
+            <div className="min-w-0 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
+              <Tabs tabs={statusTabs} value={tab} onChange={(v) => setTab(v as any)} />
+            </div>
           </div>
           <SearchInput
             placeholder={`Search ${activeTab.toLowerCase()}`}
