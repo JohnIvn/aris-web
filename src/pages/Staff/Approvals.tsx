@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { BRAND } from "@/config/navigation";
+import { useResource } from "@/hooks/useResource";
+import { saveResource } from "@/services/dataSource";
 import {
   Card,
   PageTitle,
@@ -78,196 +80,7 @@ const initialsOf = (name: string) =>
     .join("")
     .slice(0, 2);
 
-const approvalQueue: ApprovalItem[] = [
-  {
-    id: "a1",
-    faculty: "Marco Dela Cruz",
-    facultyNumber: "342",
-    type: "AR",
-    period: "Sep Cycle 1",
-    reference: "AR-2026-0906-0094",
-    submitted: "Sep 6, 2026 · 3:04 PM",
-    stage: "Checker",
-    status: "Pending",
-    event: "AR submitted · Sep Cycle 1 · 12 outputs",
-    record: {
-      period: "September Cycle 1",
-      reference: "AR-2026-0906-0094",
-      facultyName: "Marco Dela Cruz",
-      facultyNumber: "342",
-      college: "Arts & Sciences",
-      tables: [
-        arTable("GE 101 — UNDERSTANDING THE SELF", "September 1–5, 2026", [
-          ["GE 101", "BSIT 1A", 3, "Wednesday", "9:00AM–12:00PM", "CONGRESS"],
-          ["GE 101", "BSIT 1B", 3, "Friday", "1:00PM–4:00PM", "CONGRESS"],
-        ]),
-      ],
-      topics:
-        "a) The self from a philosophical perspective\nb) Self-concept and identity",
-      tasks:
-        "a) Lecture and small-group discussion.\nb) Reflection paper assigned and collected.",
-      attachment: "AR_DelaCruz_SepCycle1.pdf · 870 KB",
-      reviewer: "System — Intake",
-      reviewedAt: "Sep 6, 2026 · 3:04 PM",
-      remark: "Received and queued for checker validation.",
-    },
-  },
-  {
-    id: "a2",
-    faculty: "Juan M. Rivera",
-    facultyNumber: "289",
-    type: "DTR",
-    period: "Sep Cycle 1",
-    reference: "DTR-2026-0906-0088",
-    submitted: "Sep 6, 2026 · 12:39 PM",
-    stage: "Secretary",
-    status: "Pending",
-    event: "DTR submitted · Sep Cycle 1 · 22 days",
-    record: {
-      period: "September Cycle 1",
-      reference: "DTR-2026-0906-0088",
-      facultyName: "Juan M. Rivera",
-      facultyNumber: "289",
-      college: "College of Liberal Arts and Sciences",
-      tables: [
-        dtrTable("DTR — September 1–5, 2026", "22 duty days logged", [
-          ["Sep 01", "7:52 AM", "5:04 PM", 8.2],
-          ["Sep 02", "8:05 AM", "5:10 PM", 8.1],
-          ["Sep 03", "7:58 AM", "5:00 PM", 8.1],
-        ]),
-      ],
-      attachment: "DTR_Rivera_SepCycle1.xlsx · 82 KB",
-      reviewer: "Prof. R. Alonzo (Checker)",
-      reviewedAt: "Sep 6, 2026 · 1:15 PM",
-      remark:
-        "22 days verified against the attendance log. Endorsed to the college secretary.",
-    },
-  },
-  {
-    id: "a3",
-    faculty: "Dr. Maria Santos",
-    facultyNumber: "214",
-    type: "AR",
-    period: "Sep Cycle 1",
-    reference: "AR-2026-0906-0092",
-    submitted: "Sep 6, 2026 · 12:41 PM",
-    stage: "HR",
-    status: "Pending",
-    event: "AR submitted · Sep Cycle 1 · 18 outputs",
-    record: {
-      period: "September Cycle 1",
-      reference: "AR-2026-0906-0092",
-      facultyName: "Dr. Maria Santos",
-      facultyNumber: "214",
-      college: "College of Engineering",
-      tables: [
-        arTable("CS 102 — WEB DEVELOPMENT", "September 1–5, 2026", [
-          ["CS 102", "BSIT 3A", 3, "Monday", "7:00AM–10:00AM", "CONGRESS"],
-          ["CS 102", "BSIT 3B", 3, "Tuesday", "1:00PM–4:00PM", "CONGRESS"],
-        ]),
-      ],
-      topics: "a) HTML document structure\nb) Semantic tags and accessibility",
-      tasks:
-        "a) Discussed semantic elements and their use.\nb) Hands-on activity: build a personal profile page.",
-      attachment: "AR_Santos_SepCycle1.pdf · 1.2 MB",
-      reviewer: "L. Bautista (Secretary)",
-      reviewedAt: "Sep 7, 2026 · 9:40 AM",
-      remark: "Documents complete. Endorsed to HR for validation.",
-    },
-  },
-  {
-    id: "a4",
-    faculty: "Prof. Grace Lim",
-    facultyNumber: "178",
-    type: "DTR",
-    period: "Sep Cycle 1",
-    reference: "DTR-2026-0906-0090",
-    submitted: "Sep 6, 2026 · 1:07 PM",
-    stage: "Accounting",
-    status: "Pending",
-    event: "DTR approved by HR · Sep Cycle 1 · 21 days",
-    record: {
-      period: "September Cycle 1",
-      reference: "DTR-2026-0906-0090",
-      facultyName: "Prof. Grace Lim",
-      facultyNumber: "178",
-      college: "College of Business",
-      tables: [
-        dtrTable("DTR — September 1–5, 2026", "21 duty days logged", [
-          ["Sep 01", "8:02 AM", "5:07 PM", 8.1],
-          ["Sep 02", "8:15 AM", "5:11 PM", 7.9],
-          ["Sep 03", "7:58 AM", "5:01 PM", 8.1],
-        ]),
-      ],
-      attachment: "DTR_Lim_SepCycle1.xlsx · 78 KB",
-      reviewer: "Ana Bautista (HR)",
-      reviewedAt: "Sep 8, 2026 · 10:22 AM",
-      remark: "Validated and endorsed to accounting for payroll.",
-    },
-  },
-  {
-    id: "a5",
-    faculty: "James Reyes",
-    facultyNumber: "301",
-    type: "AR",
-    period: "Sep Cycle 1",
-    reference: "AR-2026-0906-0081",
-    submitted: "Sep 5, 2026 · 4:12 PM",
-    stage: "Accounting",
-    status: "Approved",
-    event: "AR approved by Accounting · Sep Cycle 1 · 15 outputs",
-    record: {
-      period: "September Cycle 1",
-      reference: "AR-2026-0906-0081",
-      facultyName: "James Reyes",
-      facultyNumber: "301",
-      college: "College of Engineering",
-      tables: [
-        arTable("CS 301 — DATA STRUCTURES", "September 1–5, 2026", [
-          ["CS 301", "BSCS 3A", 3, "Thursday", "8:00AM–11:00AM", "CONGRESS"],
-        ]),
-      ],
-      topics: "a) Arrays and pointers",
-      tasks:
-        "a) Lecture on pointer arithmetic.\nb) Graded exercise on dynamic arrays.",
-      attachment: "AR_Reyes_SepCycle1.pdf · 940 KB",
-      reviewer: "Payroll Office (Accounting)",
-      reviewedAt: "Sep 9, 2026 · 3:15 PM",
-      remark: "Approved and cleared for payroll.",
-    },
-  },
-  {
-    id: "a6",
-    faculty: "Paolo Garcia",
-    facultyNumber: "398",
-    type: "DTR",
-    period: "Aug Cycle 2",
-    reference: "DTR-2026-0822-0231",
-    submitted: "Aug 22, 2026 · 3:58 PM",
-    stage: "HR",
-    status: "Disapproved",
-    event: "DTR disapproved by HR · Aug Cycle 2 · 21 days",
-    record: {
-      period: "August Cycle 2",
-      reference: "DTR-2026-0822-0231",
-      facultyName: "Paolo Garcia",
-      facultyNumber: "398",
-      college: "College of Business",
-      tables: [
-        dtrTable("DTR — August 11–22, 2026", "21 duty days logged", [
-          ["Aug 11", "8:02 AM", "5:07 PM", 8.1],
-          ["Aug 12", "—", "5:03 PM", 0],
-          ["Aug 13", "8:00 AM", "5:02 PM", 8.0],
-        ]),
-      ],
-      attachment: "DTR_Garcia_AugCycle2.xlsx · 80 KB",
-      reviewer: "Ana Bautista (HR)",
-      reviewedAt: "Aug 24, 2026 · 11:15 AM",
-      remark:
-        "Disapproved: missing time-in record on August 12. Returned to faculty for correction.",
-    },
-  },
-];
+const approvalQueue: ApprovalItem[] = [];
 
 /** Where an item sits relative to the role looking at it. */
 function stageStatus(
@@ -471,7 +284,8 @@ export default function Approvals() {
   const [tab, setTab] = useState("All");
   const [viewMode, setViewMode] = useState<"table" | "board">("table");
   const [showDecided, setShowDecided] = useState(true);
-  const [queue, setQueue] = useState<ApprovalItem[]>(approvalQueue);
+  const { data: rawQueue, setData: setQueue, loading, error, reload } = useResource<ApprovalItem[]>("/approvals", []);
+  const queue = Array.isArray(rawQueue) ? rawQueue : [];
   const [openId, setOpenId] = useState<string | null>(null);
   const [remark, setRemark] = useState("");
   const [flash, setFlash] = useState<string | null>(null);
@@ -541,9 +355,27 @@ export default function Approvals() {
 
   const column = (s: StageRole) => visibleForBoard.filter((it) => it.stage === s);
 
-  const decide = (item: ApprovalItem, action: "Approve" | "Disapprove") => {
+  const decide = async (item: ApprovalItem, action: "Approve" | "Disapprove") => {
     const reviewer = `${STAGE_OWNER[role]} (${role})`;
     const target = nextStageOf(item.stage);
+    const nowStr = new Date().toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    const defaultRemark =
+      action === "Disapprove"
+        ? `Disapproved at the ${role} stage. Returned to the faculty for correction.`
+        : target
+          ? `Approved at the ${role} stage. Forwarded to ${target}.`
+          : "Approved at the final stage and cleared for payroll.";
+
+    const decisionRemark = remark.trim() || defaultRemark;
+
     setFlash(
       action === "Disapprove"
         ? `Disapproved · ${item.faculty}'s ${item.type} returned for correction`
@@ -551,40 +383,48 @@ export default function Approvals() {
           ? `Approved · ${item.type} forwarded to ${target}`
           : `Approved · ${item.type} cleared for payroll`,
     );
-    setQueue((prev) =>
-      prev.map((it) => {
-        if (it.id !== item.id) return it;
-        if (action === "Disapprove") {
-          return {
-            ...it,
-            status: "Disapproved" as StatusKind,
-            record: {
-              ...it.record,
-              reviewer,
-              reviewedAt: NOW,
-              remark:
-                remark.trim() ||
-                `Disapproved at the ${role} stage. Returned to the faculty for correction.`,
-            },
-          };
-        }
+
+    const updatedQueue = queue.map((it) => {
+      if (it.id !== item.id) return it;
+      if (action === "Disapprove") {
         return {
           ...it,
-          stage: target ?? it.stage,
-          status: target ? ("Pending" as StatusKind) : ("Approved" as StatusKind),
+          status: "Disapproved" as StatusKind,
           record: {
             ...it.record,
             reviewer,
-            reviewedAt: NOW,
-            remark:
-              remark.trim() ||
-              (target
-                ? `Approved at the ${role} stage. Forwarded to ${target}.`
-                : "Approved at the final stage and cleared for payroll."),
+            reviewedAt: nowStr,
+            remark: decisionRemark,
           },
         };
-      }),
-    );
+      }
+      return {
+        ...it,
+        stage: target ?? it.stage,
+        status: target ? ("Pending" as StatusKind) : ("Approved" as StatusKind),
+        record: {
+          ...it.record,
+          reviewer,
+          reviewedAt: nowStr,
+          remark: decisionRemark,
+        },
+      };
+    });
+
+    setQueue(updatedQueue);
+
+    try {
+      await saveResource(`/approvals/${item.id}`, {
+        action,
+        remark: decisionRemark,
+        stage: item.stage,
+        role,
+      }, "PATCH");
+    } catch (err) {
+      console.error("Failed to save approval decision:", err);
+      setFlash(err instanceof Error ? err.message : "Unable to save decision to database.");
+    }
+
     setOpenId(null);
     setRemark("");
   };
@@ -846,14 +686,28 @@ export default function Approvals() {
             <span className="text-right">Status</span>
           </div>
 
-          {/* Empty State */}
-          {filteredQueue.length === 0 && (
+          {/* Loading / Error / Empty State */}
+          {loading && queue.length === 0 ? (
+            <div className="py-12 text-center text-[12.5px] text-[#8fa394]">
+              <div
+                className="inline-block w-5 h-5 border-2 border-t-transparent rounded-full animate-spin mb-2"
+                style={{ borderColor: "#3a7d4e", borderTopColor: "transparent" }}
+              />
+              <p>Loading approval submissions from database...</p>
+            </div>
+          ) : error && queue.length === 0 ? (
+            <div className="py-8 text-center text-[12.5px] text-[#c0392b]">
+              <p className="font-semibold mb-1">Failed to load submissions from database</p>
+              <p className="text-[#8fa394] mb-3">{error}</p>
+              <GhostButton onClick={() => reload()}>Retry</GhostButton>
+            </div>
+          ) : filteredQueue.length === 0 ? (
             <p className="py-8 text-center text-[12.5px] text-[#8fa394]">
               {query || tab !== "All"
                 ? "No matching submissions found."
                 : "No submissions recorded in this queue."}
             </p>
-          )}
+          ) : null}
 
           {/* Table Rows matching SystemLogs */}
           {filteredQueue.map((item, idx) => (

@@ -731,7 +731,8 @@ function StaffDashboard() {
   const navigate = useNavigate();
   const [range, setRange] = useState("Cycle 1");
 
-  const queue = approvalQueue || [];
+  const { data: fetchedQueue } = useResource<any[]>("/approvals", []);
+  const queue = Array.isArray(fetchedQueue) && fetchedQueue.length > 0 ? fetchedQueue : approvalQueue || [];
 
   const pendingQueue = useMemo(
     () => queue.filter((i) => i.status === "Pending"),
