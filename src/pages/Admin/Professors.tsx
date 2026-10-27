@@ -35,6 +35,15 @@ const people: Professor[] = [
   { name: "Prof. Daniel Ong", email: "d.ong@aris.edu.ph", dept: "Business", rank: "Associate Prof.", courses: 3, active: false },
 ];
 
+/* FIX 1: one grid template shared by the header and every row.
+   - minmax(0, Nfr) lets columns shrink/grow with the table instead of being
+     sized by their content, so they stay dynamic.
+   - gap-x-6 gives the exact same gap between every pair of columns.
+   - The Action column is a fixed width so it never steals space from the rest. */
+const ROW_GRID =
+  "grid min-w-[1000px] items-center gap-x-6 px-5 " +
+  "grid-cols-[minmax(0,2.2fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(110px,1fr)_minmax(100px,1.2fr)_64px]";
+
 export default function Professors() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("All");
@@ -209,11 +218,15 @@ export default function Professors() {
             </select>
           </div>
         </div>
-        <div className="grid min-w-[1000px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr_1.2fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
+
+        {/* Header row */}
+        <div className={`${ROW_GRID} py-2.5 text-[11px] uppercase tracking-wide font-semibold [&>*]:min-w-0`} style={{ color: "#b6c3ba", background: "#fafbfa" }}>
           <span>Name</span><span>Department</span><span>Rank</span><span>Courses</span><span>Status</span><span>OAuth</span><span className="text-right">Action</span>
         </div>
+
+        {/* Body rows */}
         {rows.map((p, i) => (
-          <div key={p.email} onClick={() => { setSelected(p); setModalMode("view"); }} className="grid min-w-[1000px] grid-cols-[2.2fr_1.4fr_1.2fr_0.7fr_1fr_1.2fr_1.2fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
+          <div key={p.email} onClick={() => { setSelected(p); setModalMode("view"); }} className={`${ROW_GRID} py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer [&>*]:min-w-0`} style={{ borderColor: "#f2f4f2" }}>
             <button type="button" aria-label={`View details for ${p.name}`} onClick={(event) => { event.stopPropagation(); setSelected(p); setModalMode("view"); }} className="flex min-w-0 items-center gap-3 text-left">
               <Avatar initials={p.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} color={initialsColor(i)} />
               <div className="min-w-0">
@@ -221,8 +234,8 @@ export default function Professors() {
                 <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>{p.email}</p>
               </div>
             </button>
-            <span className="text-[13px]" style={{ color: "#3d4a41" }}>{p.dept}</span>
-            <span className="text-[13px]" style={{ color: "#3d4a41" }}>{p.rank}</span>
+            <span className="break-words text-[13px]" style={{ color: "#3d4a41" }}>{p.dept}</span>
+            <span className="break-words text-[13px]" style={{ color: "#3d4a41" }}>{p.rank}</span>
             <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>{p.courses}</span>
             <span><Badge tone={p.active ? "green" : "gray"} dot>{p.active ? "Active" : "Deactivated"}</Badge></span>
             <span aria-label={p.provider === "google" ? "Connected via Google" : "OAuth not connected"}>

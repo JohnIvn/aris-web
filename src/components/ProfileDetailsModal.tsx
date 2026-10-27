@@ -27,6 +27,12 @@ export type ProfileDetailsModalProps = {
   onSave?: (updatedData: ProfileModalData) => Promise<void>;
 };
 
+/* Shared field styles. min-w-0 + truncate keep long values inside the box. */
+const FIELD = "h-11 w-full min-w-0 rounded-xl border px-3 text-[13px] outline-none transition-colors truncate";
+const FIELD_VIEW = `${FIELD} border-[#e2e8e4] bg-[#fbfcfb] text-[#334237]`;
+const FIELD_EDIT = `${FIELD} border-[#d6ded8] bg-white text-[#17251c] focus:border-[#2d4a36] shadow-sm`;
+const LABEL = "mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]";
+
 export default function ProfileDetailsModal({
   isOpen,
   onClose,
@@ -94,6 +100,16 @@ export default function ProfileDetailsModal({
     };
   }, [isOpen]);
 
+  // FIX 2: with the X gone, Esc is another way to close.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !saving) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, saving, onClose]);
+
   if (!isOpen || !data) return null;
 
   const fullName = [formData.firstname, formData.middlename, formData.lastname]
@@ -115,6 +131,8 @@ export default function ProfileDetailsModal({
     }
   };
 
+  const fieldClass = isEditing ? FIELD_EDIT : FIELD_VIEW;
+
   return (
     <div
       ref={overlayRef}
@@ -123,16 +141,19 @@ export default function ProfileDetailsModal({
         if (!saving) onClose();
       }}
     >
+      {/* FIX 5: the shell is a flex column that clips (overflow-hidden) so nothing
+          can poke through the rounded border. Header and footer stay put and
+          only the middle body scrolls. */}
       <section
         role="dialog"
         aria-modal="true"
         aria-label={heading}
-        className="max-h-[calc(100dvh-2rem)] w-full max-w-[620px] overflow-y-auto overscroll-contain rounded-[24px] bg-white p-6 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-8"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[620px] flex-col overflow-hidden rounded-[24px] bg-white shadow-2xl sm:max-h-[calc(100dvh-3rem)]"
         onClick={(event) => event.stopPropagation()}
       >
-        {/* Header */}
-        <div className="mb-5 flex items-center justify-between border-b pb-4" style={{ borderColor: "#f0f2f0" }}>
-          <div>
+        {/* Header (fixed). FIX 2: X close button removed. */}
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b px-6 py-4 sm:px-8 sm:py-5" style={{ borderColor: "#f0f2f0" }}>
+          <div className="min-w-0">
             <h2 className="text-[15px] font-semibold uppercase tracking-wide text-[#111c14]">
               {isEditing ? `Edit ${heading.replace(/ ID$/i, "")}` : heading}
             </h2>
@@ -140,256 +161,213 @@ export default function ProfileDetailsModal({
               {isEditing ? "Modify account fields and details below." : "Account and profile information."}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {!isEditing && onSave && (
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-[#d6ded8] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#2d4a36] hover:bg-[#f4f6f5] transition-colors shadow-sm"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                </svg>
-                Edit
-              </button>
-            )}
+          {!isEditing && onSave && (
             <button
               type="button"
-              disabled={saving}
-              onClick={onClose}
-              aria-label="Close profile details"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[#718076] hover:bg-[#f4f6f5]"
+              onClick={() => setIsEditing(true)}
+              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[#d6ded8] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#2d4a36] hover:bg-[#f4f6f5] transition-colors shadow-sm"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-5 w-5" aria-hidden="true">
-                <path d="m6 6 12 12M18 6 6 18" />
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
               </svg>
+              Edit
             </button>
-          </div>
+          )}
         </div>
 
-        {/* Name Banner */}
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-[#f8faf9] p-4 border border-[#e8ece9]">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-[#536258]">Profile Name</p>
-            <p className="text-[18px] font-semibold leading-tight text-[#17251c]">{fullName}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-[#fbf1de] px-3 py-1 text-[11px] font-semibold uppercase text-[#996515]">
-              {formData.roleOrRank || "Member"}
-            </span>
-            <span
-              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase ${
-                formData.status === "Active"
-                  ? "bg-[#eaf5ed] text-[#2d6a4f]"
-                  : "bg-[#f3f4f6] text-[#6b7280]"
-              }`}
-            >
-              {formData.status}
-            </span>
-          </div>
-        </div>
-
-        {/* Error message */}
-        {saveError && (
-          <div className="mb-4 rounded-xl bg-red-50 p-3 text-[12px] text-red-700 border border-red-200">
-            {saveError}
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleFormSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">
-                First Name {isEditing && <span className="text-red-500">*</span>}
-              </label>
-              <input
-                required={isEditing}
-                readOnly={!isEditing}
-                value={formData.firstname}
-                onChange={(e) => setFormData({ ...formData, firstname: e.target.value })}
-                className={`h-11 w-full rounded-xl border px-3 text-[13px] outline-none transition-colors ${
-                  isEditing
-                    ? "border-[#d6ded8] bg-white text-[#17251c] focus:border-[#2d4a36] shadow-sm"
-                    : "border-[#e2e8e4] bg-[#fbfcfb] text-[#334237]"
-                }`}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">Middle Name</label>
-              <input
-                readOnly={!isEditing}
-                placeholder={isEditing ? "Optional" : "Not provided"}
-                value={isEditing ? (formData.middlename || "") : (formData.middlename || "Not provided")}
-                onChange={(e) => setFormData({ ...formData, middlename: e.target.value })}
-                className={`h-11 w-full rounded-xl border px-3 text-[13px] outline-none transition-colors ${
-                  isEditing
-                    ? "border-[#d6ded8] bg-white text-[#17251c] focus:border-[#2d4a36] shadow-sm"
-                    : "border-[#e2e8e4] bg-[#fbfcfb] text-[#334237]"
-                }`}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">
-                Last Name {isEditing && <span className="text-red-500">*</span>}
-              </label>
-              <input
-                required={isEditing}
-                readOnly={!isEditing}
-                value={formData.lastname}
-                onChange={(e) => setFormData({ ...formData, lastname: e.target.value })}
-                className={`h-11 w-full rounded-xl border px-3 text-[13px] outline-none transition-colors ${
-                  isEditing
-                    ? "border-[#d6ded8] bg-white text-[#17251c] focus:border-[#2d4a36] shadow-sm"
-                    : "border-[#e2e8e4] bg-[#fbfcfb] text-[#334237]"
-                }`}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">
-                Email Address {isEditing && <span className="text-red-500">*</span>}
-              </label>
-              <input
-                type="email"
-                required={isEditing}
-                readOnly={!isEditing}
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`h-11 w-full rounded-xl border px-3 text-[13px] outline-none transition-colors ${
-                  isEditing
-                    ? "border-[#d6ded8] bg-white text-[#17251c] focus:border-[#2d4a36] shadow-sm"
-                    : "border-[#e2e8e4] bg-[#fbfcfb] text-[#334237]"
-                }`}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">Department</label>
-              {isEditing && departmentOptions.length > 0 ? (
-                <select
-                  value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="h-11 w-full rounded-xl border border-[#d6ded8] bg-white px-3 text-[13px] text-[#17251c] outline-none focus:border-[#2d4a36] shadow-sm"
+        <form onSubmit={handleFormSubmit} className="flex min-h-0 flex-1 flex-col">
+          {/* Scrolling body */}
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-6 py-5 sm:px-8">
+            {/* Name Banner */}
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#e8ece9] bg-[#f8faf9] p-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-[#536258]">Profile Name</p>
+                <p className="break-words text-[18px] font-semibold leading-tight text-[#17251c]">{fullName}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="rounded-full bg-[#fbf1de] px-3 py-1 text-[11px] font-semibold uppercase text-[#996515]">
+                  {formData.roleOrRank || "Member"}
+                </span>
+                <span
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase ${
+                    formData.status === "Active"
+                      ? "bg-[#eaf5ed] text-[#2d6a4f]"
+                      : "bg-[#f3f4f6] text-[#6b7280]"
+                  }`}
                 >
-                  <option value="">Unassigned</option>
-                  {departmentOptions.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  readOnly
-                  value={formData.department || "Unassigned"}
-                  className="h-11 w-full rounded-xl border border-[#e2e8e4] bg-[#fbfcfb] px-3 text-[13px] text-[#334237] outline-none"
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">{roleOrRankLabel}</label>
-              {isEditing && roleOrRankOptions.length > 0 ? (
-                <select
-                  value={formData.roleOrRank}
-                  onChange={(e) => setFormData({ ...formData, roleOrRank: e.target.value })}
-                  className="h-11 w-full rounded-xl border border-[#d6ded8] bg-white px-3 text-[13px] text-[#17251c] outline-none focus:border-[#2d4a36] shadow-sm"
-                >
-                  {roleOrRankOptions.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  readOnly
-                  value={formData.roleOrRank || "None"}
-                  className="h-11 w-full rounded-xl border border-[#e2e8e4] bg-[#fbfcfb] px-3 text-[13px] text-[#334237] outline-none"
-                />
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">Status</label>
-              {isEditing ? (
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="h-11 w-full rounded-xl border border-[#d6ded8] bg-white px-3 text-[13px] text-[#17251c] outline-none focus:border-[#2d4a36] shadow-sm"
-                >
-                  {statusOptions.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  readOnly
-                  value={formData.status || "Active"}
-                  className="h-11 w-full rounded-xl border border-[#e2e8e4] bg-[#fbfcfb] px-3 text-[13px] text-[#334237] outline-none"
-                />
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">OAuth Account</label>
-              <div className="flex h-11 items-center rounded-xl border border-[#e2e8e4] bg-[#fbfcfb] px-3 text-[13px] text-[#334237]">
-                <span className="flex items-center gap-1.5">
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      formData.oauthConnected ? "bg-emerald-500" : "bg-gray-400"
-                    }`}
-                  />
-                  {formData.oauthConnected ? "Connected via Google" : "Not connected"}
+                  {formData.status}
                 </span>
               </div>
             </div>
 
-            <div>
-              <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">Phone</label>
-              <input
-                readOnly={!isEditing}
-                type="tel"
-                placeholder={isEditing ? "e.g. +63 912 345 6789" : "Not provided"}
-                value={isEditing ? (formData.phone || "") : (formData.phone || "Not provided")}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className={`h-11 w-full rounded-xl border px-3 text-[13px] outline-none transition-colors ${
-                  isEditing
-                    ? "border-[#d6ded8] bg-white text-[#17251c] focus:border-[#2d4a36] shadow-sm"
-                    : "border-[#e2e8e4] bg-[#fbfcfb] text-[#334237]"
-                }`}
-              />
+            {saveError && (
+              <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-[12px] text-red-700">
+                {saveError}
+              </div>
+            )}
+
+            {/* [&>*]:min-w-0 lets grid children shrink so long text can't widen the modal */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-3 [&>*]:min-w-0">
+                <div>
+                  <label className={LABEL}>First Name {isEditing && <span className="text-red-500">*</span>}</label>
+                  <input
+                    required={isEditing}
+                    readOnly={!isEditing}
+                    value={formData.firstname}
+                    onChange={(e) => setFormData({ ...formData, firstname: e.target.value })}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL}>Middle Name</label>
+                  <input
+                    readOnly={!isEditing}
+                    placeholder={isEditing ? "Optional" : "Not provided"}
+                    value={isEditing ? (formData.middlename || "") : (formData.middlename || "Not provided")}
+                    onChange={(e) => setFormData({ ...formData, middlename: e.target.value })}
+                    className={fieldClass}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL}>Last Name {isEditing && <span className="text-red-500">*</span>}</label>
+                  <input
+                    required={isEditing}
+                    readOnly={!isEditing}
+                    value={formData.lastname}
+                    onChange={(e) => setFormData({ ...formData, lastname: e.target.value })}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 [&>*]:min-w-0">
+                <div>
+                  <label className={LABEL}>Email Address {isEditing && <span className="text-red-500">*</span>}</label>
+                  <input
+                    type="email"
+                    required={isEditing}
+                    readOnly={!isEditing}
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className={fieldClass}
+                  />
+                </div>
+
+                {/* FIX 3: selects are w-full min-w-0 inside a min-w-0 grid cell, so the
+                    control (and its long option text) stays inside the modal. */}
+                <div>
+                  <label className={LABEL}>Department</label>
+                  {isEditing && departmentOptions.length > 0 ? (
+                    <select
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      className={FIELD_EDIT}
+                    >
+                      <option value="">Unassigned</option>
+                      {departmentOptions.map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input readOnly value={formData.department || "Unassigned"} className={FIELD_VIEW} />
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 [&>*]:min-w-0">
+                <div>
+                  <label className={LABEL}>{roleOrRankLabel}</label>
+                  {isEditing && roleOrRankOptions.length > 0 ? (
+                    <select
+                      value={formData.roleOrRank}
+                      onChange={(e) => setFormData({ ...formData, roleOrRank: e.target.value })}
+                      className={FIELD_EDIT}
+                    >
+                      {roleOrRankOptions.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input readOnly value={formData.roleOrRank || "None"} className={FIELD_VIEW} />
+                  )}
+                </div>
+
+                <div>
+                  <label className={LABEL}>Status</label>
+                  {isEditing ? (
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      className={FIELD_EDIT}
+                    >
+                      {statusOptions.map((s) => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input readOnly value={formData.status || "Active"} className={FIELD_VIEW} />
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 [&>*]:min-w-0">
+                <div>
+                  <label className={LABEL}>OAuth Account</label>
+                  <div className="flex h-11 items-center rounded-xl border border-[#e2e8e4] bg-[#fbfcfb] px-3 text-[13px] text-[#334237]">
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${formData.oauthConnected ? "bg-emerald-500" : "bg-gray-400"}`} />
+                      <span className="truncate">{formData.oauthConnected ? "Connected via Google" : "Not connected"}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={LABEL}>Phone</label>
+                  <input
+                    readOnly={!isEditing}
+                    type="tel"
+                    placeholder={isEditing ? "e.g. +63 912 345 6789" : "Not provided"}
+                    value={isEditing ? (formData.phone || "") : (formData.phone || "Not provided")}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className={fieldClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={LABEL}>Address</label>
+                <input
+                  readOnly={!isEditing}
+                  type="text"
+                  placeholder={isEditing ? "e.g. 123 University Ave, Manila" : "Not provided"}
+                  value={isEditing ? (formData.address || "") : (formData.address || "Not provided")}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className={fieldClass}
+                />
+              </div>
+
+              {/* FIX 4: password field with a placeholder. Display-only because
+                  onSave has no password in its payload. */}
+              <div>
+                <label className={LABEL}>Password</label>
+                <input
+                  type="password"
+                  disabled
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  className={`${FIELD_VIEW} cursor-not-allowed placeholder:text-[#8fa394]`}
+                />
+                <p className="mt-1 pl-0.5 text-[11.5px] text-[#8fa394]">
+                  {formData.oauthConnected ? "Sign-in is managed through Google." : "Passwords can't be changed here."}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div>
-            <label className="mb-1 block pl-0.5 text-[12px] font-medium text-[#536258]">Address</label>
-            <input
-              readOnly={!isEditing}
-              type="text"
-              placeholder={isEditing ? "e.g. 123 University Ave, Manila" : "Not provided"}
-              value={isEditing ? (formData.address || "") : (formData.address || "Not provided")}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className={`h-11 w-full rounded-xl border px-3 text-[13px] outline-none transition-colors ${
-                isEditing
-                  ? "border-[#d6ded8] bg-white text-[#17251c] focus:border-[#2d4a36] shadow-sm"
-                  : "border-[#e2e8e4] bg-[#fbfcfb] text-[#334237]"
-              }`}
-            />
-          </div>
-
-          {/* Footer Actions */}
-          <div className="mt-6 flex items-center justify-end gap-2.5 border-t pt-4" style={{ borderColor: "#f0f2f0" }}>
+          {/* Footer (fixed) */}
+          <div className="flex shrink-0 items-center justify-end gap-2.5 border-t px-6 py-4 sm:px-8" style={{ borderColor: "#f0f2f0" }}>
             {isEditing ? (
               <>
                 <button
