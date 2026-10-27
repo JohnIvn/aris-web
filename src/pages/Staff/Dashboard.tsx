@@ -26,6 +26,7 @@ import {
 } from "@/components/ui";
 import Approvals, {
   approvalQueue,
+  normalizeStaffRole,
   STAGES,
   STAGE_COLOR,
   STAGE_OWNER,
@@ -729,10 +730,15 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
 
 function StaffDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [range, setRange] = useState("Cycle 1");
 
+  const { data: profile } = useResource<{ position?: string | null }>("/users/me/profile", {});
+  const staffRole = normalizeStaffRole(profile?.position || user?.position);
+
   const { data: fetchedQueue } = useResource<any[]>("/approvals", []);
-  const queue = Array.isArray(fetchedQueue) && fetchedQueue.length > 0 ? fetchedQueue : approvalQueue || [];
+  const allQueue = Array.isArray(fetchedQueue) && fetchedQueue.length > 0 ? fetchedQueue : approvalQueue || [];
+  const queue = useMemo(() => allQueue.filter((i) => i.stage === staffRole), [allQueue, staffRole]);
 
   const pendingQueue = useMemo(
     () => queue.filter((i) => i.status === "Pending"),

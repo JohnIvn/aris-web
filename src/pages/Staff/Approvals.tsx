@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useAuth } from "@/app/authContext";
 import { BRAND } from "@/config/navigation";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
@@ -53,6 +54,16 @@ const statusTone: Record<string, "green" | "amber" | "red" | "gray" | "blue"> = 
 /** The next stage in the routing order, or undefined at the final stage. */
 const nextStageOf = (stage: StageRole): StageRole | undefined =>
   STAGES[STAGES.indexOf(stage) + 1] as StageRole | undefined;
+
+export function normalizeStaffRole(position?: string | null): StageRole {
+  if (!position) return "Checker";
+  const p = position.trim().toLowerCase();
+  if (p.includes("check")) return "Checker";
+  if (p.includes("sec")) return "Secretary";
+  if (p.includes("hr") || p.includes("human")) return "HR";
+  if (p.includes("account") || p.includes("payroll")) return "Accounting";
+  return "Checker";
+}
 
 type ApprovalItem = {
   id: string;
@@ -279,7 +290,21 @@ function QueueCard({
 }
 
 export default function Approvals() {
-  const [role, setRole] = useState<StageRole>("Secretary");
+  const { user } = useAuth();
+  const { data: profile } = useResource<{
+    position?: string | null;
+    department?: string | null;
+    firstname?: string;
+    lastname?: string;
+  }>("/users/me/profile", {});
+
+  const staffPosition = profile?.position || user?.position || "";
+  const role: StageRole = normalizeStaffRole(staffPosition);
+  const staffName =
+    [profile?.firstname, profile?.lastname].filter(Boolean).join(" ") ||
+    user?.name ||
+    STAGE_OWNER[role];
+
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("All");
   const [viewMode, setViewMode] = useState<"table" | "board">("table");
@@ -294,19 +319,22 @@ export default function Approvals() {
 
   const tabs = ["All", "Pending", "Approved", "Disapproved"];
 
-  const open = queue.find((it) => it.id === openId) ?? null;
+  // Filter items strictly scoped to the staff member's position/stage
+  const scopedQueue = useMemo(() => {
+    return queue.filter((it) => it.stage === role);
+  }, [queue, role]);
+
+  const open = scopedQueue.find((it) => it.id === openId) ?? null;
   const openStatus = open ? stageStatus(open, role) : null;
   const canAct = !!open && open.status === "Pending" && open.stage === role;
   const next = open ? nextStageOf(open.stage) : undefined;
 
-  const awaiting = queue.filter(
-    (it) => it.status === "Pending" && it.stage === role,
-  ).length;
-  const inPipeline = queue.filter((it) => it.status === "Pending").length;
+  const awaiting = scopedQueue.filter((it) => it.status === "Pending").length;
+  const inPipeline = scopedQueue.filter((it) => it.status === "Pending").length;
 
-  // Filtered rows for the Table (EXACT SystemLogs format)
+  // Filtered rows for the Table (strictly scoped to this role)
   const filteredQueue = useMemo(() => {
-    return queue.filter((it) => {
+    return scopedQueue.filter((it) => {
       if (tab === "Pending" && it.status !== "Pending") return false;
       if (tab === "Approved" && it.status !== "Approved") return false;
       if (tab === "Disapproved" && it.status !== "Disapproved" && it.status !== "Flagged") return false;
@@ -337,12 +365,12 @@ export default function Approvals() {
       }
       return true;
     });
-  }, [queue, tab, query]);
+  }, [scopedQueue, tab, query]);
 
-  // Board visibility filtering
+  // Board visibility filtering strictly for this role
   const visibleForBoard = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return queue.filter((it) => {
+    return scopedQueue.filter((it) => {
       if (!showDecided && it.status !== "Pending") return false;
       if (!q) return true;
       return (
@@ -351,12 +379,10 @@ export default function Approvals() {
         it.period.toLowerCase().includes(q)
       );
     });
-  }, [queue, showDecided, query]);
-
-  const column = (s: StageRole) => visibleForBoard.filter((it) => it.stage === s);
+  }, [scopedQueue, showDecided, query]);
 
   const decide = async (item: ApprovalItem, action: "Approve" | "Disapprove") => {
-    const reviewer = `${STAGE_OWNER[role]} (${role})`;
+    const reviewer = `${staffName} (${role})`;
     const target = nextStageOf(item.stage);
     const nowStr = new Date().toLocaleString("en-US", {
       month: "short",
@@ -571,7 +597,7 @@ export default function Approvals() {
         }
       />
 
-      {/* Role / Stage Selection Banner */}
+      {/* Staff Scope Banner */}
       <Card className="p-4 mb-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
@@ -586,14 +612,14 @@ export default function Approvals() {
                 className="text-[13px] font-semibold"
                 style={{ color: "#111c14" }}
               >
-                Acting as {role}
+                {role} Approval Stage
               </p>
               <p className="text-[11.5px]" style={{ color: "#8fa394" }}>
-                {STAGE_OWNER[role]} · {awaiting} submission(s) awaiting your action
+                {staffName} · {awaiting} submission(s) awaiting your action
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-5 flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap">
             {viewMode === "board" && (
               <label
                 className="flex items-center gap-2 text-[12px] font-medium select-none cursor-pointer"
@@ -603,14 +629,9 @@ export default function Approvals() {
                 Show decided
               </label>
             )}
-            <Tabs
-              tabs={[...STAGES]}
-              value={role}
-              onChange={(v) => {
-                setRole(v as StageRole);
-                setFlash(null);
-              }}
-            />
+            <Badge tone={awaiting > 0 ? "amber" : "green"} dot>
+              {awaiting > 0 ? `${awaiting} Awaiting Review` : "All Caught Up"}
+            </Badge>
           </div>
         </div>
       </Card>
@@ -813,55 +834,45 @@ export default function Approvals() {
         </Card>
       )}
 
-      {/* ─── BOARD VIEW: KANBAN COLUMNS ──────────────────────────────────────── */}
+      {/* ─── BOARD VIEW: STATUS COLUMNS FOR THIS ROLE ─────────────────────────── */}
       {viewMode === "board" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 items-start">
-          {STAGES.map((s) => {
-            const cards = column(s);
-            const isMine = s === role;
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
+          {[
+            { key: "Pending" as StatusKind, label: "Awaiting Action", color: "#996515" },
+            { key: "Approved" as StatusKind, label: "Approved / Endorsed", color: "#2f7043" },
+            { key: "Disapproved" as StatusKind, label: "Disapproved / Flagged", color: "#c0392b" },
+          ].map((col) => {
+            const cards = visibleForBoard.filter((it) =>
+              col.key === "Disapproved"
+                ? it.status === "Disapproved" || it.status === "Flagged"
+                : it.status === col.key
+            );
             return (
               <div
-                key={s}
-                className="rounded-3xl p-2.5 min-h-[440px] flex flex-col"
-                style={{
-                  background: isMine ? "#f0f7f2" : "#f4f6f5",
-                  boxShadow: isMine ? `inset 0 0 0 1.5px ${BRAND}33` : "none",
-                }}
+                key={col.key}
+                className="rounded-3xl p-3 min-h-[440px] flex flex-col"
+                style={{ background: "#f4f6f5" }}
               >
-                <div className="flex items-center justify-between gap-2 px-1.5 pt-1">
-                  <div className="flex items-center gap-1.5 min-w-0">
+                <div className="flex items-center justify-between gap-2 px-1.5 pt-1 pb-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: STAGE_COLOR[s] }}
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ background: col.color }}
                     />
                     <p
-                      className="text-[12.5px] font-bold truncate"
+                      className="text-[13px] font-bold truncate"
                       style={{ color: "#111c14" }}
                     >
-                      {s}
+                      {col.label}
                     </p>
-                    {isMine && (
-                      <span
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white flex-shrink-0"
-                        style={{ color: BRAND }}
-                      >
-                        YOU
-                      </span>
-                    )}
                   </div>
                   <span
-                    className="text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded-md bg-white flex-shrink-0"
-                    style={{ color: "#8fa394" }}
+                    className="text-[11px] font-semibold tabular-nums px-2 py-0.5 rounded-md bg-white flex-shrink-0 shadow-xs"
+                    style={{ color: "#5a6b5e" }}
                   >
                     {cards.length}
                   </span>
                 </div>
-                <p
-                  className="text-[10.5px] px-1.5 pt-0.5 pb-2.5 truncate"
-                  style={{ color: "#b6c3ba" }}
-                >
-                  {STAGE_OWNER[s]}
-                </p>
 
                 <div className="space-y-2 overflow-y-auto max-h-[520px] pr-0.5">
                   {cards.map((it) => (
@@ -878,10 +889,10 @@ export default function Approvals() {
                   ))}
                   {cards.length === 0 && (
                     <div
-                      className="text-center text-[11.5px] py-10 rounded-2xl border border-dashed"
+                      className="text-center text-[11.5px] py-12 rounded-2xl border border-dashed"
                       style={{ color: "#b6c3ba", borderColor: "#e2e8e4" }}
                     >
-                      Empty
+                      No {col.label.toLowerCase()} submissions
                     </div>
                   )}
                 </div>
