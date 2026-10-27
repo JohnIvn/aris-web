@@ -289,8 +289,8 @@ export default function Login({
               </div>
             </label>
 
-            <label className="flex items-center justify-between">
-              <div className="flex w-fit items-center gap-2.5 cursor-pointer select-none">
+            <div className="flex items-center justify-between">
+              <div onClick={() => setRemember((r) => !r)} className="flex w-fit items-center gap-2.5 cursor-pointer select-none">
                 <button
                   type="button"
                   onClick={() => setRemember((r) => !r)}
@@ -328,7 +328,7 @@ export default function Login({
               >
                 Forgot password?
               </button>
-            </label>
+            </div>
 
             <button
               type="submit"
