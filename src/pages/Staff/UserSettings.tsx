@@ -192,6 +192,14 @@ export default function UserSettings() {
         "POST"
       );
       setProfile((current) => ({ ...current, avatar_url: response.avatar_url }));
+      try {
+        const stored = JSON.parse(sessionStorage.getItem("aris-user") ?? "null");
+        if (stored) {
+          stored.avatar_url = response.avatar_url;
+          sessionStorage.setItem("aris-user", JSON.stringify(stored));
+        }
+        window.dispatchEvent(new Event("aris-user-updated"));
+      } catch {}
     } catch (reason) {
       setProfileMessage(
         reason instanceof Error ? reason.message : "Unable to update photo."
@@ -332,7 +340,7 @@ export default function UserSettings() {
         <Card className="flex flex-col items-center text-center overflow-hidden">
           {profile.avatar_url ? (
             <img
-              src={`${getBaseUrl()}${profile.avatar_url}`}
+              src={profile.avatar_url.startsWith("http") ? profile.avatar_url : `${getBaseUrl()}${profile.avatar_url}`}
               alt="Profile"
               className="w-20 h-20 rounded-full object-cover"
             />

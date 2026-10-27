@@ -5,6 +5,7 @@ import { BRAND, BRAND_DARK, mainNav, managementNav, settingsNav, supportNav, typ
 import type { UserAccount } from "@/data/demoAccounts"
 import { GhostButton, Modal, PrimaryButton, SearchInput } from "@/components/ui"
 import { useResource } from "@/hooks/useResource"
+import getBaseUrl from "@/utils/GetBaseUrl"
 
 type AdminAnnouncement = {
   id: string
@@ -26,6 +27,24 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const { data: rawAnnouncements } = useResource<AdminAnnouncement[]>("/announcements", [])
   const announcements = Array.isArray(rawAnnouncements) ? rawAnnouncements : []
+  const { data: profile, reload: reloadProfile } = useResource<{ avatar_url?: string | null }>("/users/me/profile", {})
+  const [imgError, setImgError] = useState(false)
+
+  useEffect(() => {
+    const handler = () => {
+      setImgError(false)
+      reloadProfile()
+    }
+    window.addEventListener("aris-user-updated", handler)
+    return () => window.removeEventListener("aris-user-updated", handler)
+  }, [reloadProfile])
+
+  const rawAvatarUrl = profile?.avatar_url || user.avatar_url
+  const avatarSrc = rawAvatarUrl
+    ? rawAvatarUrl.startsWith("http")
+      ? rawAvatarUrl
+      : `${getBaseUrl()}${rawAvatarUrl}`
+    : null
   const [readIds, setReadIds] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem("aris_admin_read_notifications")
@@ -205,10 +224,19 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
             style={{ background: "#f4f6f5" }}
           >
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 overflow-hidden"
               style={{ background: BRAND }}
             >
-              {user.name.slice(0, 2).toUpperCase()}
+              {avatarSrc && !imgError ? (
+                <img
+                  src={avatarSrc}
+                  alt={user.name}
+                  onError={() => setImgError(true)}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user.name.slice(0, 2).toUpperCase()
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p
@@ -266,10 +294,19 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
               aria-haspopup="menu"
               aria-expanded={showProfileMenu}
               onClick={() => { setShowMobileMenu(false); setShowProfileMenu((v) => !v) }}
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white overflow-hidden"
               style={{ background: BRAND }}
             >
-              {user.name.slice(0, 2).toUpperCase()}
+              {avatarSrc && !imgError ? (
+                <img
+                  src={avatarSrc}
+                  alt={user.name}
+                  onError={() => setImgError(true)}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user.name.slice(0, 2).toUpperCase()
+              )}
             </button>
           </div>
 
@@ -356,10 +393,19 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
           <header className="flex flex-col gap-2 flex-shrink-0 pb-2 pl-1 pr-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold overflow-hidden"
                 style={{ background: BRAND_DARK }}
               >
-                {user.name.slice(0, 2).toUpperCase()}
+                {avatarSrc && !imgError ? (
+                <img
+                  src={avatarSrc}
+                  alt={user.name}
+                  onError={() => setImgError(true)}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user.name.slice(0, 2).toUpperCase()
+              )}
               </div>
               <div>
                 <p

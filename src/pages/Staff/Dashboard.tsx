@@ -17,6 +17,7 @@ import arisLogo from "@/assets/brand/image.png";
 import { BRAND, BRAND_DARK } from "@/config/navigation";
 import { useAuth } from "@/app/authContext";
 import { useResource } from "@/hooks/useResource";
+import getBaseUrl from "@/utils/GetBaseUrl";
 import {
   Card,
   CardHeader,
@@ -41,6 +42,7 @@ type Profile = {
   position?: string | null;
   department?: string | null;
   phone?: string | null;
+  avatar_url?: string | null;
 };
 
 type StaffAnnouncement = {
@@ -206,7 +208,24 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  const { data: profile } = useResource<Profile>("/users/me/profile", {});
+  const { data: profile, reload: reloadProfile } = useResource<Profile>("/users/me/profile", {});
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    const handler = () => {
+      setImgError(false);
+      reloadProfile();
+    };
+    window.addEventListener("aris-user-updated", handler);
+    return () => window.removeEventListener("aris-user-updated", handler);
+  }, [reloadProfile]);
+
+  const rawAvatarUrl = profile?.avatar_url || user.avatar_url;
+  const avatarSrc = rawAvatarUrl
+    ? rawAvatarUrl.startsWith("http")
+      ? rawAvatarUrl
+      : `${getBaseUrl()}${rawAvatarUrl}`
+    : null;
   const { data: rawAnnouncements } = useResource<StaffAnnouncement[]>(
     "/announcements",
     []
@@ -424,10 +443,19 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
               }}
             >
               <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0 overflow-hidden"
                 style={{ background: BRAND }}
               >
-                {displayName.slice(0, 2).toUpperCase()}
+                {avatarSrc && !imgError ? (
+                  <img
+                    src={avatarSrc}
+                    alt={displayName}
+                    onError={() => setImgError(true)}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  displayName.slice(0, 2).toUpperCase()
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p
@@ -480,10 +508,19 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           <header className="flex flex-col gap-2 flex-shrink-0 pb-2 pl-1 pr-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold flex-shrink-0"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[13px] font-semibold flex-shrink-0 overflow-hidden"
                 style={{ background: BRAND_DARK }}
               >
-                {displayName.slice(0, 2).toUpperCase()}
+                {avatarSrc && !imgError ? (
+                  <img
+                    src={avatarSrc}
+                    alt={displayName}
+                    onError={() => setImgError(true)}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  displayName.slice(0, 2).toUpperCase()
+                )}
               </div>
               <div>
                 <p
