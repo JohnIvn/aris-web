@@ -330,8 +330,9 @@ function RowMenu({ label, items }: { label: string; items: MenuItem[] }) {
                   close();
                   item.onClick();
                 }}
-                className={`block h-9 w-full rounded-md px-3 text-left text-[12.5px] ${item.danger ? "text-red-700 hover:bg-[#fbecec]" : "text-[#111c14] hover:bg-[#f4f6f5]"
-                  }`}
+                className={`block h-9 w-full rounded-md px-3 text-left text-[12.5px] ${
+                  item.danger ? "text-red-700 hover:bg-[#fbecec]" : "text-[#111c14] hover:bg-[#f4f6f5]"
+                }`}
               >
                 {item.label}
               </button>
@@ -345,23 +346,24 @@ function RowMenu({ label, items }: { label: string; items: MenuItem[] }) {
 
 /* ------------------------------------------------------------------ */
 /* Responsive data table                                               */
-/* - lg+ : grid table. Only the table body scrolls sideways.           */
+/* - lg+ : real <table>. Columns size to their widest content, and    */
+/*         columns with maxWidth wrap instead of truncating.           */
 /* - <lg : compact single-line rows (avatar, name, status dot, menu).  */
 /*         Full details live in the faculty modal and Edit.            */
 /* ------------------------------------------------------------------ */
 
 type TableColumn<T> = {
   header: string;
-  /** CSS grid track, e.g. "80px" or "minmax(0,2fr)" */
-  width: string;
   cell: (row: T) => ReactNode;
+  /** If set, the cell grows to its content up to this width (px), then wraps. */
+  maxWidth?: number;
+  /** Minimum width (px) for wrapping columns so they don't get squeezed. */
+  minWidth?: number;
 };
 
 function DataTable<T extends { id: string }>({
   rows,
-  minWidth,
   primaryHeader,
-  primaryWidth,
   renderPrimary,
   columns,
   getMenu,
@@ -372,9 +374,7 @@ function DataTable<T extends { id: string }>({
   emptyText,
 }: {
   rows: T[];
-  minWidth: number;
   primaryHeader: string;
-  primaryWidth: string;
   renderPrimary: (row: T, index: number) => ReactNode;
   columns: TableColumn<T>[];
   getMenu: (row: T) => MenuItem[];
@@ -385,10 +385,6 @@ function DataTable<T extends { id: string }>({
   mobileMeta?: (row: T) => ReactNode;
   emptyText: string;
 }) {
-  const gridStyle = {
-    gridTemplateColumns: `${primaryWidth} ${columns.map((c) => c.width).join(" ")} 56px`,
-  };
-
   if (rows.length === 0) {
     return (
       <div className="px-4 py-12 text-center text-[13px]" style={{ color: "#8fa394" }}>
@@ -401,47 +397,67 @@ function DataTable<T extends { id: string }>({
     <>
       {/* Desktop table */}
       <div className="hidden overflow-x-auto lg:block">
-        <div style={{ minWidth }}>
-          <div
-            className="grid items-center gap-x-4 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide [&>span]:truncate"
-            style={{ ...gridStyle, color: "#b6c3ba", background: "#fafbfa" }}
-          >
-            <span>{primaryHeader}</span>
-            {columns.map((c) => (
-              <span key={c.header}>{c.header}</span>
-            ))}
-            <span className="text-right">Action</span>
-          </div>
-
-          {rows.map((row, i) => (
-            <div
-              key={row.id}
-              onClick={() => onRowClick(row)}
-              className="grid cursor-pointer items-center gap-x-4 border-t px-5 py-3 transition-colors hover:bg-[#fafbfa]"
-              style={{ ...gridStyle, borderColor: "#f2f4f2" }}
+        <table className="w-full border-collapse text-left">
+          <thead>
+            <tr
+              className="text-[11px] font-semibold uppercase tracking-wide"
+              style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
-              <button
-                type="button"
-                aria-label={rowLabel(row)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRowClick(row);
-                }}
-                className="flex min-w-0 items-center gap-3 text-left"
-              >
-                {renderPrimary(row, i)}
-              </button>
+              <th className="w-full whitespace-nowrap py-2.5 pl-5 pr-4 font-semibold">{primaryHeader}</th>
               {columns.map((c) => (
-                <div key={c.header} className="min-w-0 truncate text-[13px]" style={{ color: "#3d4a41" }}>
-                  {c.cell(row)}
-                </div>
+                <th key={c.header} className="whitespace-nowrap px-4 py-2.5 font-semibold">
+                  {c.header}
+                </th>
               ))}
-              <div className="flex justify-end">
-                <RowMenu label={menuLabel(row)} items={getMenu(row)} />
-              </div>
-            </div>
-          ))}
-        </div>
+              <th className="whitespace-nowrap py-2.5 pl-4 pr-5 text-right font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr
+                key={row.id}
+                onClick={() => onRowClick(row)}
+                className="cursor-pointer border-t transition-colors hover:bg-[#fafbfa]"
+                style={{ borderColor: "#f2f4f2" }}
+              >
+                <td className="min-w-[240px] py-3 pl-5 pr-4 align-middle">
+                  <button
+                    type="button"
+                    aria-label={rowLabel(row)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRowClick(row);
+                    }}
+                    className="flex items-center gap-3 text-left"
+                  >
+                    {renderPrimary(row, i)}
+                  </button>
+                </td>
+
+                {columns.map((c) => (
+                  <td key={c.header} className="px-4 py-3 align-middle text-[13px]" style={{ color: "#3d4a41" }}>
+                    {c.maxWidth ? (
+                      <div
+                        className="whitespace-normal break-words"
+                        style={{ maxWidth: c.maxWidth, minWidth: c.minWidth }}
+                      >
+                        {c.cell(row)}
+                      </div>
+                    ) : (
+                      <div className="whitespace-nowrap">{c.cell(row)}</div>
+                    )}
+                  </td>
+                ))}
+
+                <td className="w-px py-3 pl-4 pr-5 align-middle">
+                  <div className="flex justify-end">
+                    <RowMenu label={menuLabel(row)} items={getMenu(row)} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Mobile / tablet compact rows */}
@@ -479,10 +495,10 @@ function UsersState({ total, active }: { total: number; active: number }) {
   const inactive = total - active;
   return (
     <div className="flex min-w-0 flex-col">
-      <span className="truncate text-[13px] font-medium" style={{ color: "#111c14" }}>
+      <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
         {total} {total === 1 ? "user" : "users"}
       </span>
-      <span className="truncate text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
+      <span className="text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
         {active} active{inactive > 0 ? ` · ${inactive} inactive` : ""}
       </span>
     </div>
@@ -1007,50 +1023,49 @@ export default function Curriculum() {
   ];
 
   /* ---------------- Table definitions ---------------- */
+  // No fixed widths: columns size to their content.
+  // maxWidth/minWidth are only set on text-heavy columns so they wrap.
 
   const deptColumns: TableColumn<Department>[] = [
-    { header: "Code", width: "80px", cell: (d) => <span className="font-mono font-medium">{d.code}</span> },
-    { header: "Description", width: "minmax(0,2fr)", cell: (d) => d.description || "—" },
+    { header: "Code", cell: (d) => <span className="font-mono font-medium">{d.code}</span> },
+    { header: "Description", maxWidth: 360, minWidth: 200, cell: (d) => d.description || "—" },
     {
       header: "Users / State",
-      width: "minmax(0,1.3fr)",
       cell: (d) => {
         const { total, active } = countsFor(getDeptMembers(d), d.professor_count ?? 0, d.is_active);
         return <UsersState total={total} active={active} />;
       },
     },
-    { header: "Status", width: "120px", cell: (d) => <StatusBadge active={d.is_active} /> },
+    { header: "Status", cell: (d) => <StatusBadge active={d.is_active} /> },
   ];
 
   const rankColumns: TableColumn<AcademicRank>[] = [
-    { header: "Code", width: "100px", cell: (r) => <span className="font-mono">{r.code || "—"}</span> },
-    { header: "Level", width: "80px", cell: (r) => <span className="font-medium" style={{ color: "#111c14" }}>Tier #{r.hierarchy_level}</span> },
-    { header: "Description", width: "minmax(0,1.8fr)", cell: (r) => r.description || "—" },
+    { header: "Code", cell: (r) => <span className="font-mono">{r.code || "—"}</span> },
+    { header: "Level", cell: (r) => <span className="font-medium" style={{ color: "#111c14" }}>Tier #{r.hierarchy_level}</span> },
+    { header: "Description", maxWidth: 360, minWidth: 200, cell: (r) => r.description || "—" },
     {
       header: "Users / State",
-      width: "minmax(0,1.3fr)",
       cell: (r) => {
         const { total, active } = countsFor(getRankMembers(r), r.professor_count ?? 0, r.is_active);
         return <UsersState total={total} active={active} />;
       },
     },
-    { header: "Status", width: "120px", cell: (r) => <StatusBadge active={r.is_active} /> },
+    { header: "Status", cell: (r) => <StatusBadge active={r.is_active} /> },
   ];
 
   const courseColumns: TableColumn<Course>[] = [
-    { header: "Code", width: "90px", cell: (c) => <span className="font-mono font-medium">{c.code}</span> },
-    { header: "Department", width: "minmax(0,1.3fr)", cell: (c) => c.department_name || "Unassigned" },
-    { header: "Units", width: "56px", cell: (c) => <span className="font-medium" style={{ color: "#111c14" }}>{c.units}</span> },
-    { header: "Description", width: "minmax(0,1.6fr)", cell: (c) => c.description || "—" },
+    { header: "Code", cell: (c) => <span className="font-mono font-medium">{c.code}</span> },
+    { header: "Department", maxWidth: 200, minWidth: 120, cell: (c) => c.department_name || "Unassigned" },
+    { header: "Units", cell: (c) => <span className="font-medium" style={{ color: "#111c14" }}>{c.units}</span> },
+    { header: "Description", maxWidth: 360, minWidth: 200, cell: (c) => c.description || "—" },
     {
       header: "Users / State",
-      width: "minmax(0,1.3fr)",
       cell: (c) => {
         const { total, active } = countsFor(getCourseMembers(c), c.professor_count ?? 0, c.is_active);
         return <UsersState total={total} active={active} />;
       },
     },
-    { header: "Status", width: "120px", cell: (c) => <StatusBadge active={c.is_active} /> },
+    { header: "Status", cell: (c) => <StatusBadge active={c.is_active} /> },
   ];
 
   return (
@@ -1207,7 +1222,7 @@ export default function Curriculum() {
           className="flex flex-col gap-2 border-b p-3 lg:flex-row lg:items-center lg:justify-between lg:p-4"
           style={{ borderColor: "#eef1ef" }}
         >
-          {/* Both tab groups share one horizontally scrolling row */}
+          {/* Stacked on mobile, side by side on lg+. Each group scrolls on its own. */}
           <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center">
             <div className="min-w-0 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
               <Tabs
@@ -1235,9 +1250,7 @@ export default function Curriculum() {
         {activeTab === "Departments" && (
           <DataTable<Department>
             rows={filteredDepartments}
-            minWidth={820}
             primaryHeader="Department / College"
-            primaryWidth="minmax(0,2.2fr)"
             columns={deptColumns}
             emptyText="No departments found matching your criteria."
             onRowClick={setViewDeptMembers}
@@ -1273,9 +1286,7 @@ export default function Curriculum() {
         {activeTab === "Academic Ranks" && (
           <DataTable<AcademicRank>
             rows={filteredRanks}
-            minWidth={940}
             primaryHeader="Rank Title"
-            primaryWidth="minmax(0,2fr)"
             columns={rankColumns}
             emptyText="No academic ranks found matching your criteria."
             onRowClick={setViewRankMembers}
@@ -1311,9 +1322,7 @@ export default function Curriculum() {
         {activeTab === "Courses" && (
           <DataTable<Course>
             rows={filteredCourses}
-            minWidth={1040}
             primaryHeader="Course Title"
-            primaryWidth="minmax(0,2fr)"
             columns={courseColumns}
             emptyText="No courses found matching your criteria."
             onRowClick={setViewCourseMembers}
