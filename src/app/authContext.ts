@@ -9,10 +9,11 @@ export const EMPTY_USER: UserAccount = {
 };
 
 export interface AuthContextType {
-  signOut: () => void;
+  signOut: () => void | Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   user: UserAccount;
   isAuthenticated: boolean;
+  isLoading?: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -20,6 +21,7 @@ export const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   user: EMPTY_USER,
   isAuthenticated: false,
+  isLoading: false,
 });
 
 export const useAuth = () => useContext(AuthContext);

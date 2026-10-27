@@ -19,6 +19,45 @@ interface SignInEnvelope {
 	error?: string;
 }
 
+export function getStoredToken(): string | null {
+	if (typeof window === "undefined") return null;
+	return localStorage.getItem("aris-token") || sessionStorage.getItem("aris-token");
+}
+
+export function getStoredUser(): UserAccount | null {
+	if (typeof window === "undefined") return null;
+	try {
+		const raw = localStorage.getItem("aris-user") || sessionStorage.getItem("aris-user");
+		if (!raw) return null;
+		const user = JSON.parse(raw) as UserAccount | null;
+		return user?.id && user?.email && isUserRole(user.role) ? user : null;
+	} catch {
+		clearStoredSession();
+		return null;
+	}
+}
+
+export function setStoredSession(user: UserAccount, token?: string): void {
+	if (typeof window === "undefined") return;
+	const userJson = JSON.stringify(user);
+	localStorage.setItem("aris-user", userJson);
+	sessionStorage.setItem("aris-user", userJson);
+	if (token) {
+		localStorage.setItem("aris-token", token);
+		sessionStorage.setItem("aris-token", token);
+	}
+}
+
+export function clearStoredSession(): void {
+	if (typeof window === "undefined") return;
+	localStorage.removeItem("aris-user");
+	localStorage.removeItem("aris-token");
+	sessionStorage.removeItem("aris-user");
+	sessionStorage.removeItem("aris-token");
+}
+
+export const clearSessionStorage = clearStoredSession;
+
 export function authenticateDemo(email: string, password: string): AuthSession {
 	const account = demoAccounts.find(
 		(candidate) => candidate.email.toLowerCase() === email.trim().toLowerCase(),
@@ -67,9 +106,79 @@ export async function signIn(email: string, password: string): Promise<AuthSessi
 	if (!isUserRole(payload.user.role)) {
 		throw new Error("This account role cannot access ARIS Web.");
 	}
+
+	setStoredSession(payload.user, payload.token);
+
 	return {
 		...payload,
 	};
+}
+
+export async function verifySession(): Promise<AuthSession | null> {
+	try {
+		const response = await apiClient.get<SignInPayload | SignInEnvelope>("/auth/verify", {
+			timeout: 5000,
+		});
+
+		if ("ok" in response.data && response.data.ok === false) {
+			clearStoredSession();
+			return null;
+		}
+
+		const payload = "data" in response.data
+			? (response.data as SignInEnvelope).data
+			: (response.data as SignInPayload);
+
+		if (!payload?.user?.id || !payload.user.email) {
+			clearStoredSession();
+			return null;
+		}
+
+		if (!isUserRole(payload.user.role)) {
+			clearStoredSession();
+			return null;
+		}
+
+		setStoredSession(payload.user, payload.token);
+
+		return {
+			user: payload.user,
+			token: payload.token,
+		};
+	} catch (error) {
+		if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403 || error.response?.status === 404)) {
+			clearStoredSession();
+			return null;
+		}
+
+		const storedToken = getStoredToken();
+		if (storedToken === "demo-access-token") {
+			const storedUser = getStoredUser();
+			if (storedUser) {
+				return { user: storedUser, token: "demo-access-token" };
+			}
+		}
+
+		// If server is unreachable or timed out, keep user session if already stored
+		const currentUser = getStoredUser();
+		if (currentUser && storedToken && (!axios.isAxiosError(error) || !error.response)) {
+			return { user: currentUser, token: storedToken };
+		}
+
+		clearStoredSession();
+		return null;
+	}
+}
+
+export async function signOut(): Promise<void> {
+	try {
+		const token = getStoredToken() ?? undefined;
+		await apiClient.post("/auth/signout", { token });
+	} catch (error) {
+		console.warn("[Auth] Backend signout call failed or was unreachable:", error);
+	} finally {
+		clearStoredSession();
+	}
 }
 
 function isUserRole(value: unknown): value is UserRole {

@@ -151,9 +151,10 @@ export default function UserSettings() {
       const response = await saveResource<{ avatar_url: string }>("/users/me/photo", form, "POST");
       setProfile((current) => ({ ...current, avatar_url: response.avatar_url }));
       try {
-        const stored = JSON.parse(sessionStorage.getItem("aris-user") ?? "null");
+        const stored = JSON.parse((localStorage.getItem("aris-user") || sessionStorage.getItem("aris-user")) ?? "null");
         if (stored) {
           stored.avatar_url = response.avatar_url;
+          localStorage.setItem("aris-user", JSON.stringify(stored));
           sessionStorage.setItem("aris-user", JSON.stringify(stored));
         }
         window.dispatchEvent(new Event("aris-user-updated"));

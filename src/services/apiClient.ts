@@ -23,9 +23,9 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const token =
-    typeof sessionStorage === "undefined"
+    typeof window === "undefined"
       ? null
-      : sessionStorage.getItem("aris-token");
+      : localStorage.getItem("aris-token") || sessionStorage.getItem("aris-token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
   console.log("[ARIS API REQUEST]", {
@@ -59,6 +59,19 @@ apiClient.interceptors.response.use(
         response: error.response?.data,
         message: error.message,
       });
+
+      if (error.response?.status === 401) {
+        const url = error.config?.url ?? "";
+        if (!url.includes("/auth/signin") && !url.includes("/auth/verify")) {
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("aris-user");
+            localStorage.removeItem("aris-token");
+            sessionStorage.removeItem("aris-user");
+            sessionStorage.removeItem("aris-token");
+            window.dispatchEvent(new CustomEvent("aris:session-expired"));
+          }
+        }
+      }
     } else {
       console.error("[ARIS API ERROR]", error);
     }
