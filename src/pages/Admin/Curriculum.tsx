@@ -199,10 +199,6 @@ function CustomPieTooltip({ active, payload }: any) {
 /* Members modal pieces                                                */
 /* ------------------------------------------------------------------ */
 
-/**
- * Uses flex-wrap (not a viewport breakpoint) so the chips drop under the
- * name whenever the *modal* is too narrow, not only on small screens.
- */
 function MemberRow({
   p, colorIndex, chip, chipClass, subtitle,
 }: {
@@ -247,10 +243,7 @@ function MembersFooter({ text, onClose }: { text: string; onClose: () => void })
 }
 
 /* ------------------------------------------------------------------ */
-/* Row action menu                                                     */
-/* Rendered in a portal with fixed positioning so the table's          */
-/* scroll container can never clip it (and it flips up near the        */
-/* bottom of the screen).                                              */
+/* Row action menu (portal + fixed positioning, flips up near bottom)  */
 /* ------------------------------------------------------------------ */
 
 type MenuItem = { label: string; onClick: () => void; danger?: boolean };
@@ -353,9 +346,9 @@ function RowMenu({ label, items }: { label: string; items: MenuItem[] }) {
 
 /* ------------------------------------------------------------------ */
 /* Responsive data table                                               */
-/* - lg+ : grid table. Only the table body scrolls sideways (the       */
-/*         toolbar stays put), with a sensible min width.              */
-/* - <lg : each row becomes a card, no horizontal scrolling at all.    */
+/* - lg+ : grid table. Only the table body scrolls sideways.           */
+/* - <lg : compact single-line rows (avatar, name, status dot, menu).  */
+/*         Full details live in the faculty modal and Edit.            */
 /* ------------------------------------------------------------------ */
 
 type TableColumn<T> = {
@@ -363,8 +356,6 @@ type TableColumn<T> = {
   /** CSS grid track, e.g. "80px" or "minmax(0,2fr)" */
   width: string;
   cell: (row: T) => ReactNode;
-  /** On mobile cards, let this field span the full card width */
-  full?: boolean;
 };
 
 function DataTable<T extends { id: string }>({
@@ -378,6 +369,7 @@ function DataTable<T extends { id: string }>({
   menuLabel,
   rowLabel,
   onRowClick,
+  mobileMeta,
   emptyText,
 }: {
   rows: T[];
@@ -390,6 +382,8 @@ function DataTable<T extends { id: string }>({
   menuLabel: (row: T) => string;
   rowLabel: (row: T) => string;
   onRowClick: (row: T) => void;
+  /** Small element shown on the right of compact mobile rows (e.g. a status dot) */
+  mobileMeta?: (row: T) => ReactNode;
   emptyText: string;
 }) {
   const gridStyle = {
@@ -451,42 +445,28 @@ function DataTable<T extends { id: string }>({
         </div>
       </div>
 
-      {/* Mobile / tablet cards */}
+      {/* Mobile / tablet compact rows */}
       <div className="lg:hidden">
         {rows.map((row, i) => (
           <div
             key={row.id}
             onClick={() => onRowClick(row)}
-            className="cursor-pointer border-t p-4 transition-colors first:border-t-0 active:bg-[#fafbfa]"
+            className="flex cursor-pointer items-center gap-2 border-t px-3 py-2.5 first:border-t-0 active:bg-[#fafbfa]"
             style={{ borderColor: "#f2f4f2" }}
           >
-            <div className="flex items-start gap-2">
-              <button
-                type="button"
-                aria-label={rowLabel(row)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRowClick(row);
-                }}
-                className="flex min-w-0 flex-1 items-center gap-3 text-left"
-              >
-                {renderPrimary(row, i)}
-              </button>
-              <RowMenu label={menuLabel(row)} items={getMenu(row)} />
-            </div>
-
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-              {columns.map((c) => (
-                <div key={c.header} className={`min-w-0 ${c.full ? "col-span-2" : ""}`}>
-                  <dt className="text-[10.5px] font-semibold uppercase tracking-wide" style={{ color: "#b6c3ba" }}>
-                    {c.header}
-                  </dt>
-                  <dd className="mt-0.5 break-words text-[13px]" style={{ color: "#3d4a41" }}>
-                    {c.cell(row)}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            <button
+              type="button"
+              aria-label={rowLabel(row)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRowClick(row);
+              }}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            >
+              {renderPrimary(row, i)}
+            </button>
+            {mobileMeta && <div className="flex-shrink-0">{mobileMeta(row)}</div>}
+            <RowMenu label={menuLabel(row)} items={getMenu(row)} />
           </div>
         ))}
       </div>
@@ -515,6 +495,18 @@ function StatusBadge({ active }: { active: boolean }) {
     <Badge tone={active ? "green" : "gray"} dot>
       {active ? "Active" : "Deactivated"}
     </Badge>
+  );
+}
+
+function StatusDot({ active }: { active: boolean }) {
+  return (
+    <span
+      title={active ? "Active" : "Deactivated"}
+      aria-label={active ? "Active" : "Deactivated"}
+      role="img"
+      className="block h-2.5 w-2.5 rounded-full"
+      style={{ background: active ? "#3a7d4e" : "#c8d6cb" }}
+    />
   );
 }
 
@@ -556,6 +548,8 @@ export default function Curriculum() {
   const [activeTab, setActiveTab] = useState<"Departments" | "Academic Ranks" | "Courses">("Departments");
   const [tab, setTab] = useState<"All" | "Active" | "Deactivated">("All");
   const [search, setSearch] = useState("");
+  // Analytics are collapsed by default on small screens (always visible on lg+)
+  const [showCharts, setShowCharts] = useState(false);
 
   // Row Click Members Modals
   const [viewDeptMembers, setViewDeptMembers] = useState<Department | null>(null);
@@ -1017,7 +1011,7 @@ export default function Curriculum() {
 
   const deptColumns: TableColumn<Department>[] = [
     { header: "Code", width: "80px", cell: (d) => <span className="font-mono font-medium">{d.code}</span> },
-    { header: "Description", width: "minmax(0,2fr)", full: true, cell: (d) => d.description || "—" },
+    { header: "Description", width: "minmax(0,2fr)", cell: (d) => d.description || "—" },
     {
       header: "Users / State",
       width: "minmax(0,1.3fr)",
@@ -1032,7 +1026,7 @@ export default function Curriculum() {
   const rankColumns: TableColumn<AcademicRank>[] = [
     { header: "Code", width: "100px", cell: (r) => <span className="font-mono">{r.code || "—"}</span> },
     { header: "Level", width: "80px", cell: (r) => <span className="font-medium" style={{ color: "#111c14" }}>Tier #{r.hierarchy_level}</span> },
-    { header: "Description", width: "minmax(0,1.8fr)", full: true, cell: (r) => r.description || "—" },
+    { header: "Description", width: "minmax(0,1.8fr)", cell: (r) => r.description || "—" },
     {
       header: "Users / State",
       width: "minmax(0,1.3fr)",
@@ -1048,7 +1042,7 @@ export default function Curriculum() {
     { header: "Code", width: "90px", cell: (c) => <span className="font-mono font-medium">{c.code}</span> },
     { header: "Department", width: "minmax(0,1.3fr)", cell: (c) => c.department_name || "Unassigned" },
     { header: "Units", width: "56px", cell: (c) => <span className="font-medium" style={{ color: "#111c14" }}>{c.units}</span> },
-    { header: "Description", width: "minmax(0,1.6fr)", full: true, cell: (c) => c.description || "—" },
+    { header: "Description", width: "minmax(0,1.6fr)", cell: (c) => c.description || "—" },
     {
       header: "Users / State",
       width: "minmax(0,1.3fr)",
@@ -1059,9 +1053,6 @@ export default function Curriculum() {
     },
     { header: "Status", width: "120px", cell: (c) => <StatusBadge active={c.is_active} /> },
   ];
-
-  // Scrollable tab strips so labels never wrap/clip on narrow screens
-  const tabStrip = "max-w-full overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap";
 
   return (
     <div className="pb-2">
@@ -1113,8 +1104,20 @@ export default function Curriculum() {
         ))}
       </StatGrid>
 
+      {/* Mobile-only toggle for the analytics block */}
+      <button
+        type="button"
+        onClick={() => setShowCharts((v) => !v)}
+        aria-expanded={showCharts}
+        className="mb-3 flex h-10 w-full items-center justify-between rounded-xl border bg-white px-4 text-[13px] font-medium lg:hidden"
+        style={{ borderColor: "#e2e8e4", color: "#3d4a41" }}
+      >
+        {showCharts ? "Hide analytics" : "Show analytics"}
+        <span aria-hidden="true">{showCharts ? "−" : "+"}</span>
+      </button>
+
       {/* --- VISUAL ANALYTICS & GRAPHS --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div className={`${showCharts ? "grid" : "hidden"} lg:grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4`}>
         {/* Graph 1: Department Capacity & Course Load (Bar Chart) */}
         <Card className="flex flex-col min-h-[300px]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
@@ -1200,23 +1203,22 @@ export default function Curriculum() {
       </div>
 
       {/* --- TABLE CARD --- */}
-      {/* Card never scrolls itself: the toolbar stays fixed and only the table body scrolls on lg+. */}
       <Card className="min-w-0 overflow-hidden p-0">
-        <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center lg:justify-between" style={{ borderColor: "#eef1ef" }}>
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className={tabStrip}>
-              <Tabs
-                tabs={categoryTabs}
-                value={activeTab}
-                onChange={(v) => {
-                  setActiveTab(v as any);
-                  setSearch("");
-                }}
-              />
-            </div>
-            <div className={tabStrip}>
-              <Tabs tabs={statusTabs} value={tab} onChange={(v) => setTab(v as any)} />
-            </div>
+        <div
+          className="flex flex-col gap-2 border-b p-3 lg:flex-row lg:items-center lg:justify-between lg:p-4"
+          style={{ borderColor: "#eef1ef" }}
+        >
+          {/* Both tab groups share one horizontally scrolling row */}
+          <div className="flex min-w-0 items-center gap-2 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
+            <Tabs
+              tabs={categoryTabs}
+              value={activeTab}
+              onChange={(v) => {
+                setActiveTab(v as any);
+                setSearch("");
+              }}
+            />
+            <Tabs tabs={statusTabs} value={tab} onChange={(v) => setTab(v as any)} />
           </div>
           <SearchInput
             placeholder={`Search ${activeTab.toLowerCase()}`}
@@ -1238,6 +1240,7 @@ export default function Curriculum() {
             onRowClick={setViewDeptMembers}
             rowLabel={(d) => `View faculty in ${d.name}`}
             menuLabel={(d) => `Actions for ${d.name}`}
+            mobileMeta={(d) => <StatusDot active={d.is_active} />}
             renderPrimary={(dept, i) => {
               const { total } = countsFor(getDeptMembers(dept), dept.professor_count ?? 0, dept.is_active);
               return (
@@ -1275,6 +1278,7 @@ export default function Curriculum() {
             onRowClick={setViewRankMembers}
             rowLabel={(r) => `View accounts with rank ${r.name}`}
             menuLabel={(r) => `Actions for ${r.name}`}
+            mobileMeta={(r) => <StatusDot active={r.is_active} />}
             renderPrimary={(rank, i) => {
               const { total } = countsFor(getRankMembers(rank), rank.professor_count ?? 0, rank.is_active);
               return (
@@ -1312,6 +1316,7 @@ export default function Curriculum() {
             onRowClick={setViewCourseMembers}
             rowLabel={(c) => `View faculty for ${c.title}`}
             menuLabel={(c) => `Actions for ${c.title}`}
+            mobileMeta={(c) => <StatusDot active={c.is_active} />}
             renderPrimary={(course, i) => {
               const { total } = countsFor(getCourseMembers(course), course.professor_count ?? 0, course.is_active);
               return (
@@ -1357,6 +1362,7 @@ export default function Curriculum() {
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
             Faculty assigned to <strong>{viewDeptMembers?.name}</strong> ({viewDeptMembers?.code}).
+            {viewDeptMembers?.description ? ` ${viewDeptMembers.description}` : ""}
           </p>
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
             {deptMembersList.length === 0 ? (
@@ -1398,6 +1404,7 @@ export default function Curriculum() {
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
             Faculty holding <strong>{viewRankMembers?.name}</strong> (Tier #{viewRankMembers?.hierarchy_level}).
+            {viewRankMembers?.description ? ` ${viewRankMembers.description}` : ""}
           </p>
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
             {rankMembersList.length === 0 ? (
@@ -1439,6 +1446,7 @@ export default function Curriculum() {
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
             Faculty for <strong>{viewCourseMembers?.code} - {viewCourseMembers?.title}</strong> ({viewCourseMembers?.units} units · {viewCourseMembers?.department_name || "General Department"}).
+            {viewCourseMembers?.description ? ` ${viewCourseMembers.description}` : ""}
           </p>
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
             {courseMembersList.length === 0 ? (
