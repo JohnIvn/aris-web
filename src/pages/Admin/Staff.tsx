@@ -123,7 +123,7 @@ export default function Staff() {
   const handleSaveStaff = async (updatedData: ProfileModalData) => {
     if (!selected?.id) throw new Error("This staff member does not have a server ID.");
     const isActive = updatedData.status === "Active";
-    const updated = await saveResource(`/staff/${selected.id}`, {
+    const updated = await saveResource<StaffMember>(`/staff/${selected.id}`, {
       firstname: updatedData.firstname.trim(),
       middlename: updatedData.middlename?.trim() || null,
       lastname: updatedData.lastname.trim(),
@@ -167,7 +167,7 @@ export default function Staff() {
     setPendingStatus(null);
     try {
       if (!person.id) throw new Error("This staff member does not have a server ID.");
-      await saveResource(`/staff/${person.id}/status`, { active: person.status !== "Active" }, "PATCH");
+      await saveResource<void>(`/staff/${person.id}/status`, { active: person.status !== "Active" }, "PATCH");
       setSaveError(null);
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update staff status.");
@@ -178,7 +178,7 @@ export default function Staff() {
     setPendingDelete(null);
     try {
       if (!person.id) throw new Error("This staff member does not have a server ID.");
-      await saveResource(`/staff/${person.id}`, undefined, "DELETE");
+      await saveResource<void>(`/staff/${person.id}`, undefined, "DELETE");
       setStaff(staff.filter((item) => item.id !== person.id));
       setSaveError(null);
     } catch (reason) {

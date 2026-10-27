@@ -109,7 +109,7 @@ export default function Professors() {
   const handleSaveProfessor = async (updatedData: ProfileModalData) => {
     if (!selected?.id) throw new Error("This professor does not have a server ID.");
     const isActive = updatedData.status === "Active";
-    const updated = await saveResource(`/professors/${selected.id}`, {
+    const updated = await saveResource<Professor>(`/professors/${selected.id}`, {
       firstname: updatedData.firstname.trim(),
       middlename: updatedData.middlename?.trim() || null,
       lastname: updatedData.lastname.trim(),
@@ -152,7 +152,7 @@ export default function Professors() {
     setPendingToggle(null);
     try {
       if (!person.id) throw new Error("This professor does not have a server ID.");
-      await saveResource(`/professors/${person.id}/status`, { active: !person.active }, "PATCH");
+      await saveResource<void>(`/professors/${person.id}/status`, { active: !person.active }, "PATCH");
       setSaveError(null);
     } catch (reason) {
       setSaveError(reason instanceof Error ? reason.message : "Unable to update professor.");
@@ -163,7 +163,7 @@ export default function Professors() {
     setPendingDelete(null);
     try {
       if (!person.id) throw new Error("This professor does not have a server ID.");
-      await saveResource(`/professors/${person.id}`, undefined, "DELETE");
+      await saveResource<void>(`/professors/${person.id}`, undefined, "DELETE");
       setItems(items.filter((item) => item.id !== person.id));
       setSaveError(null);
     } catch (reason) {
