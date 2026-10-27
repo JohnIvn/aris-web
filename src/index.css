@@ -7,7 +7,9 @@ body,
   height: 100%;
   overflow: hidden;
 }
-
+button {
+  cursor: pointer;
+}
 html {
   font-family: 'DM Sans', sans-serif;
 }
