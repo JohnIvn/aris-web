@@ -235,7 +235,7 @@ function MemberRow({
 
 function MembersFooter({ text, onClose }: { text: string; onClose: () => void }) {
   return (
-    <div className="flex w-full flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex w-fit flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-center text-[12px] text-[#8fa394] sm:text-left">{text}</span>
       <GhostButton onClick={onClose}>Close</GhostButton>
     </div>
