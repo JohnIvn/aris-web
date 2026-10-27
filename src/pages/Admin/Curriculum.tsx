@@ -92,6 +92,13 @@ type CurriculumOverview = {
     total_professors: number;
   };
 };
+type MemberView = Professor & { 
+  name: string; 
+  dept: string; 
+  rank: string; 
+  active: boolean 
+};
+
 
 const initialOverview: CurriculumOverview = {
   departments: [
@@ -173,6 +180,50 @@ function CustomPieTooltip({ active, payload }: any) {
   return null;
 }
 
+function MemberRow({
+  p, colorIndex, chip, chipClass, subtitle,
+}: {
+  p: MemberView;
+  colorIndex: number;
+  chip: string;
+  chipClass: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-[#eef1ef] bg-white p-3 transition-colors hover:bg-[#fafbfa] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar
+          initials={p.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase() || "PR"}
+          color={initialsColor(colorIndex)}
+          size={38}
+        />
+        <div className="min-w-0">
+          <p className="truncate text-[13.5px] font-medium text-[#111c14]">{p.name}</p>
+          <p className="truncate text-[12px] text-[#8fa394]">{subtitle ?? p.email}</p>
+        </div>
+      </div>
+      {/* 50px = avatar 38 + gap 12, so chips line up under the name on mobile */}
+      <div className="flex flex-wrap items-center gap-2 pl-[50px] sm:flex-shrink-0 sm:pl-0">
+        <span className={`max-w-full truncate rounded-lg px-2.5 py-1 text-[12px] font-medium ${chipClass}`}>
+          {chip}
+        </span>
+        <Badge tone={p.active ? "green" : "gray"} dot>
+          {p.active ? "Active" : "Deactivated"}
+        </Badge>
+      </div>
+    </div>
+  );
+}
+
+function MembersFooter({ text, onClose }: { text: string; onClose: () => void }) {
+  return (
+    <div className="flex w-full flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-center text-[12px] text-[#8fa394] sm:text-left">{text}</span>
+      <GhostButton onClick={onClose}>Close</GhostButton>
+    </div>
+  );
+}
+
 export default function Curriculum() {
   const { data: overview, setData: setOverview, reload } = useResource<CurriculumOverview>(
     "/curriculum",
@@ -227,6 +278,13 @@ export default function Curriculum() {
   const [courseUnits, setCourseUnits] = useState(3);
   const [courseDesc, setCourseDesc] = useState("");
   const [courseActive, setCourseActive] = useState(true);
+
+  const DEPT_GRID =
+    "grid min-w-[960px] grid-cols-[minmax(0,2.2fr)_88px_minmax(0,2fr)_minmax(0,1.2fr)_120px_64px] items-center gap-x-4 px-5";
+  const RANK_GRID =
+    "grid min-w-[1050px] grid-cols-[minmax(0,2.2fr)_110px_80px_minmax(0,1.8fr)_minmax(0,1.2fr)_120px_64px] items-center gap-x-4 px-5";
+  const COURSE_GRID =
+    "grid min-w-[1150px] grid-cols-[minmax(0,2fr)_90px_minmax(0,1.3fr)_64px_minmax(0,1.6fr)_minmax(0,1.2fr)_120px_64px] items-center gap-x-4 px-5";
 
   // Toggle Confirm Modal
   const [pendingToggle, setPendingToggle] = useState<{
@@ -824,13 +882,13 @@ export default function Curriculum() {
         {activeTab === "Departments" && (
           <>
             <div
-              className="grid min-w-[1050px] grid-cols-[2.2fr_1.1fr_2fr_1.3fr_1.1fr_0.8fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
+              className={`${DEPT_GRID} py-2.5 text-[11px] uppercase tracking-wide font-semibold [&>span]:truncate`}
               style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
               <span>Department / College</span>
               <span>Code</span>
               <span>Description</span>
-              <span>No. of Users / State</span>
+              <span>Users / State</span>
               <span>Status</span>
               <span className="text-right">Action</span>
             </div>
@@ -850,7 +908,7 @@ export default function Curriculum() {
                   <div
                     key={dept.id}
                     onClick={() => setViewDeptMembers(dept)}
-                    className="grid min-w-[1050px] grid-cols-[2.2fr_1.1fr_2fr_1.3fr_1.1fr_0.8fr] items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer"
+                    className={`${DEPT_GRID} py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer`}
                     style={{ borderColor: "#f2f4f2" }}
                   >
                     <button
@@ -873,7 +931,7 @@ export default function Curriculum() {
                       </div>
                     </button>
 
-                    <span className="text-[13px] font-mono font-medium" style={{ color: "#3d4a41" }}>
+                    <span className="whitespace-nowrap text-[13px] font-mono font-medium" style={{ color: "#3d4a41" }}>
                       {dept.code}
                     </span>
 
@@ -881,11 +939,11 @@ export default function Curriculum() {
                       {dept.description || "—"}
                     </span>
 
-                    <div className="flex flex-col">
-                      <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-[13px] font-medium" style={{ color: "#111c14" }}>
                         {total} {total === 1 ? "user" : "users"}
                       </span>
-                      <span className="text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
+                      <span className="truncate text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
                         {active} active {inactive > 0 ? `· ${inactive} inactive` : ""}
                       </span>
                     </div>
@@ -1036,11 +1094,11 @@ export default function Curriculum() {
                       </div>
                     </button>
 
-                    <span className="text-[13px] font-mono" style={{ color: "#3d4a41" }}>
+                    <span className="whitespace-nowrap text-[13px] font-mono" style={{ color: "#3d4a41" }}>
                       {rank.code || "—"}
                     </span>
 
-                    <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
+                    <span className="whitespace-nowrap text-[13px] font-medium" style={{ color: "#111c14" }}>
                       Tier #{rank.hierarchy_level}
                     </span>
 
@@ -1331,50 +1389,31 @@ export default function Curriculum() {
         align="left"
         size="lg"
         actions={
-          <div className="flex w-full items-center justify-between pt-2">
-            <span className="text-[12px] text-[#8fa394]">
-              {deptMembersList.length} faculty member(s) found
-            </span>
-            <GhostButton onClick={() => setViewDeptMembers(null)}>Close</GhostButton>
-          </div>
+          <MembersFooter
+            text={`${deptMembersList.length} faculty member(s) found`}
+            onClose={() => setViewDeptMembers(null)}
+          />
         }
       >
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
             Faculty assigned to <strong>{viewDeptMembers?.name}</strong> ({viewDeptMembers?.code}).
           </p>
-          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
             {deptMembersList.length === 0 ? (
-              <div className="py-8 text-center text-[#8fa394] bg-[#fafbfa] rounded-2xl border border-dashed border-[#e2e8e4]">
+              <div className="rounded-2xl border border-dashed border-[#e2e8e4] bg-[#fafbfa] py-8 text-center text-[#8fa394]">
                 <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned yet</p>
-                <p className="text-[12px] mt-0.5">Faculty assigned to this department will appear here.</p>
+                <p className="mt-0.5 text-[12px]">Faculty assigned to this department will appear here.</p>
               </div>
             ) : (
               deptMembersList.map((p, idx) => (
-                <div
+                <MemberRow
                   key={p.email || p.id || idx}
-                  className="flex items-center justify-between p-3 rounded-2xl border border-[#eef1ef] bg-white hover:bg-[#fafbfa] transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Avatar
-                      initials={p.name?.split(" ").slice(-1)[0].slice(0, 2).toUpperCase() || "PR"}
-                      color={initialsColor(idx)}
-                      size={38}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] font-medium text-[#111c14] truncate">{p.name}</p>
-                      <p className="text-[12px] text-[#8fa394] truncate">{p.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-[12px] px-2.5 py-1 rounded-lg bg-[#f0f2f0] text-[#3d4a41] font-medium">
-                      {p.rank}
-                    </span>
-                    <Badge tone={p.active ? "green" : "gray"} dot>
-                      {p.active ? "Active" : "Deactivated"}
-                    </Badge>
-                  </div>
-                </div>
+                  p={p}
+                  colorIndex={idx}
+                  chip={p.rank}
+                  chipClass="bg-[#f0f2f0] text-[#3d4a41]"
+                />
               ))
             )}
           </div>
