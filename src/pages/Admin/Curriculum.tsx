@@ -207,6 +207,75 @@ const defaultProfessors: Professor[] = [
 ];
 
 /* ------------------------------------------------------------------ */
+/* Drag-to-scroll hook                                                 */
+/* ------------------------------------------------------------------ */
+
+const DRAG_THRESHOLD = 4;
+
+function useDragScroll<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const state = useRef({ down: false, startX: 0, startScroll: 0, moved: false });
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const s = state.current;
+      const el = ref.current;
+      if (!s.down || !el) return;
+      const dx = e.clientX - s.startX;
+      if (!s.moved && Math.abs(dx) > DRAG_THRESHOLD) {
+        s.moved = true;
+        setDragging(true);
+        window.getSelection()?.removeAllRanges();
+      }
+      if (s.moved) {
+        el.scrollLeft = s.startScroll - dx;
+      }
+    };
+    const onUp = () => {
+      const s = state.current;
+      if (!s.down) return;
+      s.down = false;
+      setDragging(false);
+      // `moved` is cleared by the click-capture handler (or on next mousedown)
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  const onMouseDown = (e: ReactMouseEvent<T>) => {
+    if (e.button !== 0) return;
+    const el = ref.current;
+    if (!el) return;
+    // Don't start a drag from the row action menu button
+    if ((e.target as HTMLElement).closest('[aria-haspopup="menu"]')) return;
+    state.current = {
+      down: true,
+      startX: e.clientX,
+      startScroll: el.scrollLeft,
+      moved: false,
+    };
+  };
+
+  // Swallow the click that follows a drag so rows don't open modals
+  const onClickCapture = (e: ReactMouseEvent<T>) => {
+    if (state.current.moved) {
+      e.stopPropagation();
+      e.preventDefault();
+      state.current.moved = false;
+    }
+  };
+
+  const onDragStart = (e: React.DragEvent<T>) => e.preventDefault();
+
+  return { ref, dragging, handlers: { onMouseDown, onClickCapture, onDragStart } };
+}
+
+/* ------------------------------------------------------------------ */
 /* Chart tooltips                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -430,6 +499,8 @@ function DataTable<T extends { id: string }>({
   mobileMeta?: (row: T) => ReactNode;
   emptyText: string;
 }) {
+  const { ref: scrollRef, dragging, handlers } = useDragScroll<HTMLDivElement>();
+
   if (rows.length === 0) {
     return (
       <div className="px-4 py-12 text-center text-[13px]" style={{ color: "#8fa394" }}>
@@ -440,14 +511,28 @@ function DataTable<T extends { id: string }>({
 
   return (
     <>
-      <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full border-collapse text-left">
+      {/* Desktop: horizontally scrollable table (drag with mouse, or use trackpad / scrollbar) */}
+      <div
+        ref={scrollRef}
+        {...handlers}
+        className={`hidden overflow-x-auto overscroll-x-contain lg:block ${
+          dragging ? "cursor-grabbing select-none" : "cursor-grab"
+        }`}
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
+        {/*
+          FIX: `w-max min-w-full` instead of `w-full min-w-max`.
+          The table is at least as wide as the card, and only grows as wide
+          as its content needs, so columns no longer get stretched apart.
+        */}
+        <table className="w-max min-w-full border-collapse text-left">
           <thead>
             <tr
               className="text-[11px] font-semibold uppercase tracking-wide"
               style={{ color: "#b6c3ba", background: "#fafbfa" }}
             >
-              <th className="w-full whitespace-nowrap py-2.5 pl-5 pr-4 font-semibold">{primaryHeader}</th>
+              {/* FIX: removed `w-full` here (it caused the huge column gaps) */}
+              <th className="min-w-[260px] whitespace-nowrap py-2.5 pl-5 pr-4 font-semibold">{primaryHeader}</th>
               {columns.map((c) => (
                 <th key={c.header} className="whitespace-nowrap px-4 py-2.5 font-semibold">
                   {c.header}
@@ -461,10 +546,10 @@ function DataTable<T extends { id: string }>({
               <tr
                 key={row.id}
                 onClick={() => onRowClick(row)}
-                className="cursor-pointer border-t transition-colors hover:bg-[#fafbfa]"
+                className="border-t transition-colors hover:bg-[#fafbfa]"
                 style={{ borderColor: "#f2f4f2" }}
               >
-                <td className="min-w-[240px] py-3 pl-5 pr-4 align-middle">
+                <td className="min-w-[260px] py-3 pl-5 pr-4 align-middle">
                   <button
                     type="button"
                     aria-label={rowLabel(row)}
