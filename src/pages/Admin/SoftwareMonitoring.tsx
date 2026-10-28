@@ -314,7 +314,7 @@ export default function SoftwareMonitoring() {
               </svg>
               Export
             </GhostButton>
-            <div className="flex items-center gap-1 bg-[#eef1ef] p-1 rounded-xl">
+            <div className="flex flex-wrap items-center gap-1 bg-[#eef1ef] p-1 rounded-xl">
               {(["24h", "7d", "30d"] as const).map((range) => (
                 <button
                   key={range}
