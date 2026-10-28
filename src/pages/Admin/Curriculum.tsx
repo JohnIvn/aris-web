@@ -610,7 +610,7 @@ export default function Curriculum() {
 
   // Row Click Members / Offerings Modals
   const [viewCollegePrograms, setViewCollegePrograms] = useState<College | null>(null);
-  const [viewDeptMembers, setViewDeptMembers] = useState<Department | null>(null);
+  const [viewDeptPrograms, setViewDeptPrograms] = useState<Department | null>(null);
   const [viewRankMembers, setViewRankMembers] = useState<AcademicRank | null>(null);
   const [viewCourseMembers, setViewCourseMembers] = useState<Course | null>(null);
 
@@ -692,7 +692,19 @@ export default function Curriculum() {
     return [...new Set([...fromDesc, ...fromProgTable])];
   }, [overview.programs]);
 
-  // Helper functions to get users/professors for departments, ranks, courses
+  // Extract all assigned academic programs / degree offerings for a department
+  const getDeptPrograms = useCallback((dept: Department) => {
+    const fromDesc = (dept.description || "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => Boolean(l) && !l.includes("|"));
+    const fromProgTable = overview.programs
+      .filter((p) => (p.department_name || "").toLowerCase().trim() === dept.name.toLowerCase().trim() || p.department_id === dept.id)
+      .map((p) => p.name);
+    return [...new Set([...fromDesc, ...fromProgTable])];
+  }, [overview.programs]);
+
+  // Helper functions to get users/professors for ranks, courses
   const getDeptMembers = (dept: Department) => {
     const targetName = dept.name.toLowerCase().trim();
     const targetCode = (dept.code || "").toLowerCase().trim();
@@ -726,10 +738,6 @@ export default function Curriculum() {
   };
 
   // Members lists filtered for detail modals
-  const deptMembersList = useMemo(
-    () => (viewDeptMembers ? getDeptMembers(viewDeptMembers) : []),
-    [viewDeptMembers, professors],
-  );
   const rankMembersList = useMemo(
     () => (viewRankMembers ? getRankMembers(viewRankMembers) : []),
     [viewRankMembers, professors],
@@ -1351,21 +1359,40 @@ export default function Curriculum() {
   const deptColumns: TableColumn<Department>[] = [
     { header: "Code", cell: (d) => <span className="font-mono font-medium">{d.code}</span> },
     { header: "College", maxWidth: 220, minWidth: 140, cell: (d) => d.college_name || "Unassigned" },
-    { header: "Description", maxWidth: 280, minWidth: 160, cell: (d) => d.description || "—" },
     {
-      header: "Programs",
-      cell: (d) => (
-        <span className="font-medium" style={{ color: "#111c14" }}>
-          {d.program_count ?? overview.programs.filter((p) => p.department_name === d.name).length}
-        </span>
-      ),
+      header: "Assigned Programs / Offerings",
+      maxWidth: 320,
+      minWidth: 200,
+      cell: (d) => {
+        const progs = getDeptPrograms(d);
+        if (progs.length === 0) return <span className="text-[#8fa394] text-[12px] italic">None assigned</span>;
+        return (
+          <div className="flex flex-wrap items-center gap-1.5 py-1">
+            {progs.slice(0, 2).map((prog, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#f0f4f1] text-[#2b5a38] border border-[#d8e2da] max-w-[150px] truncate"
+                title={prog}
+              >
+                {prog}
+              </span>
+            ))}
+            {progs.length > 2 && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#eef1ef] text-[#556359]">
+                +{progs.length - 2} more
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
-      header: "Users / State",
-      cell: (d) => {
-        const { total, active } = countsFor(getDeptMembers(d), d.professor_count ?? 0, d.is_active);
-        return <UsersState total={total} active={active} />;
-      },
+      header: "Programs Count",
+      cell: (d) => (
+        <span className="font-medium" style={{ color: "#111c14" }}>
+          {getDeptPrograms(d).length}
+        </span>
+      ),
     },
     { header: "Status", cell: (d) => <StatusBadge active={d.is_active} /> },
   ];
@@ -1641,21 +1668,24 @@ export default function Curriculum() {
             primaryHeader="Department"
             columns={deptColumns}
             emptyText="No departments found matching your criteria."
-            onRowClick={setViewDeptMembers}
-            rowLabel={(d) => `View faculty in ${d.name}`}
+            onRowClick={setViewDeptPrograms}
+            rowLabel={(d) => `View assigned programs in ${d.name}`}
             menuLabel={(d) => `Actions for ${d.name}`}
             mobileMeta={(d) => <StatusDot active={d.is_active} />}
             renderPrimary={(dept, i) => {
-              const { total } = countsFor(getDeptMembers(dept), dept.professor_count ?? 0, dept.is_active);
+              const assignedPrograms = getDeptPrograms(dept);
               return (
                 <>
                   <Avatar initials={dept.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 1)} />
-                  <PrimaryText title={dept.name} subtitle={`${dept.code} • ${total} faculty`} />
+                  <PrimaryText
+                    title={dept.name}
+                    subtitle={`${dept.code} • ${assignedPrograms.length} assigned program${assignedPrograms.length === 1 ? "" : "s"}`}
+                  />
                 </>
               );
             }}
             getMenu={(dept) => [
-              { label: "View faculty", onClick: () => setViewDeptMembers(dept) },
+              { label: "View assigned programs", onClick: () => setViewDeptPrograms(dept) },
               { label: "Edit details", onClick: () => openEditDept(dept) },
               {
                 label: dept.is_active ? "Deactivate" : "Reactivate",
@@ -1664,7 +1694,7 @@ export default function Curriculum() {
               {
                 label: "Delete",
                 danger: true,
-                onClick: () => setPendingDelete({ type: "department", id: dept.id, name: dept.name, count: dept.professor_count }),
+                onClick: () => setPendingDelete({ type: "department", id: dept.id, name: dept.name, count: getDeptPrograms(dept).length }),
               },
             ]}
           />
@@ -1843,42 +1873,67 @@ export default function Curriculum() {
       </Modal>
 
       {/* ============================================================== */}
-      {/* MODAL: Department Faculty Members List                         */}
+      {/* MODAL: Department Assigned Programs List                       */}
       {/* ============================================================== */}
       <Modal
-        isOpen={Boolean(viewDeptMembers)}
-        onClose={() => setViewDeptMembers(null)}
-        title={viewDeptMembers ? `Faculty Members • ${viewDeptMembers.name}` : ""}
+        isOpen={Boolean(viewDeptPrograms)}
+        onClose={() => setViewDeptPrograms(null)}
+        title={viewDeptPrograms ? `Assigned Programs • ${viewDeptPrograms.name}` : ""}
         align="left"
         size="lg"
         actions={
           <MembersFooter
-            text={`${deptMembersList.length} faculty member(s) found`}
-            onClose={() => setViewDeptMembers(null)}
+            text={`${viewDeptPrograms ? getDeptPrograms(viewDeptPrograms).length : 0} academic program(s) assigned`}
+            onClose={() => setViewDeptPrograms(null)}
           />
         }
       >
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
-            Faculty assigned to <strong>{viewDeptMembers?.name}</strong> ({viewDeptMembers?.code}).
-            {viewDeptMembers?.description ? ` ${viewDeptMembers.description}` : ""}
+            Academic degree programs assigned to <strong>{viewDeptPrograms?.name}</strong> ({viewDeptPrograms?.code}).
           </p>
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
-            {deptMembersList.length === 0 ? (
+            {(!viewDeptPrograms || getDeptPrograms(viewDeptPrograms).length === 0) ? (
               <div className="rounded-2xl border border-dashed border-[#e2e8e4] bg-[#fafbfa] py-8 text-center text-[#8fa394]">
-                <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned yet</p>
-                <p className="mt-0.5 text-[12px]">Faculty assigned to this department will appear here.</p>
+                <p className="text-[13px] font-medium text-[#111c14]">No programs assigned yet</p>
+                <p className="mt-0.5 text-[12px]">Academic degree programs assigned to this department will appear here.</p>
               </div>
             ) : (
-              deptMembersList.map((p, idx) => (
-                <MemberRow
-                  key={p.email || p.id || idx}
-                  p={p}
-                  colorIndex={idx + 1}
-                  chip={p.rank}
-                  chipClass="bg-[#f0f2f0] text-[#3d4a41]"
-                />
-              ))
+              getDeptPrograms(viewDeptPrograms).map((progName, idx) => {
+                const matchedProg = overview.programs.find(
+                  (p) => p.name.toLowerCase().trim() === progName.toLowerCase().trim()
+                );
+                return (
+                  <div
+                    key={idx}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl border border-[#eef1ef] bg-white p-3.5 transition-colors hover:bg-[#fafbfa]"
+                  >
+                    <div className="flex min-w-[200px] flex-1 items-center gap-3">
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-mono text-[12px] font-bold text-white shadow-sm"
+                        style={{ background: initialsColor(idx + 1) }}
+                      >
+                        {matchedProg?.code || progName.slice(0, 3).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-semibold text-[#111c14]">{progName}</p>
+                        <p className="text-[12px] text-[#8fa394]">
+                          {matchedProg?.college_name
+                            ? `College: ${matchedProg.college_name}`
+                            : viewDeptPrograms.college_name
+                            ? `College: ${viewDeptPrograms.college_name}`
+                            : "Department Degree Offering"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge tone="green" dot>
+                        Assigned Program
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -2096,15 +2151,20 @@ export default function Curriculum() {
           </div>
 
           <div>
-            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>Description</label>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>
+              Assigned Academic Programs / Offerings
+            </label>
             <textarea
-              placeholder="Department purpose or overview..."
+              placeholder={"e.g.\nBachelor of Science in Information Technology\nBachelor of Science in Computer Science"}
               value={deptDesc}
               onChange={(e) => setDeptDesc(e.target.value)}
-              rows={3}
-              className="w-full p-3 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e] resize-none"
+              rows={4}
+              className="w-full p-3 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e] resize-none font-sans"
               style={{ borderColor: "#e2e8e4", color: "#111c14" }}
             />
+            <p className="text-[11.5px] text-[#8fa394] mt-1">
+              List the academic degree programs assigned to this department, one per line.
+            </p>
           </div>
         </div>
       </Modal>
