@@ -291,21 +291,6 @@ function DataTable<T>({
   );
 }
 
-function PrimaryText({ title, subtitle }: { title: string; subtitle?: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="truncate text-[13.5px] font-medium" style={{ color: "#111c14" }}>
-        {title}
-      </p>
-      {subtitle && (
-        <p className="truncate text-[11.5px]" style={{ color: "#8fa394" }}>
-          {subtitle}
-        </p>
-      )}
-    </div>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
