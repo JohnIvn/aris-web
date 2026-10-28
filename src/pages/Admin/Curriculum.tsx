@@ -148,11 +148,11 @@ type EntityType = "college" | "department" | "program" | "rank" | "course";
 
 const initialOverview: CurriculumOverview = {
   colleges: [
-    { id: "1", code: "CLAS", name: "College of Liberal Arts and Sciences", description: "Liberal Arts, Computing, Mathematics, Social Sciences", is_active: true, department_count: 3, program_count: 3, professor_count: 3 },
-    { id: "2", code: "CBA", name: "College of Business and Accountancy", description: "Accountancy, Business Administration, and Management", is_active: true, department_count: 2, program_count: 2, professor_count: 2 },
-    { id: "3", code: "CCJE", name: "College of Criminal Justice Education", description: "Criminology and Industrial Security Management", is_active: true, department_count: 1, program_count: 1, professor_count: 1 },
-    { id: "4", code: "CEDUC", name: "College of Education", description: "Elementary, Secondary, and Early Childhood Education", is_active: true, department_count: 1, program_count: 1, professor_count: 1 },
-    { id: "5", code: "CENG", name: "College of Engineering", description: "Computer, Electrical, Electronics, and Industrial Engineering", is_active: true, department_count: 1, program_count: 1, professor_count: 1 },
+    { id: "1", code: "CLAS", name: "College of Liberal Arts and Sciences", description: "AB Political Science\nBA Communication\nBachelor of Science in Information Technology\nBachelor of Science in Computer Science", is_active: true, department_count: 3, program_count: 10, professor_count: 3 },
+    { id: "2", code: "CBA", name: "College of Business and Accountancy", description: "BS Accountancy\nBS Business Administration, Major in Marketing Management\nBS Hospitality Management", is_active: true, department_count: 2, program_count: 9, professor_count: 2 },
+    { id: "3", code: "CCJE", name: "College of Criminal Justice Education", description: "Bachelor of Science in Criminology\nBachelor of Science in Industrial Security Management", is_active: true, department_count: 1, program_count: 2, professor_count: 1 },
+    { id: "4", code: "CEDUC", name: "College of Education", description: "Bachelor in Secondary Education Major in English\nBachelor of Early Childhood Education", is_active: true, department_count: 1, program_count: 7, professor_count: 1 },
+    { id: "5", code: "CENG", name: "College of Engineering", description: "Bachelor of Science in Computer Engineering\nBachelor of Science in Electrical Engineering", is_active: true, department_count: 1, program_count: 4, professor_count: 1 },
   ],
   departments: [
     { id: "1", code: "CSD", name: "Computer Studies Department", college_name: "College of Liberal Arts and Sciences", description: "Computing, Software Engineering, and Information Technology", is_active: true, program_count: 3, professor_count: 2 },
@@ -223,8 +223,8 @@ function CustomBarTooltip({ active, payload, label }: any) {
           <span className="font-semibold">{data.departments}</span>
         </p>
         <p className="text-[#2b6ca3] flex items-center justify-between gap-4">
-          <span>Faculty:</span>
-          <span className="font-semibold">{data.faculty}</span>
+          <span>Programs:</span>
+          <span className="font-semibold">{data.programs}</span>
         </p>
       </div>
     );
@@ -608,8 +608,8 @@ export default function Curriculum() {
   const [search, setSearch] = useState("");
   const [showCharts, setShowCharts] = useState(false);
 
-  // Row Click Members Modals
-  const [viewCollegeMembers, setViewCollegeMembers] = useState<College | null>(null);
+  // Row Click Members / Offerings Modals
+  const [viewCollegePrograms, setViewCollegePrograms] = useState<College | null>(null);
   const [viewDeptMembers, setViewDeptMembers] = useState<Department | null>(null);
   const [viewRankMembers, setViewRankMembers] = useState<AcademicRank | null>(null);
   const [viewCourseMembers, setViewCourseMembers] = useState<Course | null>(null);
@@ -680,16 +680,19 @@ export default function Curriculum() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Helper functions to get users/professors for each entity
-  const getCollegeMembers = (col: College) => {
-    const targetName = col.name.toLowerCase().trim();
-    const targetCode = (col.code || "").toLowerCase().trim();
-    return professors.filter((p) => {
-      const d = (p.dept || "").toLowerCase().trim();
-      return d === targetName || (targetCode && d === targetCode);
-    });
-  };
+  // Extract all assigned academic programs / degree offerings for a college
+  const getCollegePrograms = useCallback((col: College) => {
+    const fromDesc = (col.description || "")
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => Boolean(l) && !l.includes("|"));
+    const fromProgTable = overview.programs
+      .filter((p) => (p.college_name || "").toLowerCase().trim() === col.name.toLowerCase().trim() || p.college_id === col.id)
+      .map((p) => p.name);
+    return [...new Set([...fromDesc, ...fromProgTable])];
+  }, [overview.programs]);
 
+  // Helper functions to get users/professors for departments, ranks, courses
   const getDeptMembers = (dept: Department) => {
     const targetName = dept.name.toLowerCase().trim();
     const targetCode = (dept.code || "").toLowerCase().trim();
@@ -723,10 +726,6 @@ export default function Curriculum() {
   };
 
   // Members lists filtered for detail modals
-  const collegeMembersList = useMemo(
-    () => (viewCollegeMembers ? getCollegeMembers(viewCollegeMembers) : []),
-    [viewCollegeMembers, professors],
-  );
   const deptMembersList = useMemo(
     () => (viewDeptMembers ? getDeptMembers(viewDeptMembers) : []),
     [viewDeptMembers, professors],
@@ -1258,20 +1257,21 @@ export default function Curriculum() {
     return matchesTab && matchesSearch;
   });
 
-  // Chart datasets
+  // Chart datasets: College Capacity shows Departments and Assigned Programs
   const collegeChartData = useMemo(() => {
     return overview.colleges.map((col) => {
       const depts = overview.departments.filter(
         (d) => (d.college_name || "").toLowerCase().trim() === col.name.toLowerCase().trim(),
       ).length;
+      const progs = getCollegePrograms(col).length;
       return {
         name: col.name,
         code: col.code,
         departments: depts,
-        faculty: col.professor_count ?? 0,
+        programs: progs,
       };
     });
-  }, [overview.colleges, overview.departments]);
+  }, [overview.colleges, overview.departments, getCollegePrograms]);
 
   const rankPalette = [BRAND, "#3f8ecc", "#d99a2b", "#8a63c4", "#c0563a", "#2b9c8a"];
   const rankChartData = useMemo(() => {
@@ -1303,7 +1303,32 @@ export default function Curriculum() {
 
   const collegeColumns: TableColumn<College>[] = [
     { header: "Code", cell: (c) => <span className="font-mono font-medium">{c.code}</span> },
-    { header: "Description", maxWidth: 320, minWidth: 180, cell: (c) => c.description || "—" },
+    {
+      header: "Assigned Programs / Offerings",
+      maxWidth: 420,
+      minWidth: 260,
+      cell: (c) => {
+        const progs = getCollegePrograms(c);
+        if (progs.length === 0) return <span className="text-[#8fa394]">No programs assigned</span>;
+        return (
+          <div className="flex flex-wrap gap-1.5 py-1">
+            {progs.slice(0, 3).map((p, idx) => (
+              <span
+                key={idx}
+                className="inline-flex items-center rounded-md bg-[#eef3ef] px-2 py-0.5 text-[11.5px] font-medium text-[#2f7043]"
+              >
+                {p}
+              </span>
+            ))}
+            {progs.length > 3 && (
+              <span className="inline-flex items-center rounded-md bg-[#f0f2f0] px-1.5 py-0.5 text-[11px] font-medium text-[#5a6b5e]">
+                +{progs.length - 3} more
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
     {
       header: "Departments",
       cell: (c) => (
@@ -1313,19 +1338,12 @@ export default function Curriculum() {
       ),
     },
     {
-      header: "Programs",
+      header: "Programs Count",
       cell: (c) => (
         <span className="font-medium" style={{ color: "#111c14" }}>
-          {c.program_count ?? overview.programs.filter((p) => p.college_name === c.name).length}
+          {getCollegePrograms(c).length}
         </span>
       ),
-    },
-    {
-      header: "Users / State",
-      cell: (c) => {
-        const { total, active } = countsFor(getCollegeMembers(c), c.professor_count ?? 0, c.is_active);
-        return <UsersState total={total} active={active} />;
-      },
     },
     { header: "Status", cell: (c) => <StatusBadge active={c.is_active} /> },
   ];
@@ -1469,19 +1487,19 @@ export default function Curriculum() {
 
       {/* --- VISUAL ANALYTICS & GRAPHS --- */}
       <div className={`${showCharts ? "grid" : "hidden"} lg:grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4`}>
-        {/* Graph 1: College Capacity & Department Count */}
+        {/* Graph 1: College Capacity & Academic Offerings */}
         <Card className="flex flex-col min-h-[300px]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div>
-              <h2 className="text-[14px] font-semibold text-[#111c14]">College Capacity &amp; Departments</h2>
-              <p className="text-[12px] text-[#8fa394]">Departments and faculty distribution across academic colleges</p>
+              <h2 className="text-[14px] font-semibold text-[#111c14]">College Capacity &amp; Academic Offerings</h2>
+              <p className="text-[12px] text-[#8fa394]">Departments and assigned degree programs across academic colleges</p>
             </div>
             <div className="flex items-center gap-3 text-[11px] font-medium">
               <span className="flex items-center gap-1.5 text-[#3d4a41]">
                 <span className="w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} /> Departments
               </span>
               <span className="flex items-center gap-1.5 text-[#3d4a41]">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#3f8ecc" }} /> Faculty
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#3f8ecc" }} /> Programs
               </span>
             </div>
           </div>
@@ -1492,7 +1510,7 @@ export default function Curriculum() {
                 <YAxis allowDecimals={false} tick={{ fill: "#8fa394", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomBarTooltip />} />
                 <Bar dataKey="departments" fill={BRAND} radius={[5, 5, 0, 0]} maxBarSize={24} />
-                <Bar dataKey="faculty" fill="#3f8ecc" radius={[5, 5, 0, 0]} maxBarSize={24} />
+                <Bar dataKey="programs" fill="#3f8ecc" radius={[5, 5, 0, 0]} maxBarSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1587,21 +1605,21 @@ export default function Curriculum() {
             primaryHeader="College Title"
             columns={collegeColumns}
             emptyText="No colleges found matching your criteria."
-            onRowClick={setViewCollegeMembers}
-            rowLabel={(c) => `View faculty in ${c.name}`}
+            onRowClick={setViewCollegePrograms}
+            rowLabel={(c) => `View assigned programs in ${c.name}`}
             menuLabel={(c) => `Actions for ${c.name}`}
             mobileMeta={(c) => <StatusDot active={c.is_active} />}
             renderPrimary={(col, i) => {
-              const { total } = countsFor(getCollegeMembers(col), col.professor_count ?? 0, col.is_active);
+              const assignedPrograms = getCollegePrograms(col);
               return (
                 <>
                   <Avatar initials={col.code.slice(0, 2).toUpperCase()} color={initialsColor(i)} />
-                  <PrimaryText title={col.name} subtitle={`${col.code} • ${total} faculty`} />
+                  <PrimaryText title={col.name} subtitle={`${col.code} • ${assignedPrograms.length} assigned programs`} />
                 </>
               );
             }}
             getMenu={(col) => [
-              { label: "View faculty", onClick: () => setViewCollegeMembers(col) },
+              { label: "View assigned programs", onClick: () => setViewCollegePrograms(col) },
               { label: "Edit details", onClick: () => openEditCollege(col) },
               {
                 label: col.is_active ? "Deactivate" : "Reactivate",
@@ -1610,7 +1628,7 @@ export default function Curriculum() {
               {
                 label: "Delete",
                 danger: true,
-                onClick: () => setPendingDelete({ type: "college", id: col.id, name: col.name, count: col.professor_count }),
+                onClick: () => setPendingDelete({ type: "college", id: col.id, name: col.name, count: getCollegePrograms(col).length }),
               },
             ]}
           />
@@ -1667,7 +1685,7 @@ export default function Curriculum() {
               return (
                 <>
                   <Avatar initials={prog.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 2)} />
-                  <PrimaryText title={prog.name} subtitle={`${prog.code} • ${prog.department_name || "General"}`} />
+                  <PrimaryText title={prog.name} subtitle={`${prog.code} • ${prog.department_name || prog.college_name || "General"}`} />
                 </>
               );
             }}
@@ -1760,42 +1778,65 @@ export default function Curriculum() {
       </Card>
 
       {/* ============================================================== */}
-      {/* MODAL: College Faculty Members List                            */}
+      {/* MODAL: College Assigned Programs List                          */}
       {/* ============================================================== */}
       <Modal
-        isOpen={Boolean(viewCollegeMembers)}
-        onClose={() => setViewCollegeMembers(null)}
-        title={viewCollegeMembers ? `Faculty Members • ${viewCollegeMembers.name}` : ""}
+        isOpen={Boolean(viewCollegePrograms)}
+        onClose={() => setViewCollegePrograms(null)}
+        title={viewCollegePrograms ? `Assigned Programs • ${viewCollegePrograms.name}` : ""}
         align="left"
         size="lg"
         actions={
           <MembersFooter
-            text={`${collegeMembersList.length} faculty member(s) found`}
-            onClose={() => setViewCollegeMembers(null)}
+            text={`${viewCollegePrograms ? getCollegePrograms(viewCollegePrograms).length : 0} academic program(s) assigned`}
+            onClose={() => setViewCollegePrograms(null)}
           />
         }
       >
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
-            Faculty assigned to <strong>{viewCollegeMembers?.name}</strong> ({viewCollegeMembers?.code}).
-            {viewCollegeMembers?.description ? ` ${viewCollegeMembers.description}` : ""}
+            Academic degree programs and offerings assigned to <strong>{viewCollegePrograms?.name}</strong> ({viewCollegePrograms?.code}).
           </p>
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
-            {collegeMembersList.length === 0 ? (
+            {(!viewCollegePrograms || getCollegePrograms(viewCollegePrograms).length === 0) ? (
               <div className="rounded-2xl border border-dashed border-[#e2e8e4] bg-[#fafbfa] py-8 text-center text-[#8fa394]">
-                <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned yet</p>
-                <p className="mt-0.5 text-[12px]">Faculty assigned to this college will appear here.</p>
+                <p className="text-[13px] font-medium text-[#111c14]">No programs assigned yet</p>
+                <p className="mt-0.5 text-[12px]">Academic degree programs assigned to this college will appear here.</p>
               </div>
             ) : (
-              collegeMembersList.map((p, idx) => (
-                <MemberRow
-                  key={p.email || p.id || idx}
-                  p={p}
-                  colorIndex={idx}
-                  chip={p.rank}
-                  chipClass="bg-[#f0f2f0] text-[#3d4a41]"
-                />
-              ))
+              getCollegePrograms(viewCollegePrograms).map((progName, idx) => {
+                const matchedProg = overview.programs.find(
+                  (p) => p.name.toLowerCase().trim() === progName.toLowerCase().trim()
+                );
+                return (
+                  <div
+                    key={idx}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl border border-[#eef1ef] bg-white p-3.5 transition-colors hover:bg-[#fafbfa]"
+                  >
+                    <div className="flex min-w-[200px] flex-1 items-center gap-3">
+                      <div
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-mono text-[12px] font-bold text-white shadow-sm"
+                        style={{ background: initialsColor(idx) }}
+                      >
+                        {matchedProg?.code || progName.slice(0, 3).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-semibold text-[#111c14]">{progName}</p>
+                        <p className="text-[12px] text-[#8fa394]">
+                          {matchedProg?.department_name
+                            ? `Department: ${matchedProg.department_name}`
+                            : "College Degree Offering"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge tone="green" dot>
+                        Assigned Offering
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
@@ -1974,15 +2015,20 @@ export default function Curriculum() {
           </div>
 
           <div>
-            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>Description</label>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>
+              Assigned Academic Programs / Offerings
+            </label>
             <textarea
-              placeholder="College scope, academic disciplines, or overview..."
+              placeholder={"e.g.\nBS Accountancy\nBS Business Administration, Major in Marketing Management\nBS Hospitality Management"}
               value={collegeDesc}
               onChange={(e) => setCollegeDesc(e.target.value)}
-              rows={3}
-              className="w-full p-3 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e] resize-none"
+              rows={4}
+              className="w-full p-3 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e] resize-none font-sans"
               style={{ borderColor: "#e2e8e4", color: "#111c14" }}
             />
+            <p className="text-[11.5px] text-[#8fa394] mt-1">
+              List the academic degree programs assigned to this college (e.g. BS Accountancy), one per line.
+            </p>
           </div>
         </div>
       </Modal>
