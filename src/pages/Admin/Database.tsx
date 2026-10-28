@@ -26,6 +26,11 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat().format(value);
 }
 
+// Inserts zero-width break opportunities so long file names wrap inside narrow cards
+function softWrap(value: string) {
+  return value.replace(/([_\-.])/g, "$1\u200b");
+}
+
 function formatRelativeTime(value: string) {
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return "Time unavailable";
@@ -266,8 +271,8 @@ export default function Database() {
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { data: backupsList, setData: setBackupsList, loading: backupsLoading, error: backupsError } = useResource("/system/database/backups", initialBackups);
-  const { data: healthChecks, setData: setHealthChecks, loading: healthChecksLoading } = useResource("/system/database/health-checks", initialHealthChecks);
-  const { data: restoreLogData, loading: restoreLogsLoading } = useResource("/system/database/restore-logs", restoreLogs);
+  const { data: healthChecks, setData: setHealthChecks } = useResource("/system/database/health-checks", initialHealthChecks);
+  const { data: restoreLogData } = useResource("/system/database/restore-logs", restoreLogs);
   const { data: metrics, loading: metricsLoading, error: metricsError } = useResource<DatabaseMetrics>("/system/database/metrics", {
     clusterStatus: "Unavailable",
     clusterDetail: "Unable to read database status",
@@ -367,6 +372,11 @@ export default function Database() {
       setIsProcessing(false);
       setBannerMessage(`Restoration completed from ${backupName}.`);
     }, 1200);
+  };
+
+  const handleDownload = (b: (typeof initialBackups)[number]) => {
+    setBannerMessage(`Preparing download link for ${b.name}...`);
+    setTimeout(() => setBannerMessage(`Download started for ${b.name}`), 1000);
   };
 
   return (
@@ -571,7 +581,7 @@ export default function Database() {
         <StatCard
           label="Latest Snapshot"
           value={metrics.latestSnapshot ? formatRelativeTime(metrics.latestSnapshot.createdAt) : "No snapshot"}
-          detail={metrics.latestSnapshot?.name ?? "Create a backup to record a snapshot"}
+          detail={softWrap(metrics.latestSnapshot?.name ?? "Create a backup to record a snapshot")}
           badge={metrics.latestSnapshot ? <Badge tone="blue">{formatBytes(metrics.latestSnapshot.sizeBytes)}</Badge> : undefined}
         />
         <StatCard
@@ -583,17 +593,30 @@ export default function Database() {
       </StatGrid>
 
       {/* Main Tabs Container */}
-      <Card className="p-0 overflow-x-auto">
+      <Card className="min-w-0 overflow-hidden p-0">
         <div
-          className="flex items-center justify-between p-4 border-b flex-wrap gap-3"
+          className="flex flex-col gap-2 border-b p-3 lg:flex-row lg:items-center lg:justify-between lg:p-4"
           style={{ borderColor: "#eef1ef" }}
         >
-          <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+          <div className="min-w-0 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
+            <Tabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+          </div>
           {activeTab === "Backups & Snapshots" && (
-            <div className="flex flex-wrap items-center gap-2">
-              <SearchInput placeholder="Search snapshots" value={searchQuery} onChange={setSearchQuery} />
+            <div className="flex w-full items-center gap-2 lg:w-auto">
+              <SearchInput
+                placeholder="Search snapshots"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                className="min-w-0 flex-1 lg:w-60 lg:flex-none"
+              />
               <label className="sr-only" htmlFor="backup-type-filter">Filter backup type</label>
-              <select id="backup-type-filter" value={filterType} onChange={(event) => setFilterType(event.target.value)} className="h-9 rounded-xl border bg-white px-3 text-[12px] text-[#3d4a41]" style={{ borderColor: "#e2e8e4" }}>
+              <select
+                id="backup-type-filter"
+                value={filterType}
+                onChange={(event) => setFilterType(event.target.value)}
+                className="h-9 flex-shrink-0 rounded-xl border bg-white px-3 text-[12px] text-[#3d4a41]"
+                style={{ borderColor: "#e2e8e4" }}
+              >
                 {["All", "Automated", "Manual"].map((filter) => <option key={filter} value={filter}>{filter}</option>)}
               </select>
             </div>
@@ -602,263 +625,356 @@ export default function Database() {
 
         {/* Tab 1: Backups & Snapshots */}
         {activeTab === "Backups & Snapshots" && (
-          <div>
-            <div
-              className="grid min-w-[900px] grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
-              style={{ color: "#b6c3ba", background: "#fafbfa" }}
-            >
-              <span>Backup ID</span>
-              <span>Snapshot File</span>
-              <span>Type</span>
-              <span>Created</span>
-              <span>Size & Checksum</span>
-              <span className="text-right">Actions</span>
-            </div>
-            {filteredBackups.length === 0 ? (
-              <div
-                className="p-8 text-center text-sm"
-                style={{ color: "#8fa394" }}
-              >
+          <>
+            {backupsLoading && filteredBackups.length === 0 ? (
+              <p className="py-8 text-center text-[12px] text-[#8fa394]">Loading backups...</p>
+            ) : filteredBackups.length === 0 ? (
+              <p className="py-8 text-center text-[13px] text-[#8fa394]">
                 No backup snapshots match your search criteria.
-              </div>
+              </p>
             ) : (
-              backupsLoading && filteredBackups.length === 0 ? (
-                <p className="py-6 text-center text-[12px] text-[#8fa394]">Loading backups...</p>
-              ) : filteredBackups.length === 0 ? (
-                <p className="py-6 text-center text-[12px] text-[#8fa394]">No backups found.</p>
-              ) : filteredBackups.map((b) => (
-                <div
-                  key={b.id}
-                  className="grid min-w-[900px] grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
-                  style={{ borderColor: "#f2f4f2" }}
-                >
-                  <span
-                    className="text-[12.5px] font-mono font-semibold"
-                    style={{ color: "#111c14" }}
+              <>
+                {/* Desktop table */}
+                <div className="hidden overflow-x-auto lg:block">
+                  <div
+                    className="grid min-w-[900px] grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide"
+                    style={{ color: "#b6c3ba", background: "#fafbfa" }}
                   >
-                    {b.id}
-                  </span>
-                  <div className="flex items-center gap-2 min-w-0 pr-2">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#3a7d4e"
-                      strokeWidth="1.6"
-                      className="w-4 h-4 flex-shrink-0"
-                    >
-                      <ellipse cx="12" cy="5" rx="9" ry="3" />
-                      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                      <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                    </svg>
-                    <span
-                      className="text-[13px] font-medium truncate"
-                      style={{ color: "#111c14" }}
-                    >
-                      {b.name}
-                    </span>
+                    <span>Backup ID</span>
+                    <span>Snapshot File</span>
+                    <span>Type</span>
+                    <span>Created</span>
+                    <span>Size & Checksum</span>
+                    <span className="text-right">Actions</span>
                   </div>
-                  <div>
-                    <Badge
-                      tone={
-                        b.type.includes("Automated")
-                          ? "green"
-                          : b.type.includes("Manual")
-                            ? "blue"
-                            : "amber"
-                      }
+                  {filteredBackups.map((b) => (
+                    <div
+                      key={b.id}
+                      className="grid min-w-[900px] grid-cols-[1.2fr_2fr_1.2fr_1.5fr_1.5fr_1fr] items-center border-t px-5 py-3.5 transition-colors hover:bg-[#fafbfa]"
+                      style={{ borderColor: "#f2f4f2" }}
                     >
-                      {b.type}
-                    </Badge>
-                  </div>
-                  <span className="text-[12.5px]" style={{ color: "#8fa394" }}>
-                    {b.date}
-                  </span>
-                  <div className="flex flex-col">
-                    <span
-                      className="text-[12.5px] font-semibold"
-                      style={{ color: "#3d4a41" }}
-                    >
-                      {b.size}
-                    </span>
-                    <span
-                      className="text-[10.5px] font-mono truncate max-w-[140px]"
-                      style={{ color: "#8fa394" }}
-                    >
-                      {b.checksum}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button
-                      onClick={() => {
-                        setRestoreTarget(b);
-                      }}
-                      className="px-2.5 py-1 rounded-lg text-[12px] font-medium transition-colors hover:bg-[#eaf4ee]"
-                      style={{ color: "#2f7043" }}
-                      title="Restore from snapshot"
-                    >
-                      Restore
-                    </button>
-                    <button
-                      onClick={() => {
-                        setBannerMessage(
-                          `Preparing download link for ${b.name}...`,
-                        );
-                        setTimeout(
-                          () =>
-                            setBannerMessage(`Download started for ${b.name}`),
-                          1000,
-                        );
-                      }}
-                      className="p-1 rounded-lg transition-colors hover:bg-[#f0f2f0]"
-                      style={{ color: "#5a6b5e" }}
-                      title="Download SQL archive"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        className="w-4 h-4"
+                      <span
+                        className="truncate pr-2 text-[12.5px] font-mono font-semibold"
+                        style={{ color: "#111c14" }}
                       >
-                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                      </svg>
-                    </button>
-                  </div>
+                        {b.id}
+                      </span>
+                      <div className="flex min-w-0 items-center gap-2 pr-2">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#3a7d4e"
+                          strokeWidth="1.6"
+                          className="h-4 w-4 flex-shrink-0"
+                        >
+                          <ellipse cx="12" cy="5" rx="9" ry="3" />
+                          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                        </svg>
+                        <span
+                          className="truncate text-[13px] font-medium"
+                          style={{ color: "#111c14" }}
+                        >
+                          {b.name}
+                        </span>
+                      </div>
+                      <div>
+                        <Badge
+                          tone={
+                            b.type.includes("Automated")
+                              ? "green"
+                              : b.type.includes("Manual")
+                                ? "blue"
+                                : "amber"
+                          }
+                        >
+                          {b.type}
+                        </Badge>
+                      </div>
+                      <span className="text-[12.5px]" style={{ color: "#8fa394" }}>
+                        {b.date}
+                      </span>
+                      <div className="flex flex-col">
+                        <span
+                          className="text-[12.5px] font-semibold"
+                          style={{ color: "#3d4a41" }}
+                        >
+                          {b.size}
+                        </span>
+                        <span
+                          className="max-w-[140px] truncate text-[10.5px] font-mono"
+                          style={{ color: "#8fa394" }}
+                        >
+                          {b.checksum}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => setRestoreTarget(b)}
+                          className="rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors hover:bg-[#eaf4ee]"
+                          style={{ color: "#2f7043" }}
+                          title="Restore from snapshot"
+                        >
+                          Restore
+                        </button>
+                        <button
+                          onClick={() => handleDownload(b)}
+                          className="rounded-lg p-1 transition-colors hover:bg-[#f0f2f0]"
+                          style={{ color: "#5a6b5e" }}
+                          title="Download SQL archive"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            className="h-4 w-4"
+                          >
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))
+
+                {/* Mobile: brief rows */}
+                <div className="divide-y lg:hidden" style={{ borderColor: "#f2f4f2" }}>
+                  {filteredBackups.map((b) => (
+                    <div key={b.id} className="flex items-center gap-3 p-3">
+                      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[#eaf4ee]">
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#3a7d4e"
+                          strokeWidth="1.6"
+                          className="h-4 w-4"
+                        >
+                          <ellipse cx="12" cy="5" rx="9" ry="3" />
+                          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-medium" style={{ color: "#111c14" }}>
+                          {b.name}
+                        </p>
+                        <p className="truncate text-[11.5px]" style={{ color: "#8fa394" }}>
+                          {b.type} • {b.size}
+                        </p>
+                        <p className="truncate text-[11px]" style={{ color: "#b6c3ba" }}>
+                          {b.date}
+                        </p>
+                      </div>
+                      <div className="flex flex-shrink-0 items-center">
+                        <button
+                          onClick={() => setRestoreTarget(b)}
+                          className="h-9 rounded-lg px-2.5 text-[12px] font-medium active:bg-[#eaf4ee]"
+                          style={{ color: "#2f7043" }}
+                        >
+                          Restore
+                        </button>
+                        <button
+                          onClick={() => handleDownload(b)}
+                          aria-label={`Download ${b.name}`}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg active:bg-[#f0f2f0]"
+                          style={{ color: "#5a6b5e" }}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            className="h-4 w-4"
+                          >
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
-          </div>
+          </>
         )}
 
         {/* Tab 2: Automated Health Checks & Diagnostics */}
         {activeTab === "Health & Diagnostics" && (
-          <div>
-            {/* Table Header */}
-            <div
-              className="grid min-w-[980px] grid-cols-[2.2fr_3fr_1.4fr_0.8fr_1.1fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
-              style={{ color: "#b6c3ba", background: "#fafbfa" }}
-            >
-              <span>Check Name</span>
-              <span>Description</span>
-              <span>Frequency</span>
-              <span>Execution</span>
-              <span>Last Run</span>
-              <span className="text-right">Status</span>
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto lg:block">
+              <div
+                className="grid min-w-[980px] grid-cols-[2.2fr_3fr_1.4fr_0.8fr_1.1fr_1fr] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide"
+                style={{ color: "#b6c3ba", background: "#fafbfa" }}
+              >
+                <span>Check Name</span>
+                <span>Description</span>
+                <span>Frequency</span>
+                <span>Execution</span>
+                <span>Last Run</span>
+                <span className="text-right">Status</span>
+              </div>
+
+              {healthChecks.map((chk) => (
+                <div
+                  key={chk.id}
+                  className="grid min-w-[980px] grid-cols-[2.2fr_3fr_1.4fr_0.8fr_1.1fr_1fr] items-center border-t px-5 py-3.5 transition-colors hover:bg-[#fafbfa]"
+                  style={{ borderColor: "#f2f4f2" }}
+                >
+                  <span
+                    className="pr-3 text-[13px] font-semibold"
+                    style={{ color: "#111c14" }}
+                  >
+                    {chk.name}
+                  </span>
+                  <span
+                    className="pr-4 text-[12px] leading-relaxed"
+                    style={{ color: "#5a6b5e" }}
+                  >
+                    {chk.desc}
+                  </span>
+                  <span
+                    className="pr-2 text-[12.5px] font-medium"
+                    style={{ color: "#3d4a41" }}
+                  >
+                    {chk.frequency}
+                  </span>
+                  <span
+                    className="text-[12.5px] font-mono"
+                    style={{ color: "#5a6b5e" }}
+                  >
+                    {chk.latency}
+                  </span>
+                  <span className="text-[12.5px]" style={{ color: "#8fa394" }}>
+                    {chk.lastRun}
+                  </span>
+                  <div className="flex justify-end">
+                    <Badge tone={chk.tone} dot>
+                      {chk.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Table Body */}
-            {healthChecks.map((chk) => (
-              <div
-                key={chk.id}
-                className="grid min-w-[980px] grid-cols-[2.2fr_3fr_1.4fr_0.8fr_1.1fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
-                style={{ borderColor: "#f2f4f2" }}
-              >
-                <span
-                  className="text-[13px] font-semibold pr-3"
-                  style={{ color: "#111c14" }}
-                >
-                  {chk.name}
-                </span>
-                <span
-                  className="text-[12px] leading-relaxed pr-4"
-                  style={{ color: "#5a6b5e" }}
-                >
-                  {chk.desc}
-                </span>
-                <span
-                  className="text-[12.5px] font-medium pr-2"
-                  style={{ color: "#3d4a41" }}
-                >
-                  {chk.frequency}
-                </span>
-                <span
-                  className="text-[12.5px] font-mono"
-                  style={{ color: "#5a6b5e" }}
-                >
-                  {chk.latency}
-                </span>
-                <span className="text-[12.5px]" style={{ color: "#8fa394" }}>
-                  {chk.lastRun}
-                </span>
-                <div className="flex justify-end">
+            {/* Mobile: brief rows */}
+            <div className="divide-y lg:hidden" style={{ borderColor: "#f2f4f2" }}>
+              {healthChecks.map((chk) => (
+                <div key={chk.id} className="flex items-center justify-between gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium" style={{ color: "#111c14" }}>
+                      {chk.name}
+                    </p>
+                    <p className="truncate text-[11.5px]" style={{ color: "#8fa394" }}>
+                      {chk.frequency} • {chk.lastRun}
+                    </p>
+                  </div>
                   <Badge tone={chk.tone} dot>
                     {chk.status}
                   </Badge>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Tab 3: Restore Logs & History */}
         {activeTab === "Restore Logs" && (
-          <div>
-            <div
-              className="grid min-w-[900px] grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold"
-              style={{ color: "#b6c3ba", background: "#fafbfa" }}
-            >
-              <span>Log ID</span>
-              <span>Target Database</span>
-              <span>Source Snapshot</span>
-              <span>Initiated By</span>
-              <span>Duration</span>
-              <span className="text-right">Result</span>
-            </div>
-            {restoreLogData.map((log) => (
+          <>
+            {/* Desktop table */}
+            <div className="hidden overflow-x-auto lg:block">
               <div
-                key={log.id}
-                className="grid min-w-[900px] grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] items-center px-5 py-3.5 border-t transition-colors hover:bg-[#fafbfa]"
-                style={{ borderColor: "#f2f4f2" }}
+                className="grid min-w-[900px] grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide"
+                style={{ color: "#b6c3ba", background: "#fafbfa" }}
               >
-                <span
-                  className="text-[12.5px] font-mono font-semibold"
-                  style={{ color: "#111c14" }}
+                <span>Log ID</span>
+                <span>Target Database</span>
+                <span>Source Snapshot</span>
+                <span>Initiated By</span>
+                <span>Duration</span>
+                <span className="text-right">Result</span>
+              </div>
+              {restoreLogData.map((log) => (
+                <div
+                  key={log.id}
+                  className="grid min-w-[900px] grid-cols-[1fr_1.8fr_2fr_1.5fr_1fr_1fr] items-center border-t px-5 py-3.5 transition-colors hover:bg-[#fafbfa]"
+                  style={{ borderColor: "#f2f4f2" }}
                 >
-                  {log.id}
-                </span>
-                <span
-                  className="text-[13px] font-medium"
-                  style={{ color: "#111c14" }}
-                >
-                  {log.target}
-                </span>
-                <span className="text-[12.5px] font-mono text-[#5a6b5e] truncate pr-2">
-                  {log.snapshot}
-                </span>
-                <div className="flex flex-col">
                   <span
-                    className="text-[12.5px] font-medium"
-                    style={{ color: "#3d4a41" }}
+                    className="truncate pr-2 text-[12.5px] font-mono font-semibold"
+                    style={{ color: "#111c14" }}
                   >
-                    {log.initiatedBy}
+                    {log.id}
                   </span>
-                  <span className="text-[11px]" style={{ color: "#8fa394" }}>
-                    {log.date}
+                  <span
+                    className="text-[13px] font-medium"
+                    style={{ color: "#111c14" }}
+                  >
+                    {log.target}
                   </span>
+                  <span className="truncate pr-2 text-[12.5px] font-mono text-[#5a6b5e]">
+                    {log.snapshot}
+                  </span>
+                  <div className="flex flex-col">
+                    <span
+                      className="text-[12.5px] font-medium"
+                      style={{ color: "#3d4a41" }}
+                    >
+                      {log.initiatedBy}
+                    </span>
+                    <span className="text-[11px]" style={{ color: "#8fa394" }}>
+                      {log.date}
+                    </span>
+                  </div>
+                  <span className="text-[12.5px]" style={{ color: "#8fa394" }}>
+                    {log.duration}
+                  </span>
+                  <div className="flex justify-end">
+                    <Badge tone="green" dot>
+                      {log.status}
+                    </Badge>
+                  </div>
                 </div>
-                <span className="text-[12.5px]" style={{ color: "#8fa394" }}>
-                  {log.duration}
-                </span>
-                <div className="flex justify-end">
+              ))}
+            </div>
+
+            {/* Mobile: brief rows */}
+            <div className="divide-y lg:hidden" style={{ borderColor: "#f2f4f2" }}>
+              {restoreLogData.map((log) => (
+                <div key={log.id} className="flex items-center justify-between gap-3 p-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-medium" style={{ color: "#111c14" }}>
+                      {log.target}
+                    </p>
+                    <p className="truncate font-mono text-[11.5px]" style={{ color: "#8fa394" }}>
+                      {log.snapshot}
+                    </p>
+                    <p className="truncate text-[11px]" style={{ color: "#b6c3ba" }}>
+                      {log.initiatedBy} • {log.duration}
+                    </p>
+                  </div>
                   <Badge tone="green" dot>
                     {log.status}
                   </Badge>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Tab 4: Backup Settings & Schedule */}
         {activeTab === "Backup Settings" && (
-          <div className="p-6 max-w-3xl space-y-6">
+          <div className="p-4 sm:p-6 max-w-3xl space-y-6">
             <div
-              className="flex items-center justify-between pb-4 border-b"
+              className="flex items-center justify-between gap-3 pb-4 border-b"
               style={{ borderColor: "#eef1ef" }}
             >
-              <div>
+              <div className="min-w-0">
                 <h3
                   className="text-[14.5px] font-semibold"
                   style={{ color: "#111c14" }}
@@ -877,10 +993,10 @@ export default function Database() {
             </div>
 
             <div
-              className="flex items-center justify-between pb-4 border-b"
+              className="flex items-center justify-between gap-3 pb-4 border-b"
               style={{ borderColor: "#eef1ef" }}
             >
-              <div>
+              <div className="min-w-0">
                 <h3
                   className="text-[14.5px] font-semibold"
                   style={{ color: "#111c14" }}
@@ -902,10 +1018,10 @@ export default function Database() {
             </div>
 
             <div
-              className="flex items-center justify-between pb-4 border-b"
+              className="flex items-center justify-between gap-3 pb-4 border-b"
               style={{ borderColor: "#eef1ef" }}
             >
-              <div>
+              <div className="min-w-0">
                 <h3
                   className="text-[14.5px] font-semibold"
                   style={{ color: "#111c14" }}
