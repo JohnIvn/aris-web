@@ -34,7 +34,6 @@ import Approvals, {
 import Announcements from "./Announcements";
 import UserSettings from "./UserSettings";
 import Tickets from "../Admin/Tickets";
-import Support from "../Admin/Support";
 
 type Profile = {
   firstname?: string;
@@ -98,11 +97,6 @@ const staffSupportNav: StaffNavItem[] = [
     icon: (
       <path d="M4 13a8 8 0 0 1 16 0v4a2 2 0 0 1-2 2h-2v-6h4M4 13v6h2v-6H4Z" />
     ),
-  },
-  {
-    path: "/support",
-    label: "New Ticket",
-    icon: <path d="M12 5v14M5 12h14" />,
   },
 ];
 
@@ -634,8 +628,8 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           {(location.pathname === "/notifications" ||
             location.pathname === "/announcements") && <StaffNotifications />}
           {location.pathname === "/approvals" && <StaffApprovals />}
-          {location.pathname === "/tickets" && <Tickets />}
-          {location.pathname === "/support" && <Support />}
+          {(location.pathname === "/tickets" ||
+            location.pathname === "/support") && <Tickets />}
           {(location.pathname === "/settings" ||
             location.pathname === "/settings/user") && <StaffUserSettings />}
         </main>

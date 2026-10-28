@@ -18,7 +18,6 @@ import SystemLogs from "@/pages/Admin/SystemLogs";
 import Database from "@/pages/Admin/Database";
 import SoftwareMonitoring from "@/pages/Admin/SoftwareMonitoring";
 import UserSettings from "@/pages/Admin/UserSettings";
-import Support from "@/pages/Admin/Support";
 import Tickets from "@/pages/Admin/Tickets";
 import StaffProfMessages from "@/pages/Admin/StaffProfMessages";
 import HardwareMonitoring from "@/pages/Admin/HardwareMonitoring";
@@ -151,7 +150,7 @@ export const router = createBrowserRouter([
       { path: "hardware-monitoring", Component: HardwareMonitoring },
       { path: "software-monitoring", Component: SoftwareMonitoring },
       { path: "settings/user", Component: UserSettings },
-      { path: "support", Component: Support },
+      { path: "support", element: <Navigate to="/tickets" replace /> },
       { path: "support/messages", Component: StaffProfMessages },
       { path: "messages", Component: StaffProfMessages },
       { path: "tickets", Component: Tickets },

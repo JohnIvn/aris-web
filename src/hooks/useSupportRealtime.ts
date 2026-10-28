@@ -1,19 +1,48 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/services/supabase";
 
 export function useSupportRealtime(onChange: () => void) {
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
   useEffect(() => {
     const client = supabase;
-    if (!client) return;
+    let channel: ReturnType<typeof client.channel> | null = null;
 
-    const channel = client
-      .channel("support-tickets")
-      .on("postgres_changes", { event: "*", schema: "public", table: "support_tickets" }, onChange)
-      .on("postgres_changes", { event: "*", schema: "public", table: "support_ticket_messages" }, onChange)
-      .subscribe();
+    if (client) {
+      const channelName = `support-tickets-sync-${Math.random().toString(36).slice(2, 9)}`;
+      channel = client
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "support_tickets" },
+          () => {
+            onChangeRef.current();
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "support_ticket_messages" },
+          () => {
+            onChangeRef.current();
+          },
+        )
+        .subscribe();
+    }
+
+    // Polling fallback to keep tickets fresh even if tab was suspended
+    // or if realtime publication has latency
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        onChangeRef.current();
+      }
+    }, 4000);
 
     return () => {
-      void client.removeChannel(channel);
+      clearInterval(interval);
+      if (client && channel) {
+        void client.removeChannel(channel);
+      }
     };
-  }, [onChange]);
+  }, []);
 }
