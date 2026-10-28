@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { isPasswordValid } from "@/components/PasswordField";
 
 export type ProfileModalData = {
   id?: string;
@@ -12,6 +13,7 @@ export type ProfileModalData = {
   phone?: string;
   address?: string;
   oauthConnected?: boolean;
+  password?: string;
 };
 
 export type ProfileDetailsModalProps = {
@@ -51,6 +53,7 @@ export default function ProfileDetailsModal({
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const [isEditing, setIsEditing] = useState(initialMode === "edit");
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<ProfileModalData>({
     firstname: "",
     middlename: "",
@@ -61,6 +64,7 @@ export default function ProfileDetailsModal({
     status: "Active",
     phone: "",
     address: "",
+    password: "",
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -81,7 +85,9 @@ export default function ProfileDetailsModal({
         phone: data.phone === "Not provided" ? "" : (data.phone || ""),
         address: data.address === "Not provided" ? "" : (data.address || ""),
         oauthConnected: data.oauthConnected ?? false,
+        password: "",
       });
+      setShowPassword(false);
       setSaveError(null);
     }
   }, [isOpen, data, initialMode]);
@@ -119,11 +125,17 @@ export default function ProfileDetailsModal({
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!onSave) return;
+    if (formData.password && !isPasswordValid(formData.password)) {
+      setSaveError("Password needs 8–15 characters with a capital letter, a number, and a symbol.");
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     try {
       await onSave(formData);
       setIsEditing(false);
+      setFormData((prev) => ({ ...prev, password: "" }));
+      setShowPassword(false);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save profile changes.");
     } finally {
@@ -161,19 +173,16 @@ export default function ProfileDetailsModal({
               {isEditing ? "Modify account fields and details below." : "Account and profile information."}
             </p>
           </div>
-          {!isEditing && onSave && (
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              className="flex shrink-0 items-center gap-1.5 rounded-xl border border-[#d6ded8] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#2d4a36] hover:bg-[#f4f6f5] transition-colors shadow-sm"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-              Edit
-            </button>
-          )}
+          <button
+            type="button"
+            aria-label="Close modal"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[#718076] hover:bg-[#f4f6f5] hover:text-[#111c14] transition-colors"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <form onSubmit={handleFormSubmit} className="flex min-h-0 flex-1 flex-col">
@@ -348,20 +357,66 @@ export default function ProfileDetailsModal({
                 />
               </div>
 
-              {/* FIX 4: password field with a placeholder. Display-only because
-                  onSave has no password in its payload. */}
               <div>
-                <label className={LABEL}>Password</label>
-                <input
-                  type="password"
-                  disabled
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                  className={`${FIELD_VIEW} cursor-not-allowed placeholder:text-[#8fa394]`}
-                />
-                <p className="mt-1 pl-0.5 text-[11.5px] text-[#8fa394]">
-                  {formData.oauthConnected ? "Sign-in is managed through Google." : "Passwords can't be changed here."}
-                </p>
+                <label htmlFor="profile-password" className={LABEL}>
+                  Password {isEditing && <span className="text-[11px] text-[#718076] font-normal">(leave blank to keep existing)</span>}
+                </label>
+                {isEditing ? (
+                  <div>
+                    <div className="relative">
+                      <input
+                        id="profile-password"
+                        type={showPassword ? "text" : "password"}
+                        maxLength={15}
+                        autoComplete="new-password"
+                        placeholder="Leave blank to keep current password"
+                        value={formData.password || ""}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className={`${FIELD_EDIT} pr-14 ${
+                          formData.password && !isPasswordValid(formData.password)
+                            ? "border-red-300 focus:border-red-500"
+                            : ""
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[#718076] hover:text-[#2d4a36] transition-colors"
+                      >
+                        {showPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                    <p
+                      className={`mt-1 pl-0.5 text-[11.5px] ${
+                        formData.password && !isPasswordValid(formData.password)
+                          ? "text-red-600"
+                          : "text-[#718076]"
+                      }`}
+                    >
+                      {formData.password
+                        ? isPasswordValid(formData.password)
+                          ? "Password meets requirements."
+                          : "Must be 8–15 characters with a capital letter, a number, and a symbol."
+                        : "Leave blank to keep current password, or enter 8–15 characters with a capital letter, a number, and a symbol."}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      id="profile-password"
+                      type="password"
+                      disabled
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                      className={`${FIELD_VIEW} cursor-not-allowed placeholder:text-[#8fa394]`}
+                    />
+                    <p className="mt-1 pl-0.5 text-[11.5px] text-[#8fa394]">
+                      {formData.oauthConnected
+                        ? "Account connected via Google. You can set a password in edit mode to allow password sign-in."
+                        : "Password is set. Click Edit Profile to change it."}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -379,6 +434,8 @@ export default function ProfileDetailsModal({
                     } else {
                       setIsEditing(false);
                       setSaveError(null);
+                      setFormData((prev) => ({ ...prev, password: "" }));
+                      setShowPassword(false);
                     }
                   }}
                   className="rounded-xl border border-[#d6ded8] bg-white px-4 py-2.5 text-[13px] font-medium text-[#536258] hover:bg-[#f4f6f5] transition-colors"

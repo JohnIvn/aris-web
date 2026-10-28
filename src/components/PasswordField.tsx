@@ -10,9 +10,17 @@ export const isPasswordValid = (value: string) =>
 export default function PasswordField({
   value,
   onChange,
+  label = "Password",
+  id = "password",
+  placeholder = "••••••••",
+  required,
 }: {
   value: string;
   onChange: (value: string) => void;
+  label?: string;
+  id?: string;
+  placeholder?: string;
+  required?: boolean;
 }) {
   const [visible, setVisible] = useState(false);
   const hasValue = value.length > 0;
@@ -20,15 +28,22 @@ export default function PasswordField({
 
   return (
     <div>
+      {label && (
+        <label htmlFor={id} className="text-[12.5px] font-medium block mb-1.5" style={{ color: "#3d4a41" }}>
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+      )}
       <div className="relative">
         <input
-          aria-label="Password"
+          id={id}
+          aria-label={label || "Password"}
           type={visible ? "text" : "password"}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           maxLength={15}
+          placeholder={placeholder}
           autoComplete="new-password"
-          className="w-full h-10 px-3.5 pr-11 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]"
+          className="w-full h-10 px-3.5 pr-11 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e] placeholder:text-[#8fa394]"
           style={{ borderColor: hasValue && !valid ? "#f1a5a5" : "#e2e8e4" }}
         />
         <button

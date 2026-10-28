@@ -133,6 +133,7 @@ export default function Staff() {
       phone: updatedData.phone?.trim() || null,
       address: updatedData.address?.trim() || null,
       active: isActive,
+      password: updatedData.password?.trim() || undefined,
     }, "PATCH");
 
     const updatedFullName = [updatedData.firstname.trim(), updatedData.middlename?.trim(), updatedData.lastname.trim()]
