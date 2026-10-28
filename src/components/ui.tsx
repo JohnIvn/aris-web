@@ -711,10 +711,7 @@ export function SubmissionDetail({
               </span>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <DetailField label="Reviewed By" value={r.reviewer} />
-            <DetailField label="Reviewed At" value={r.reviewedAt} />
-          </div>
+          <DetailField label="Reviewed At" value={r.reviewedAt} />
           <DetailField
             label="Remark"
             value={<span className="font-normal">{r.remark}</span>}
@@ -724,3 +721,4 @@ export function SubmissionDetail({
     </div>
   );
 }
+

@@ -1154,7 +1154,7 @@ function StaffDashboard() {
                 <span
                   className="text-[12px] flex-1 text-[#3d4a41] truncate"
                 >
-                  {stage} ({STAGE_OWNER[stage]})
+                  {stage}
                 </span>
                 <span
                   className="text-[12px] font-semibold text-[#111c14]"

@@ -799,9 +799,6 @@ export default function Approvals() {
                 <span className="text-[12.5px] font-medium text-[#2d3830] truncate">
                   {item.stage}
                 </span>
-                <span className="text-[11px] text-[#8fa394] truncate">
-                  ({STAGE_OWNER[item.stage]})
-                </span>
               </div>
 
               {/* 5. Submitted Date & Time */}
