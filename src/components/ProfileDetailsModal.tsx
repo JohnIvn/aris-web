@@ -179,16 +179,6 @@ export default function ProfileDetailsModal({
               {isEditing ? "Modify account fields and details below." : "Account and profile information."}
             </p>
           </div>
-          <button
-            type="button"
-            aria-label="Close modal"
-            onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[#718076] hover:bg-[#f4f6f5] hover:text-[#111c14] transition-colors"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         <form onSubmit={handleFormSubmit} className="flex min-h-0 flex-1 flex-col">
