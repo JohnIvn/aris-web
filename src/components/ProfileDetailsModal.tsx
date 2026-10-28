@@ -26,6 +26,9 @@ export type ProfileDetailsModalProps = {
   roleOrRankOptions?: string[];
   roleOrRankLabel?: string;
   statusOptions?: { label: string; value: string }[];
+  canEditDepartment?: boolean;
+  canEditRoleOrRank?: boolean;
+  canEditStatus?: boolean;
   onSave?: (updatedData: ProfileModalData) => Promise<void>;
 };
 
@@ -48,6 +51,9 @@ export default function ProfileDetailsModal({
     { label: "Active", value: "Active" },
     { label: "Deactivated", value: "Deactivated" },
   ],
+  canEditDepartment = true,
+  canEditRoleOrRank = true,
+  canEditStatus = true,
   onSave,
 }: ProfileDetailsModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -268,7 +274,7 @@ export default function ProfileDetailsModal({
                     control (and its long option text) stays inside the modal. */}
                 <div>
                   <label className={LABEL}>Department</label>
-                  {isEditing && departmentOptions.length > 0 ? (
+                  {isEditing && canEditDepartment && departmentOptions.length > 0 ? (
                     <select
                       value={formData.department}
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
@@ -288,7 +294,7 @@ export default function ProfileDetailsModal({
               <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2 [&>*]:min-w-0">
                 <div>
                   <label className={LABEL}>{roleOrRankLabel}</label>
-                  {isEditing && roleOrRankOptions.length > 0 ? (
+                  {isEditing && canEditRoleOrRank && roleOrRankOptions.length > 0 ? (
                     <select
                       value={formData.roleOrRank}
                       onChange={(e) => setFormData({ ...formData, roleOrRank: e.target.value })}
@@ -305,7 +311,7 @@ export default function ProfileDetailsModal({
 
                 <div>
                   <label className={LABEL}>Status</label>
-                  {isEditing ? (
+                  {isEditing && canEditStatus && statusOptions.length > 0 ? (
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}

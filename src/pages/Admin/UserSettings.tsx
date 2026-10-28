@@ -167,7 +167,7 @@ export default function UserSettings() {
       middlename: updatedData.middlename?.trim() || null,
       lastname: updatedData.lastname.trim(),
       email: updatedData.email.trim().toLowerCase(),
-      department: updatedData.department?.trim() || null,
+      department: profile.department || null,
       phone: updatedData.phone?.trim() || null,
       address: updatedData.address?.trim() || null,
     };
@@ -274,6 +274,9 @@ export default function UserSettings() {
           { label: "Active", value: "Active" },
           { label: "On Leave", value: "On Leave" },
         ]}
+        canEditDepartment={false}
+        canEditRoleOrRank={false}
+        canEditStatus={false}
         onSave={handleSaveProfile}
       />
 
