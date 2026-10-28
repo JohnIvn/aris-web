@@ -7,28 +7,25 @@ export function useSupportRealtime(onChange: () => void) {
 
   useEffect(() => {
     const client = supabase;
-    let channel: ReturnType<typeof client.channel> | null = null;
-
-    if (client) {
-      const channelName = `support-tickets-sync-${Math.random().toString(36).slice(2, 9)}`;
-      channel = client
-        .channel(channelName)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "support_tickets" },
-          () => {
-            onChangeRef.current();
-          },
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "support_ticket_messages" },
-          () => {
-            onChangeRef.current();
-          },
-        )
-        .subscribe();
-    }
+    const channel = client
+      ? client
+          .channel(`support-tickets-sync-${Math.random().toString(36).slice(2, 9)}`)
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "support_tickets" },
+            () => {
+              onChangeRef.current();
+            },
+          )
+          .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "support_ticket_messages" },
+            () => {
+              onChangeRef.current();
+            },
+          )
+          .subscribe()
+      : null;
 
     // Polling fallback to keep tickets fresh even if tab was suspended
     // or if realtime publication has latency
