@@ -360,18 +360,9 @@ export default function UserSettings() {
         {/* Right column */}
         <div className="flex flex-col gap-4 min-h-0">
           <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-[15px] font-semibold" style={{ color: "#111c14" }}>Profile Information</p>
-                <p className="text-[12px] text-[#8fa394]">Your primary account and departmental information.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditModalOpen(true)}
-                className="text-[12.5px] font-medium text-[#2d4a36] hover:underline"
-              >
-                Edit
-              </button>
+            <div className="mb-4">
+              <p className="text-[15px] font-semibold" style={{ color: "#111c14" }}>Profile Information</p>
+              <p className="text-[12px] text-[#8fa394]">Your primary account and departmental information.</p>
             </div>
             {profileMessage && (
               <p role="status" className="mb-3 text-[12px]" style={{ color: "#c0392b" }}>
