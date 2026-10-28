@@ -21,6 +21,7 @@ import UserSettings from "@/pages/Admin/UserSettings";
 import Tickets from "@/pages/Admin/Tickets";
 import StaffProfMessages from "@/pages/Admin/StaffProfMessages";
 import HardwareMonitoring from "@/pages/Admin/HardwareMonitoring";
+import Enroll from "@/pages/Admin/Enroll";
 import StaffDashboard from "@/pages/Staff/Dashboard";
 
 if (typeof window !== "undefined" && window.location.hash.startsWith("#/")) {
@@ -147,6 +148,7 @@ export const router = createBrowserRouter([
       { path: "audit", Component: Audit },
       { path: "system-logs", Component: SystemLogs },
       { path: "database", Component: Database },
+      { path: "enroll", Component: Enroll },
       { path: "hardware-monitoring", Component: HardwareMonitoring },
       { path: "software-monitoring", Component: SoftwareMonitoring },
       { path: "settings/user", Component: UserSettings },
