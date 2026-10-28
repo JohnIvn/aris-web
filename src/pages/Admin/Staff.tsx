@@ -1,4 +1,12 @@
-import { useState } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  type ReactNode,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import ProfileDetailsModal, { ProfileModalData } from "@/components/ProfileDetailsModal";
 import { useResource } from "@/hooks/useResource";
@@ -49,19 +57,268 @@ const demoStaff: StaffMember[] = [
 ];
 
 const staffStatusTone = { Active: "green", "On Leave": "amber" } as const;
+const statusDotColor = { Active: "#3a7d4e", "On Leave": "#d99a2b" } as const;
 const roleColor: Record<string, string> = { Checker: "#3a7d4e", Secretary: "#3f8ecc", HR: "#8a63c4", Accounting: "#d99a2b" };
+
+/* ------------------------------------------------------------------ */
+/* Row action menu (portal, so it never gets clipped by the table)     */
+/* ------------------------------------------------------------------ */
+
+type MenuItem = { label: string; onClick: () => void; danger?: boolean };
+
+function RowMenu({ label, items }: { label: string; items: MenuItem[] }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const close = useCallback(() => setPos(null), []);
+
+  useEffect(() => {
+    if (!pos) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (btnRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      close();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [pos, close]);
+
+  const toggle = (e: ReactMouseEvent) => {
+    e.stopPropagation();
+    if (pos) {
+      close();
+      return;
+    }
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const menuHeight = items.length * 36 + 8;
+    const right = Math.max(8, window.innerWidth - rect.right);
+    const openUp = rect.bottom + menuHeight + 8 > window.innerHeight && rect.top > menuHeight + 8;
+    setPos(
+      openUp
+        ? { bottom: window.innerHeight - rect.top + 4, right }
+        : { top: rect.bottom + 4, right },
+    );
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={Boolean(pos)}
+        onClick={toggle}
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0] active:bg-[#e8ece9]"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+          <circle cx="5" cy="12" r="1.8" />
+          <circle cx="12" cy="12" r="1.8" />
+          <circle cx="19" cy="12" r="1.8" />
+        </svg>
+      </button>
+      {pos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            onClick={(e) => e.stopPropagation()}
+            className="fixed z-[60] min-w-40 rounded-lg border bg-white p-1 shadow-lg"
+            style={{ borderColor: "#e2e8e4", top: pos.top, bottom: pos.bottom, right: pos.right }}
+          >
+            {items.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  close();
+                  item.onClick();
+                }}
+                className={`block h-9 w-full rounded-md px-3 text-left text-[12.5px] ${
+                  item.danger ? "text-red-700 hover:bg-[#fbecec]" : "text-[#111c14] hover:bg-[#f4f6f5]"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Responsive data table (table on lg+, compact list on mobile)        */
+/* ------------------------------------------------------------------ */
+
+type TableColumn<T> = {
+  header: string;
+  cell: (row: T) => ReactNode;
+  maxWidth?: number;
+  minWidth?: number;
+};
+
+function DataTable<T>({
+  rows,
+  getKey,
+  primaryHeader,
+  renderPrimary,
+  columns,
+  getMenu,
+  menuLabel,
+  rowLabel,
+  onRowClick,
+  mobileMeta,
+  emptyText,
+}: {
+  rows: T[];
+  getKey: (row: T) => string;
+  primaryHeader: string;
+  renderPrimary: (row: T, index: number) => ReactNode;
+  columns: TableColumn<T>[];
+  getMenu: (row: T) => MenuItem[];
+  menuLabel: (row: T) => string;
+  rowLabel: (row: T) => string;
+  onRowClick: (row: T) => void;
+  mobileMeta?: (row: T) => ReactNode;
+  emptyText: string;
+}) {
+  if (rows.length === 0) {
+    return (
+      <div className="px-4 py-12 text-center text-[13px]" style={{ color: "#8fa394" }}>
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Desktop table */}
+      <div className="hidden overflow-x-auto lg:block">
+        <table className="w-full border-collapse text-left">
+          <thead>
+            <tr
+              className="text-[11px] font-semibold uppercase tracking-wide"
+              style={{ color: "#b6c3ba", background: "#fafbfa" }}
+            >
+              <th className="w-full whitespace-nowrap py-2.5 pl-5 pr-4 font-semibold">{primaryHeader}</th>
+              {columns.map((c) => (
+                <th key={c.header} className="whitespace-nowrap px-4 py-2.5 font-semibold">
+                  {c.header}
+                </th>
+              ))}
+              <th className="whitespace-nowrap py-2.5 pl-4 pr-5 text-right font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr
+                key={getKey(row)}
+                onClick={() => onRowClick(row)}
+                className="cursor-pointer border-t transition-colors hover:bg-[#fafbfa]"
+                style={{ borderColor: "#f2f4f2" }}
+              >
+                <td className="min-w-[240px] py-3 pl-5 pr-4 align-middle">
+                  <button
+                    type="button"
+                    aria-label={rowLabel(row)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRowClick(row);
+                    }}
+                    className="flex items-center gap-3 text-left"
+                  >
+                    {renderPrimary(row, i)}
+                  </button>
+                </td>
+
+                {columns.map((c) => (
+                  <td key={c.header} className="px-4 py-3 align-middle text-[13px]" style={{ color: "#3d4a41" }}>
+                    {c.maxWidth ? (
+                      <div
+                        className="whitespace-normal break-words"
+                        style={{ maxWidth: c.maxWidth, minWidth: c.minWidth }}
+                      >
+                        {c.cell(row)}
+                      </div>
+                    ) : (
+                      <div className="whitespace-nowrap">{c.cell(row)}</div>
+                    )}
+                  </td>
+                ))}
+
+                <td className="whitespace-nowrap py-3 pl-4 pr-5 text-right align-middle">
+                  <RowMenu label={menuLabel(row)} items={getMenu(row)} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile compact list */}
+      <div className="divide-y lg:hidden" style={{ borderColor: "#f2f4f2" }}>
+        {rows.map((row, i) => (
+          <div
+            key={getKey(row)}
+            onClick={() => onRowClick(row)}
+            className="flex cursor-pointer items-center justify-between gap-3 p-3 transition-colors active:bg-[#fafbfa]"
+          >
+            <div className="flex min-w-0 flex-1 items-center gap-3">{renderPrimary(row, i)}</div>
+            <div className="flex flex-shrink-0 items-center gap-1">
+              {mobileMeta && mobileMeta(row)}
+              <RowMenu label={menuLabel(row)} items={getMenu(row)} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function PrimaryText({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="truncate text-[13.5px] font-medium" style={{ color: "#111c14" }}>
+        {title}
+      </p>
+      {subtitle && (
+        <p className="truncate text-[11.5px]" style={{ color: "#8fa394" }}>
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
 
 export default function Staff() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("All");
   const [search, setSearch] = useState("");
-  const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [selected, setSelected] = useState<StaffMember | null>(null);
   const [modalMode, setModalMode] = useState<"view" | "edit">("view");
   const [pendingStatus, setPendingStatus] = useState<StaffMember | null>(null);
   const [pendingDelete, setPendingDelete] = useState<StaffMember | null>(null);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const { data: resourceStaff, setData: setResourceStaff } = useResource<StaffMember[]>("/staff", demoStaff);
@@ -194,9 +451,35 @@ export default function Staff() {
     Accounting: staff.filter((s) => s.role === "Accounting").length,
   };
 
+  type Row = (typeof staff)[number];
+
+  const columns: TableColumn<Row>[] = [
+    { header: "Staff ID", cell: (s) => <span className="text-[12.5px] font-semibold tabular-nums">{s.id || "—"}</span> },
+    {
+      header: "Role",
+      cell: (s) => (
+        <span className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: roleColor[s.role] ?? "#b6c3ba" }} />
+          {s.role}
+        </span>
+      ),
+    },
+    { header: "Department", maxWidth: 220, minWidth: 140, cell: (s) => s.dept },
+    { header: "Status", cell: (s) => <Badge tone={staffStatusTone[s.status]} dot>{s.status}</Badge> },
+  ];
+
   return (
     <div className="pb-2">
-      <PageTitle title="Staff Management" subtitle="Support staff by role — checkers, secretaries, HR, and accounting." action={<PrimaryButton onClick={() => navigate("/staff/new")}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>Add Staff</PrimaryButton>} />
+      <PageTitle
+        title="Staff Management"
+        subtitle="Support staff by role — checkers, secretaries, HR, and accounting."
+        action={
+          <PrimaryButton onClick={() => navigate("/staff/new")}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4"><path d="M12 5v14M5 12h14" /></svg>
+            Add Staff
+          </PrimaryButton>
+        }
+      />
       {saveError && <p role="alert" className="mb-3 text-[12px] text-red-700">{saveError}</p>}
 
       <StatGrid columns={5} className="mb-4">
@@ -206,53 +489,68 @@ export default function Staff() {
         ))}
       </StatGrid>
 
-      <Card className="p-0 overflow-x-auto">
-        <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
-          <Tabs tabs={tabs} value={tab} onChange={setTab} />
-          <div className="flex gap-2">
-            <SearchInput placeholder="Search staff or ID" value={search} onChange={setSearch} />
-            <div className="relative">
-              <GhostButton onClick={() => setFilterOpen((open) => !open)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z" /></svg>Filter</GhostButton>
-              {filterOpen && <div className="absolute right-0 top-11 z-10 min-w-44 rounded-lg border bg-white p-3 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
-                <label className="block text-[11px] font-medium text-[#5a6b5e]" htmlFor="staff-status-filter">Status</label>
-                <select id="staff-status-filter" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="mt-1 h-9 w-full rounded-md border bg-white px-2 text-[12px]" style={{ borderColor: "#e2e8e4" }}>
-                  {["All statuses", "Active", "On Leave"].map((status) => <option key={status}>{status}</option>)}
-                </select>
-              </div>}
-            </div>
+      <Card className="min-w-0 overflow-hidden p-0">
+        <div
+          className="flex flex-col gap-2 border-b p-3 lg:flex-row lg:items-center lg:justify-between lg:p-4"
+          style={{ borderColor: "#eef1ef" }}
+        >
+          <div className="min-w-0 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
+            <Tabs tabs={tabs} value={tab} onChange={setTab} />
+          </div>
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+            <SearchInput placeholder="Search staff or ID" value={search} onChange={setSearch} className="w-full lg:w-60" />
+            <label className="sr-only" htmlFor="staff-status-filter">Filter by status</label>
+            <select
+              id="staff-status-filter"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="h-9 w-full rounded-xl border bg-white px-3 text-[12px] text-[#3d4a41] sm:max-w-44"
+              style={{ borderColor: "#e2e8e4" }}
+            >
+              {["All statuses", "Active", "On Leave"].map((status) => <option key={status}>{status}</option>)}
+            </select>
           </div>
         </div>
-        <div className="grid min-w-[760px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr] gap-4 px-5 py-2.5 text-[11px] uppercase tracking-wide font-semibold" style={{ color: "#b6c3ba", background: "#fafbfa" }}>
-          <span>Name</span><span>Staff ID</span><span>Role</span><span>Department</span><span>Status</span><span className="text-right">Action</span>
-        </div>
-        {rows.map((s) => (
-          <div key={s.id} onClick={() => { setSelected(s); setModalMode("view"); }} className="grid min-w-[900px] grid-cols-[2.2fr_1.1fr_1.2fr_1.4fr_1fr_0.7fr] gap-4 items-center px-5 py-3 border-t transition-colors hover:bg-[#fafbfa] cursor-pointer" style={{ borderColor: "#f2f4f2" }}>
-            <button type="button" aria-label={`View details for ${s.name}`} onClick={(event) => { event.stopPropagation(); setSelected(s); setModalMode("view"); }} className="flex min-w-0 items-center gap-3 text-left">
-              <Avatar initials={s.name.split(" ").map((w) => w[0]).join("").slice(0, 2)} color={roleColor[s.role]} />
+
+        <DataTable<Row>
+          rows={rows}
+          getKey={(s) => s.id || s.email}
+          primaryHeader="Name"
+          columns={columns}
+          emptyText="No staff found matching your criteria."
+          onRowClick={(s) => { setSelected(s); setModalMode("view"); }}
+          rowLabel={(s) => `View details for ${s.name}`}
+          menuLabel={(s) => `Actions for ${s.name}`}
+          mobileMeta={(s) => (
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: statusDotColor[s.status] }}
+              aria-label={s.status}
+            />
+          )}
+          renderPrimary={(s) => (
+            <>
+              <Avatar
+                initials={s.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                color={roleColor[s.role] ?? "#8fa394"}
+              />
+              {/* Desktop shows the email; mobile shows ID • role so the row stays brief */}
               <div className="min-w-0">
-                <p className="text-[13.5px] font-medium truncate" style={{ color: "#111c14" }}>{s.name}</p>
-                <p className="text-[12px] truncate" style={{ color: "#8fa394" }}>{s.email}</p>
+                <p className="truncate text-[13.5px] font-medium" style={{ color: "#111c14" }}>{s.name}</p>
+                <p className="hidden truncate text-[11.5px] lg:block" style={{ color: "#8fa394" }}>{s.email}</p>
+                <p className="truncate text-[11.5px] lg:hidden" style={{ color: "#8fa394" }}>
+                  {s.id ? `${s.id} • ${s.role}` : s.role}
+                </p>
               </div>
-            </button>
-            <span className="text-[12.5px] font-semibold tabular-nums" style={{ color: "#3d4a41" }}>{s.id}</span>
-            <span className="flex items-center gap-2 text-[13px]" style={{ color: "#3d4a41" }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: roleColor[s.role] }} />{s.role}
-            </span>
-            <span className="text-[13px]" style={{ color: "#3d4a41" }}>{s.dept}</span>
-            <span><Badge tone={staffStatusTone[s.status]} dot>{s.status}</Badge></span>
-            <span className="relative flex justify-end">
-              <button type="button" aria-label={`Actions for ${s.name}`} aria-expanded={openMenu === s.id} onClick={(event) => { event.stopPropagation(); setOpenMenu(openMenu === s.id ? null : s.id); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#5a6b5e] hover:bg-[#f0f2f0]">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
-              </button>
-              {openMenu === s.id && <div className="absolute right-0 top-9 z-10 min-w-36 rounded-lg border bg-white p-1 shadow-lg" style={{ borderColor: "#e2e8e4" }}>
-                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(s); setModalMode("view"); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">View details</button>
-                <button type="button" onClick={(event) => { event.stopPropagation(); setSelected(s); setModalMode("edit"); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] text-[#2d4a36] font-medium hover:bg-[#f4f6f5]">Edit staff</button>
-                <button type="button" onClick={(event) => { event.stopPropagation(); setPendingStatus(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] hover:bg-[#f4f6f5]">{s.status === "Active" ? "Set on leave" : "Reactivate"}</button>
-                <button type="button" onClick={(event) => { event.stopPropagation(); setPendingDelete(s); setOpenMenu(null); }} className="w-full rounded-md px-3 py-2 text-left text-[12px] text-red-700 hover:bg-[#fbecec]">Delete</button>
-              </div>}
-            </span>
-          </div>
-        ))}
+            </>
+          )}
+          getMenu={(s) => [
+            { label: "View details", onClick: () => { setSelected(s); setModalMode("view"); } },
+            { label: "Edit staff", onClick: () => { setSelected(s); setModalMode("edit"); } },
+            { label: s.status === "Active" ? "Set on leave" : "Reactivate", onClick: () => setPendingStatus(s) },
+            { label: "Delete", danger: true, onClick: () => setPendingDelete(s) },
+          ]}
+        />
       </Card>
 
       {/* Unified Profile Details & Edit Modal */}
