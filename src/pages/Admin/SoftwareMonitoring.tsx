@@ -287,7 +287,7 @@ export default function SoftwareMonitoring() {
         title="Software Monitoring"
         subtitle="Live subsystem health probes, endpoint performance, and HTTP telemetry."
         action={
-          <>
+          <div className="flex items-center gap-2 flex-wrap">
             <span title="Refresh software monitoring">
               <GhostButton onClick={() => reload()}>
                 <svg
@@ -329,7 +329,7 @@ export default function SoftwareMonitoring() {
                 </button>
               ))}
             </div>
-          </>
+          </div>
         }
       />
 
