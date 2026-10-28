@@ -13,11 +13,14 @@ type Toast = { id: number; message: string };
 type NameKey = "firstname" | "middlename" | "lastname";
 
 const fallbackDepts: DeptItem[] = [
-  { name: "Engineering" },
-  { name: "Computer Science" },
-  { name: "Business" },
-  { name: "Sciences" },
-  { name: "Arts & Humanities" },
+  { name: "Computer Studies Department" },
+  { name: "Languages & Humanities Department" },
+  { name: "Mathematics & Natural Sciences Department" },
+  { name: "Business Administration Department" },
+  { name: "Accountancy Department" },
+  { name: "Criminal Justice Department" },
+  { name: "Teacher Education Department" },
+  { name: "Engineering Department" },
 ];
 
 const fallbackRanks: RankItem[] = [

@@ -75,7 +75,16 @@ export default function Professors() {
 
   const loadedDeptNames = Array.isArray(deptResources) && deptResources.length > 0
     ? deptResources.map((d) => d.name)
-    : ["Engineering", "Computer Science", "Business", "Sciences", "Arts & Humanities"];
+    : [
+        "Computer Studies Department",
+        "Languages & Humanities Department",
+        "Mathematics & Natural Sciences Department",
+        "Business Administration Department",
+        "Accountancy Department",
+        "Criminal Justice Department",
+        "Teacher Education Department",
+        "Engineering Department",
+      ];
   const departments = [...new Set(loadedDeptNames)].filter(Boolean);
   const modalDepartments = selected?.dept && selected.dept !== "Unassigned" && !departments.includes(selected.dept)
     ? [selected.dept, ...departments]

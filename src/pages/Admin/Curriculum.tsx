@@ -37,14 +37,43 @@ import { BRAND } from "@/config/navigation";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 
-export type Department = {
+export type College = {
   id: string;
   code: string;
   name: string;
   description?: string | null;
   is_active: boolean;
+  department_count?: number;
+  program_count?: number;
+  professor_count?: number;
+  created_at?: string;
+};
+
+export type Department = {
+  id: string;
+  code: string;
+  name: string;
+  college_id?: string | null;
+  college_name?: string | null;
+  description?: string | null;
+  is_active: boolean;
+  program_count?: number;
+  course_count?: number;
   professor_count?: number;
   staff_count?: number;
+  created_at?: string;
+};
+
+export type Program = {
+  id: string;
+  code: string;
+  name: string;
+  department_id?: string | null;
+  department_name?: string | null;
+  college_id?: string | null;
+  college_name?: string | null;
+  description?: string | null;
+  is_active: boolean;
   created_at?: string;
 };
 
@@ -89,12 +118,18 @@ export type Professor = {
 };
 
 type CurriculumOverview = {
+  colleges: College[];
   departments: Department[];
+  programs: Program[];
   ranks: AcademicRank[];
   courses: Course[];
   stats: {
+    total_colleges: number;
+    active_colleges: number;
     total_departments: number;
     active_departments: number;
+    total_programs: number;
+    active_programs: number;
     total_ranks: number;
     active_ranks: number;
     total_courses: number;
@@ -109,15 +144,28 @@ type MemberView = Professor & {
   active: boolean;
 };
 
-type EntityType = "department" | "rank" | "course";
+type EntityType = "college" | "department" | "program" | "rank" | "course";
 
 const initialOverview: CurriculumOverview = {
+  colleges: [
+    { id: "1", code: "CLAS", name: "College of Liberal Arts and Sciences", description: "Liberal Arts, Computing, Mathematics, Social Sciences", is_active: true, department_count: 3, program_count: 3, professor_count: 3 },
+    { id: "2", code: "CBA", name: "College of Business and Accountancy", description: "Accountancy, Business Administration, and Management", is_active: true, department_count: 2, program_count: 2, professor_count: 2 },
+    { id: "3", code: "CCJE", name: "College of Criminal Justice Education", description: "Criminology and Industrial Security Management", is_active: true, department_count: 1, program_count: 1, professor_count: 1 },
+    { id: "4", code: "CEDUC", name: "College of Education", description: "Elementary, Secondary, and Early Childhood Education", is_active: true, department_count: 1, program_count: 1, professor_count: 1 },
+    { id: "5", code: "CENG", name: "College of Engineering", description: "Computer, Electrical, Electronics, and Industrial Engineering", is_active: true, department_count: 1, program_count: 1, professor_count: 1 },
+  ],
   departments: [
-    { id: "1", code: "ENG", name: "Engineering", description: "Engineering and technology disciplines", is_active: true, professor_count: 2 },
-    { id: "2", code: "CS", name: "Computer Science", description: "Computing and software engineering", is_active: true, professor_count: 2 },
-    { id: "3", code: "BUS", name: "Business", description: "Business administration and management", is_active: true, professor_count: 2 },
-    { id: "4", code: "SCI", name: "Sciences", description: "Natural and applied sciences", is_active: true, professor_count: 1 },
-    { id: "5", code: "HUM", name: "Arts & Humanities", description: "Liberal arts and communication", is_active: true, professor_count: 1 },
+    { id: "1", code: "CSD", name: "Computer Studies Department", college_name: "College of Liberal Arts and Sciences", description: "Computing, Software Engineering, and Information Technology", is_active: true, program_count: 3, professor_count: 2 },
+    { id: "2", code: "LANG", name: "Languages & Humanities Department", college_name: "College of Liberal Arts and Sciences", description: "Languages, Literature, and Communication", is_active: true, program_count: 1, professor_count: 1 },
+    { id: "3", code: "MATH", name: "Mathematics & Natural Sciences Department", college_name: "College of Liberal Arts and Sciences", description: "Mathematics, Statistics, and Physical Sciences", is_active: true, program_count: 1, professor_count: 1 },
+    { id: "4", code: "BA", name: "Business Administration Department", college_name: "College of Business and Accountancy", description: "Business administration and management", is_active: true, program_count: 1, professor_count: 1 },
+    { id: "5", code: "ACCT", name: "Accountancy Department", college_name: "College of Business and Accountancy", description: "Professional accountancy and finance", is_active: true, program_count: 1, professor_count: 1 },
+  ],
+  programs: [
+    { id: "1", code: "BSIT", name: "Bachelor of Science in Information Technology", department_name: "Computer Studies Department", college_name: "College of Liberal Arts and Sciences", description: "Four-year undergraduate degree program focusing on information technology, software, and systems.", is_active: true },
+    { id: "2", code: "BSCS", name: "Bachelor of Science in Computer Science", department_name: "Computer Studies Department", college_name: "College of Liberal Arts and Sciences", description: "Undergraduate degree in computer science and algorithms.", is_active: true },
+    { id: "3", code: "BSIS", name: "Bachelor of Science in Information System", department_name: "Computer Studies Department", college_name: "College of Liberal Arts and Sciences", description: "Undergraduate degree in information systems.", is_active: true },
+    { id: "4", code: "BSA", name: "Bachelor of Science in Accountancy", department_name: "Accountancy Department", college_name: "College of Business and Accountancy", description: "Professional degree program in accountancy.", is_active: true },
   ],
   ranks: [
     { id: "1", code: "PROF", name: "Professor", hierarchy_level: 1, description: "Full Professor with academic tenure", is_active: true, professor_count: 3 },
@@ -127,15 +175,19 @@ const initialOverview: CurriculumOverview = {
     { id: "5", code: "ADJ", name: "Adjunct", hierarchy_level: 5, description: "Adjunct / visiting faculty member", is_active: true, professor_count: 1 },
   ],
   courses: [
-    { id: "1", code: "CS101", title: "Introduction to Computing", department_name: "Computer Science", units: 3, description: "Fundamental computer concepts and programming logic", is_active: true, professor_count: 2 },
-    { id: "2", code: "CS201", title: "Data Structures & Algorithms", department_name: "Computer Science", units: 3, description: "Core algorithmic design and complexity", is_active: true, professor_count: 2 },
-    { id: "3", code: "ENG101", title: "Engineering Mechanics", department_name: "Engineering", units: 3, description: "Statics and dynamics principles", is_active: true, professor_count: 2 },
-    { id: "4", code: "BUS101", title: "Principles of Management", department_name: "Business", units: 3, description: "Organizational behavior and modern management", is_active: true, professor_count: 2 },
-    { id: "5", code: "SCI101", title: "Applied Physics", department_name: "Sciences", units: 3, description: "Classical mechanics and laboratory applications", is_active: true, professor_count: 1 },
+    { id: "1", code: "CS101", title: "Introduction to Computing", department_name: "Computer Studies Department", units: 3, description: "Fundamental computer concepts and programming logic", is_active: true, professor_count: 2 },
+    { id: "2", code: "CS201", title: "Data Structures & Algorithms", department_name: "Computer Studies Department", units: 3, description: "Core algorithmic design and complexity", is_active: true, professor_count: 2 },
+    { id: "3", code: "ENG101", title: "Engineering Mechanics", department_name: "Engineering Department", units: 3, description: "Statics and dynamics principles", is_active: true, professor_count: 2 },
+    { id: "4", code: "BUS101", title: "Principles of Management", department_name: "Business Administration Department", units: 3, description: "Organizational behavior and modern management", is_active: true, professor_count: 2 },
+    { id: "5", code: "SCI101", title: "Applied Physics", department_name: "Mathematics & Natural Sciences Department", units: 3, description: "Classical mechanics and laboratory applications", is_active: true, professor_count: 1 },
   ],
   stats: {
+    total_colleges: 5,
+    active_colleges: 5,
     total_departments: 5,
     active_departments: 5,
+    total_programs: 4,
+    active_programs: 4,
     total_ranks: 5,
     active_ranks: 5,
     total_courses: 5,
@@ -144,14 +196,14 @@ const initialOverview: CurriculumOverview = {
 };
 
 const defaultProfessors: Professor[] = [
-  { name: "Dr. Maria Santos", email: "m.santos@aris.edu.ph", dept: "Engineering", rank: "Professor", courses: 4, active: true },
-  { name: "Prof. Lito Cruz", email: "l.cruz@aris.edu.ph", dept: "Computer Science", rank: "Associate Prof.", courses: 3, active: true },
-  { name: "Dr. Elena Reyes", email: "e.reyes@aris.edu.ph", dept: "Business", rank: "Professor", courses: 5, active: true },
-  { name: "Dr. Ramon Aquino", email: "r.aquino@aris.edu.ph", dept: "Sciences", rank: "Assistant Prof.", courses: 2, active: false },
-  { name: "Prof. Grace Lim", email: "g.lim@aris.edu.ph", dept: "Arts & Humanities", rank: "Lecturer", courses: 3, active: true },
-  { name: "Dr. Nestor Villar", email: "n.villar@aris.edu.ph", dept: "Engineering", rank: "Adjunct", courses: 1, active: false },
-  { name: "Dr. Sofia Mendoza", email: "s.mendoza@aris.edu.ph", dept: "Computer Science", rank: "Professor", courses: 4, active: true },
-  { name: "Prof. Daniel Ong", email: "d.ong@aris.edu.ph", dept: "Business", rank: "Associate Prof.", courses: 3, active: false },
+  { name: "Dr. Maria Santos", email: "m.santos@aris.edu.ph", dept: "Computer Studies Department", rank: "Professor", courses: 4, active: true },
+  { name: "Prof. Lito Cruz", email: "l.cruz@aris.edu.ph", dept: "Computer Studies Department", rank: "Associate Prof.", courses: 3, active: true },
+  { name: "Dr. Elena Reyes", email: "e.reyes@aris.edu.ph", dept: "Business Administration Department", rank: "Professor", courses: 5, active: true },
+  { name: "Dr. Ramon Aquino", email: "r.aquino@aris.edu.ph", dept: "Mathematics & Natural Sciences Department", rank: "Assistant Prof.", courses: 2, active: false },
+  { name: "Prof. Grace Lim", email: "g.lim@aris.edu.ph", dept: "Languages & Humanities Department", rank: "Lecturer", courses: 3, active: true },
+  { name: "Dr. Nestor Villar", email: "n.villar@aris.edu.ph", dept: "Engineering Department", rank: "Adjunct", courses: 1, active: false },
+  { name: "Dr. Sofia Mendoza", email: "s.mendoza@aris.edu.ph", dept: "Computer Studies Department", rank: "Professor", courses: 4, active: true },
+  { name: "Prof. Daniel Ong", email: "d.ong@aris.edu.ph", dept: "Accountancy Department", rank: "Associate Prof.", courses: 3, active: false },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -167,12 +219,12 @@ function CustomBarTooltip({ active, payload, label }: any) {
           {data.name} ({label})
         </p>
         <p className="text-[#2f7043] flex items-center justify-between gap-4">
-          <span>Faculty:</span>
-          <span className="font-semibold">{data.faculty}</span>
+          <span>Departments:</span>
+          <span className="font-semibold">{data.departments}</span>
         </p>
         <p className="text-[#2b6ca3] flex items-center justify-between gap-4">
-          <span>Courses:</span>
-          <span className="font-semibold">{data.courses}</span>
+          <span>Faculty:</span>
+          <span className="font-semibold">{data.faculty}</span>
         </p>
       </div>
     );
@@ -187,7 +239,7 @@ function CustomPieTooltip({ active, payload }: any) {
       <div className="bg-white rounded-xl shadow-lg border border-[#e2e8e4] p-2.5 text-[12px]">
         <p className="font-bold text-[#111c14]">{data.name}</p>
         <p className="text-[#5a6b5e] mt-0.5">
-          Tier #{data.level} · <span className="font-semibold text-[#111c14]">{data.value} faculty</span>
+          Tier #{data.level} • <span className="font-semibold text-[#111c14]">{data.value} faculty</span>
         </p>
       </div>
     );
@@ -243,7 +295,7 @@ function MembersFooter({ text, onClose }: { text: string; onClose: () => void })
 }
 
 /* ------------------------------------------------------------------ */
-/* Row action menu (portal + fixed positioning, flips up near bottom)  */
+/* Row action menu                                                     */
 /* ------------------------------------------------------------------ */
 
 type MenuItem = { label: string; onClick: () => void; danger?: boolean };
@@ -346,18 +398,12 @@ function RowMenu({ label, items }: { label: string; items: MenuItem[] }) {
 
 /* ------------------------------------------------------------------ */
 /* Responsive data table                                               */
-/* - lg+ : real <table>. Columns size to their widest content, and    */
-/*         columns with maxWidth wrap instead of truncating.           */
-/* - <lg : compact single-line rows (avatar, name, status dot, menu).  */
-/*         Full details live in the faculty modal and Edit.            */
 /* ------------------------------------------------------------------ */
 
 type TableColumn<T> = {
   header: string;
   cell: (row: T) => ReactNode;
-  /** If set, the cell grows to its content up to this width (px), then wraps. */
   maxWidth?: number;
-  /** Minimum width (px) for wrapping columns so they don't get squeezed. */
   minWidth?: number;
 };
 
@@ -381,7 +427,6 @@ function DataTable<T extends { id: string }>({
   menuLabel: (row: T) => string;
   rowLabel: (row: T) => string;
   onRowClick: (row: T) => void;
-  /** Small element shown on the right of compact mobile rows (e.g. a status dot) */
   mobileMeta?: (row: T) => ReactNode;
   emptyText: string;
 }) {
@@ -395,7 +440,6 @@ function DataTable<T extends { id: string }>({
 
   return (
     <>
-      {/* Desktop table */}
       <div className="hidden overflow-x-auto lg:block">
         <table className="w-full border-collapse text-left">
           <thead>
@@ -449,10 +493,8 @@ function DataTable<T extends { id: string }>({
                   </td>
                 ))}
 
-                <td className="w-px py-3 pl-4 pr-5 align-middle">
-                  <div className="flex justify-end">
-                    <RowMenu label={menuLabel(row)} items={getMenu(row)} />
-                  </div>
+                <td className="whitespace-nowrap py-3 pl-4 pr-5 text-right align-middle">
+                  <RowMenu label={menuLabel(row)} items={getMenu(row)} />
                 </td>
               </tr>
             ))}
@@ -460,28 +502,20 @@ function DataTable<T extends { id: string }>({
         </table>
       </div>
 
-      {/* Mobile / tablet compact rows */}
-      <div className="lg:hidden">
+      <div className="divide-y lg:hidden" style={{ borderColor: "#f2f4f2" }}>
         {rows.map((row, i) => (
           <div
             key={row.id}
             onClick={() => onRowClick(row)}
-            className="flex cursor-pointer items-center gap-2 border-t px-3 py-2.5 first:border-t-0 active:bg-[#fafbfa]"
-            style={{ borderColor: "#f2f4f2" }}
+            className="flex items-center justify-between gap-3 p-3 transition-colors active:bg-[#fafbfa]"
           >
-            <button
-              type="button"
-              aria-label={rowLabel(row)}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRowClick(row);
-              }}
-              className="flex min-w-0 flex-1 items-center gap-3 text-left"
-            >
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               {renderPrimary(row, i)}
-            </button>
-            {mobileMeta && <div className="flex-shrink-0">{mobileMeta(row)}</div>}
-            <RowMenu label={menuLabel(row)} items={getMenu(row)} />
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-1">
+              {mobileMeta && mobileMeta(row)}
+              <RowMenu label={menuLabel(row)} items={getMenu(row)} />
+            </div>
           </div>
         ))}
       </div>
@@ -489,19 +523,13 @@ function DataTable<T extends { id: string }>({
   );
 }
 
-/* Small shared cells */
-
-function UsersState({ total, active }: { total: number; active: number }) {
-  const inactive = total - active;
+function StatusDot({ active }: { active: boolean }) {
   return (
-    <div className="flex min-w-0 flex-col">
-      <span className="text-[13px] font-medium" style={{ color: "#111c14" }}>
-        {total} {total === 1 ? "user" : "users"}
-      </span>
-      <span className="text-[11.5px]" style={{ color: active > 0 ? "#2f7043" : "#8fa394" }}>
-        {active} active{inactive > 0 ? ` · ${inactive} inactive` : ""}
-      </span>
-    </div>
+    <span
+      className="inline-block h-2 w-2 rounded-full"
+      style={{ background: active ? BRAND : "#b6c3ba" }}
+      aria-label={active ? "Active" : "Deactivated"}
+    />
   );
 }
 
@@ -513,41 +541,56 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
-function StatusDot({ active }: { active: boolean }) {
-  return (
-    <span
-      title={active ? "Active" : "Deactivated"}
-      aria-label={active ? "Active" : "Deactivated"}
-      role="img"
-      className="block h-2.5 w-2.5 rounded-full"
-      style={{ background: active ? "#3a7d4e" : "#c8d6cb" }}
-    />
-  );
-}
-
-function PrimaryText({ title, subtitle }: { title: string; subtitle: string }) {
+function PrimaryText({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="min-w-0">
       <p className="truncate text-[13.5px] font-medium" style={{ color: "#111c14" }}>
         {title}
       </p>
-      <p className="truncate text-[12px]" style={{ color: "#8fa394" }}>
-        {subtitle}
-      </p>
+      {subtitle && (
+        <p className="truncate text-[11.5px]" style={{ color: "#8fa394" }}>
+          {subtitle}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function UsersState({ total, active }: { total: number; active: number }) {
+  return (
+    <div>
+      <span className="font-medium" style={{ color: "#111c14" }}>
+        {total}
+      </span>
+      <span className="text-[11px] block text-[#8fa394]">
+        {active} active
+      </span>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Page                                                                */
+/* Main Page Component                                                */
 /* ------------------------------------------------------------------ */
 
 export default function Curriculum() {
-  const { data: overview, setData: setOverview, reload } = useResource<CurriculumOverview>(
-    "/curriculum",
-    initialOverview,
-  );
+  const { data: rawOverview, reload } = useResource<CurriculumOverview>("/curriculum", initialOverview);
   const { data: rawProfessors } = useResource<Professor[]>("/professors", defaultProfessors);
+
+  const [overview, setOverview] = useState<CurriculumOverview>(initialOverview);
+
+  useEffect(() => {
+    if (rawOverview) {
+      setOverview({
+        colleges: Array.isArray(rawOverview.colleges) ? rawOverview.colleges : initialOverview.colleges,
+        departments: Array.isArray(rawOverview.departments) ? rawOverview.departments : initialOverview.departments,
+        programs: Array.isArray(rawOverview.programs) ? rawOverview.programs : initialOverview.programs,
+        ranks: Array.isArray(rawOverview.ranks) ? rawOverview.ranks : initialOverview.ranks,
+        courses: Array.isArray(rawOverview.courses) ? rawOverview.courses : initialOverview.courses,
+        stats: rawOverview.stats ?? initialOverview.stats,
+      });
+    }
+  }, [rawOverview]);
 
   const professors = useMemo(() => {
     const list = Array.isArray(rawProfessors) && rawProfessors.length > 0 ? rawProfessors : defaultProfessors;
@@ -560,24 +603,43 @@ export default function Curriculum() {
     }));
   }, [rawProfessors]);
 
-  const [activeTab, setActiveTab] = useState<"Departments" | "Academic Ranks" | "Courses">("Departments");
+  const [activeTab, setActiveTab] = useState<"Colleges" | "Departments" | "Programs" | "Academic Ranks" | "Courses">("Colleges");
   const [tab, setTab] = useState<"All" | "Active" | "Deactivated">("All");
   const [search, setSearch] = useState("");
-  // Analytics are collapsed by default on small screens (always visible on lg+)
   const [showCharts, setShowCharts] = useState(false);
 
   // Row Click Members Modals
+  const [viewCollegeMembers, setViewCollegeMembers] = useState<College | null>(null);
   const [viewDeptMembers, setViewDeptMembers] = useState<Department | null>(null);
   const [viewRankMembers, setViewRankMembers] = useState<AcademicRank | null>(null);
   const [viewCourseMembers, setViewCourseMembers] = useState<Course | null>(null);
+
+  // College Modal State (Edit / Add)
+  const [collegeModalOpen, setCollegeModalOpen] = useState(false);
+  const [editingCollege, setEditingCollege] = useState<College | null>(null);
+  const [collegeCode, setCollegeCode] = useState("");
+  const [collegeName, setCollegeName] = useState("");
+  const [collegeDesc, setCollegeDesc] = useState("");
+  const [collegeActive, setCollegeActive] = useState(true);
 
   // Department Modal State (Edit / Add)
   const [deptModalOpen, setDeptModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);
   const [deptCode, setDeptCode] = useState("");
   const [deptName, setDeptName] = useState("");
+  const [deptCollegeName, setDeptCollegeName] = useState("");
   const [deptDesc, setDeptDesc] = useState("");
   const [deptActive, setDeptActive] = useState(true);
+
+  // Program Modal State (Edit / Add)
+  const [programModalOpen, setProgramModalOpen] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<Program | null>(null);
+  const [programCode, setProgramCode] = useState("");
+  const [programName, setProgramName] = useState("");
+  const [programDeptName, setProgramDeptName] = useState("");
+  const [programCollegeName, setProgramCollegeName] = useState("");
+  const [programDesc, setProgramDesc] = useState("");
+  const [programActive, setProgramActive] = useState(true);
 
   // Rank Modal State (Edit / Add)
   const [rankModalOpen, setRankModalOpen] = useState(false);
@@ -619,6 +681,15 @@ export default function Curriculum() {
   const [saving, setSaving] = useState(false);
 
   // Helper functions to get users/professors for each entity
+  const getCollegeMembers = (col: College) => {
+    const targetName = col.name.toLowerCase().trim();
+    const targetCode = (col.code || "").toLowerCase().trim();
+    return professors.filter((p) => {
+      const d = (p.dept || "").toLowerCase().trim();
+      return d === targetName || (targetCode && d === targetCode);
+    });
+  };
+
   const getDeptMembers = (dept: Department) => {
     const targetName = dept.name.toLowerCase().trim();
     const targetCode = (dept.code || "").toLowerCase().trim();
@@ -652,6 +723,10 @@ export default function Curriculum() {
   };
 
   // Members lists filtered for detail modals
+  const collegeMembersList = useMemo(
+    () => (viewCollegeMembers ? getCollegeMembers(viewCollegeMembers) : []),
+    [viewCollegeMembers, professors],
+  );
   const deptMembersList = useMemo(
     () => (viewDeptMembers ? getDeptMembers(viewDeptMembers) : []),
     [viewDeptMembers, professors],
@@ -665,11 +740,85 @@ export default function Curriculum() {
     [viewCourseMembers, professors],
   );
 
+  // --- College Actions ---
+  const openAddCollege = () => {
+    setEditingCollege(null);
+    setCollegeCode("");
+    setCollegeName("");
+    setCollegeDesc("");
+    setCollegeActive(true);
+    setSaveError(null);
+    setCollegeModalOpen(true);
+  };
+
+  const openEditCollege = (col: College) => {
+    setEditingCollege(col);
+    setCollegeCode(col.code);
+    setCollegeName(col.name);
+    setCollegeDesc(col.description || "");
+    setCollegeActive(col.is_active);
+    setSaveError(null);
+    setCollegeModalOpen(true);
+  };
+
+  const handleSaveCollege = async () => {
+    if (!collegeCode.trim() || !collegeName.trim()) {
+      setSaveError("College Code and College Name are required.");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      if (editingCollege) {
+        const updated = await saveResource<College>(
+          `/curriculum/colleges/${editingCollege.id}`,
+          {
+            code: collegeCode.trim().toUpperCase(),
+            name: collegeName.trim(),
+            description: collegeDesc.trim() || null,
+            is_active: collegeActive,
+          },
+          "PATCH",
+        );
+        setOverview({
+          ...overview,
+          colleges: overview.colleges.map((c) => (c.id === editingCollege.id ? { ...c, ...updated } : c)),
+        });
+      } else {
+        const created = await saveResource<College>(
+          "/curriculum/colleges",
+          {
+            code: collegeCode.trim().toUpperCase(),
+            name: collegeName.trim(),
+            description: collegeDesc.trim() || null,
+            is_active: collegeActive,
+          },
+          "POST",
+        );
+        setOverview({
+          ...overview,
+          colleges: [...overview.colleges, created],
+          stats: {
+            ...overview.stats,
+            total_colleges: (overview.stats.total_colleges || overview.colleges.length) + 1,
+            active_colleges: collegeActive ? (overview.stats.active_colleges || 0) + 1 : overview.stats.active_colleges,
+          },
+        });
+      }
+      setCollegeModalOpen(false);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Unable to save college.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // --- Department Actions ---
   const openAddDept = () => {
     setEditingDept(null);
     setDeptCode("");
     setDeptName("");
+    setDeptCollegeName(overview.colleges[0]?.name || "");
     setDeptDesc("");
     setDeptActive(true);
     setSaveError(null);
@@ -680,6 +829,7 @@ export default function Curriculum() {
     setEditingDept(dept);
     setDeptCode(dept.code);
     setDeptName(dept.name);
+    setDeptCollegeName(dept.college_name || overview.colleges[0]?.name || "");
     setDeptDesc(dept.description || "");
     setDeptActive(dept.is_active);
     setSaveError(null);
@@ -698,8 +848,9 @@ export default function Curriculum() {
         const updated = await saveResource<Department>(
           `/curriculum/departments/${editingDept.id}`,
           {
-            code: deptCode.trim(),
+            code: deptCode.trim().toUpperCase(),
             name: deptName.trim(),
+            college_name: deptCollegeName.trim() || null,
             description: deptDesc.trim() || null,
             is_active: deptActive,
           },
@@ -713,8 +864,9 @@ export default function Curriculum() {
         const created = await saveResource<Department>(
           "/curriculum/departments",
           {
-            code: deptCode.trim(),
+            code: deptCode.trim().toUpperCase(),
             name: deptName.trim(),
+            college_name: deptCollegeName.trim() || null,
             description: deptDesc.trim() || null,
             is_active: deptActive,
           },
@@ -738,40 +890,84 @@ export default function Curriculum() {
     }
   };
 
-  const executeToggle = async (item: { type: EntityType; id: string; active: boolean }) => {
-    const nextState = !item.active;
-    setPendingToggle(null);
+  // --- Program Actions ---
+  const openAddProgram = () => {
+    setEditingProgram(null);
+    setProgramCode("");
+    setProgramName("");
+    setProgramDeptName(overview.departments[0]?.name || "");
+    setProgramCollegeName(overview.departments[0]?.college_name || overview.colleges[0]?.name || "");
+    setProgramDesc("");
+    setProgramActive(true);
+    setSaveError(null);
+    setProgramModalOpen(true);
+  };
+
+  const openEditProgram = (prog: Program) => {
+    setEditingProgram(prog);
+    setProgramCode(prog.code);
+    setProgramName(prog.name);
+    setProgramDeptName(prog.department_name || overview.departments[0]?.name || "");
+    setProgramCollegeName(prog.college_name || overview.colleges[0]?.name || "");
+    setProgramDesc(prog.description || "");
+    setProgramActive(prog.is_active);
+    setSaveError(null);
+    setProgramModalOpen(true);
+  };
+
+  const handleSaveProgram = async () => {
+    if (!programCode.trim() || !programName.trim()) {
+      setSaveError("Program Code and Program Name are required.");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
     try {
-      if (item.type === "department") {
-        await saveResource(`/curriculum/departments/${item.id}`, { is_active: nextState }, "PATCH");
+      if (editingProgram) {
+        const updated = await saveResource<Program>(
+          `/curriculum/programs/${editingProgram.id}`,
+          {
+            code: programCode.trim().toUpperCase(),
+            name: programName.trim(),
+            department_name: programDeptName.trim() || null,
+            college_name: programCollegeName.trim() || null,
+            description: programDesc.trim() || null,
+            is_active: programActive,
+          },
+          "PATCH",
+        );
         setOverview({
           ...overview,
-          departments: overview.departments.map((d) => (d.id === item.id ? { ...d, is_active: nextState } : d)),
+          programs: overview.programs.map((p) => (p.id === editingProgram.id ? { ...p, ...updated } : p)),
+        });
+      } else {
+        const created = await saveResource<Program>(
+          "/curriculum/programs",
+          {
+            code: programCode.trim().toUpperCase(),
+            name: programName.trim(),
+            department_name: programDeptName.trim() || null,
+            college_name: programCollegeName.trim() || null,
+            description: programDesc.trim() || null,
+            is_active: programActive,
+          },
+          "POST",
+        );
+        setOverview({
+          ...overview,
+          programs: [...overview.programs, created],
           stats: {
             ...overview.stats,
-            active_departments: nextState ? overview.stats.active_departments + 1 : overview.stats.active_departments - 1,
+            total_programs: (overview.stats.total_programs || overview.programs.length) + 1,
+            active_programs: programActive ? (overview.stats.active_programs || 0) + 1 : overview.stats.active_programs,
           },
-        });
-      } else if (item.type === "rank") {
-        await saveResource(`/curriculum/ranks/${item.id}`, { is_active: nextState }, "PATCH");
-        setOverview({
-          ...overview,
-          ranks: overview.ranks.map((r) => (r.id === item.id ? { ...r, is_active: nextState } : r)),
-          stats: {
-            ...overview.stats,
-            active_ranks: nextState ? overview.stats.active_ranks + 1 : overview.stats.active_ranks - 1,
-          },
-        });
-      } else if (item.type === "course") {
-        await saveResource(`/curriculum/courses/${item.id}`, { is_active: nextState }, "PATCH");
-        setOverview({
-          ...overview,
-          courses: overview.courses.map((c) => (c.id === item.id ? { ...c, is_active: nextState } : c)),
         });
       }
-      setSaveError(null);
+      setProgramModalOpen(false);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to toggle status.");
+      setSaveError(err instanceof Error ? err.message : "Unable to save program.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -889,7 +1085,7 @@ export default function Curriculum() {
         const updated = await saveResource<Course>(
           `/curriculum/courses/${editingCourse.id}`,
           {
-            code: courseCode.trim(),
+            code: courseCode.trim().toUpperCase(),
             title: courseTitle.trim(),
             department_name: courseDept.trim() || null,
             units: Number(courseUnits),
@@ -906,7 +1102,7 @@ export default function Curriculum() {
         const created = await saveResource<Course>(
           "/curriculum/courses",
           {
-            code: courseCode.trim(),
+            code: courseCode.trim().toUpperCase(),
             title: courseTitle.trim(),
             department_name: courseDept.trim() || null,
             units: Number(courseUnits),
@@ -932,15 +1128,85 @@ export default function Curriculum() {
     }
   };
 
+  // --- Toggle Handler ---
+  const executeToggle = async (item: { type: EntityType; id: string; active: boolean }) => {
+    const nextState = !item.active;
+    setPendingToggle(null);
+    try {
+      if (item.type === "college") {
+        await saveResource(`/curriculum/colleges/${item.id}`, { is_active: nextState }, "PATCH");
+        setOverview({
+          ...overview,
+          colleges: overview.colleges.map((c) => (c.id === item.id ? { ...c, is_active: nextState } : c)),
+          stats: {
+            ...overview.stats,
+            active_colleges: nextState ? overview.stats.active_colleges + 1 : overview.stats.active_colleges - 1,
+          },
+        });
+      } else if (item.type === "department") {
+        await saveResource(`/curriculum/departments/${item.id}`, { is_active: nextState }, "PATCH");
+        setOverview({
+          ...overview,
+          departments: overview.departments.map((d) => (d.id === item.id ? { ...d, is_active: nextState } : d)),
+          stats: {
+            ...overview.stats,
+            active_departments: nextState ? overview.stats.active_departments + 1 : overview.stats.active_departments - 1,
+          },
+        });
+      } else if (item.type === "program") {
+        await saveResource(`/curriculum/programs/${item.id}`, { is_active: nextState }, "PATCH");
+        setOverview({
+          ...overview,
+          programs: overview.programs.map((p) => (p.id === item.id ? { ...p, is_active: nextState } : p)),
+          stats: {
+            ...overview.stats,
+            active_programs: nextState ? (overview.stats.active_programs || 0) + 1 : (overview.stats.active_programs || 1) - 1,
+          },
+        });
+      } else if (item.type === "rank") {
+        await saveResource(`/curriculum/ranks/${item.id}`, { is_active: nextState }, "PATCH");
+        setOverview({
+          ...overview,
+          ranks: overview.ranks.map((r) => (r.id === item.id ? { ...r, is_active: nextState } : r)),
+          stats: {
+            ...overview.stats,
+            active_ranks: nextState ? overview.stats.active_ranks + 1 : overview.stats.active_ranks - 1,
+          },
+        });
+      } else if (item.type === "course") {
+        await saveResource(`/curriculum/courses/${item.id}`, { is_active: nextState }, "PATCH");
+        setOverview({
+          ...overview,
+          courses: overview.courses.map((c) => (c.id === item.id ? { ...c, is_active: nextState } : c)),
+        });
+      }
+      setSaveError(null);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to toggle status.");
+    }
+  };
+
   // --- Delete Handler ---
   const executeDelete = async (item: { type: EntityType; id: string; name: string }) => {
     setPendingDelete(null);
     try {
-      if (item.type === "department") {
+      if (item.type === "college") {
+        await saveResource(`/curriculum/colleges/${item.id}`, undefined, "DELETE");
+        setOverview({
+          ...overview,
+          colleges: overview.colleges.filter((c) => c.id !== item.id),
+        });
+      } else if (item.type === "department") {
         await saveResource(`/curriculum/departments/${item.id}`, undefined, "DELETE");
         setOverview({
           ...overview,
           departments: overview.departments.filter((d) => d.id !== item.id),
+        });
+      } else if (item.type === "program") {
+        await saveResource(`/curriculum/programs/${item.id}`, undefined, "DELETE");
+        setOverview({
+          ...overview,
+          programs: overview.programs.filter((p) => p.id !== item.id),
         });
       } else if (item.type === "rank") {
         await saveResource(`/curriculum/ranks/${item.id}`, undefined, "DELETE");
@@ -962,9 +1228,21 @@ export default function Curriculum() {
   };
 
   // Filter items
+  const filteredColleges = overview.colleges.filter((c) => {
+    const matchesTab = tab === "All" || (tab === "Active" ? c.is_active : !c.is_active);
+    const matchesSearch = `${c.code} ${c.name} ${c.description || ""}`.toLowerCase().includes(search.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
   const filteredDepartments = overview.departments.filter((d) => {
     const matchesTab = tab === "All" || (tab === "Active" ? d.is_active : !d.is_active);
-    const matchesSearch = `${d.code} ${d.name} ${d.description || ""}`.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = `${d.code} ${d.name} ${d.college_name || ""} ${d.description || ""}`.toLowerCase().includes(search.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  const filteredPrograms = overview.programs.filter((p) => {
+    const matchesTab = tab === "All" || (tab === "Active" ? p.is_active : !p.is_active);
+    const matchesSearch = `${p.code} ${p.name} ${p.department_name || ""} ${p.college_name || ""} ${p.description || ""}`.toLowerCase().includes(search.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
@@ -981,19 +1259,19 @@ export default function Curriculum() {
   });
 
   // Chart datasets
-  const deptChartData = useMemo(() => {
-    return overview.departments.map((dept) => {
-      const courseCount = overview.courses.filter(
-        (c) => (c.department_name || "").toLowerCase().trim() === dept.name.toLowerCase().trim(),
+  const collegeChartData = useMemo(() => {
+    return overview.colleges.map((col) => {
+      const depts = overview.departments.filter(
+        (d) => (d.college_name || "").toLowerCase().trim() === col.name.toLowerCase().trim(),
       ).length;
       return {
-        name: dept.name,
-        code: dept.code,
-        faculty: dept.professor_count ?? 0,
-        courses: courseCount,
+        name: col.name,
+        code: col.code,
+        departments: depts,
+        faculty: col.professor_count ?? 0,
       };
     });
-  }, [overview.departments, overview.courses]);
+  }, [overview.colleges, overview.departments]);
 
   const rankPalette = [BRAND, "#3f8ecc", "#d99a2b", "#8a63c4", "#c0563a", "#2b9c8a"];
   const rankChartData = useMemo(() => {
@@ -1010,25 +1288,60 @@ export default function Curriculum() {
     return rankChartData.reduce((acc, r) => acc + r.value, 0);
   }, [rankChartData]);
 
-  const categoryTabs = ["Departments", "Academic Ranks", "Courses"];
+  const categoryTabs = ["Colleges", "Departments", "Programs", "Academic Ranks", "Courses"];
   const statusTabs = ["All", "Active", "Deactivated"];
 
-  const activeDeptCount = overview.departments.filter((d) => d.is_active).length;
-
   const stats = [
-    ["Colleges / Departments", String(overview.departments.length)],
-    ["Active Departments", String(activeDeptCount)],
+    ["Colleges", String(overview.colleges.length)],
+    ["Departments", String(overview.departments.length)],
+    ["Academic Programs", String(overview.programs.length)],
     ["Academic Ranks", String(overview.ranks.length)],
     ["Cataloged Courses", String(overview.courses.length)],
   ];
 
   /* ---------------- Table definitions ---------------- */
-  // No fixed widths: columns size to their content.
-  // maxWidth/minWidth are only set on text-heavy columns so they wrap.
+
+  const collegeColumns: TableColumn<College>[] = [
+    { header: "Code", cell: (c) => <span className="font-mono font-medium">{c.code}</span> },
+    { header: "Description", maxWidth: 320, minWidth: 180, cell: (c) => c.description || "—" },
+    {
+      header: "Departments",
+      cell: (c) => (
+        <span className="font-medium" style={{ color: "#111c14" }}>
+          {c.department_count ?? overview.departments.filter((d) => d.college_name === c.name).length}
+        </span>
+      ),
+    },
+    {
+      header: "Programs",
+      cell: (c) => (
+        <span className="font-medium" style={{ color: "#111c14" }}>
+          {c.program_count ?? overview.programs.filter((p) => p.college_name === c.name).length}
+        </span>
+      ),
+    },
+    {
+      header: "Users / State",
+      cell: (c) => {
+        const { total, active } = countsFor(getCollegeMembers(c), c.professor_count ?? 0, c.is_active);
+        return <UsersState total={total} active={active} />;
+      },
+    },
+    { header: "Status", cell: (c) => <StatusBadge active={c.is_active} /> },
+  ];
 
   const deptColumns: TableColumn<Department>[] = [
     { header: "Code", cell: (d) => <span className="font-mono font-medium">{d.code}</span> },
-    { header: "Description", maxWidth: 360, minWidth: 200, cell: (d) => d.description || "—" },
+    { header: "College", maxWidth: 220, minWidth: 140, cell: (d) => d.college_name || "Unassigned" },
+    { header: "Description", maxWidth: 280, minWidth: 160, cell: (d) => d.description || "—" },
+    {
+      header: "Programs",
+      cell: (d) => (
+        <span className="font-medium" style={{ color: "#111c14" }}>
+          {d.program_count ?? overview.programs.filter((p) => p.department_name === d.name).length}
+        </span>
+      ),
+    },
     {
       header: "Users / State",
       cell: (d) => {
@@ -1037,6 +1350,14 @@ export default function Curriculum() {
       },
     },
     { header: "Status", cell: (d) => <StatusBadge active={d.is_active} /> },
+  ];
+
+  const programColumns: TableColumn<Program>[] = [
+    { header: "Code", cell: (p) => <span className="font-mono font-medium">{p.code}</span> },
+    { header: "Department", maxWidth: 220, minWidth: 140, cell: (p) => p.department_name || "Unassigned" },
+    { header: "College", maxWidth: 220, minWidth: 140, cell: (p) => p.college_name || "Unassigned" },
+    { header: "Description", maxWidth: 280, minWidth: 160, cell: (p) => p.description || "—" },
+    { header: "Status", cell: (p) => <StatusBadge active={p.is_active} /> },
   ];
 
   const rankColumns: TableColumn<AcademicRank>[] = [
@@ -1072,7 +1393,7 @@ export default function Curriculum() {
     <div className="pb-2">
       <PageTitle
         title="Curriculum Management"
-        subtitle={`${overview.departments.length} departments, ${overview.ranks.length} ranks, and ${overview.courses.length} cataloged courses.`}
+        subtitle={`${overview.colleges.length} colleges, ${overview.departments.length} departments, ${overview.programs.length} programs, and ${overview.courses.length} courses.`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <GhostButton onClick={reload}>
@@ -1082,12 +1403,28 @@ export default function Curriculum() {
               </svg>
               Refresh
             </GhostButton>
+            {activeTab === "Colleges" && (
+              <PrimaryButton onClick={openAddCollege}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add College
+              </PrimaryButton>
+            )}
             {activeTab === "Departments" && (
               <PrimaryButton onClick={openAddDept}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
                   <path d="M12 5v14M5 12h14" />
                 </svg>
                 Add Department
+              </PrimaryButton>
+            )}
+            {activeTab === "Programs" && (
+              <PrimaryButton onClick={openAddProgram}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add Program
               </PrimaryButton>
             )}
             {activeTab === "Academic Ranks" && (
@@ -1127,41 +1464,41 @@ export default function Curriculum() {
         style={{ borderColor: "#e2e8e4", color: "#3d4a41" }}
       >
         {showCharts ? "Hide analytics" : "Show analytics"}
-        <span aria-hidden="true">{showCharts ? "−" : "+"}</span>
+        <span aria-hidden="true">{showCharts ? "▲" : "+"}</span>
       </button>
 
       {/* --- VISUAL ANALYTICS & GRAPHS --- */}
       <div className={`${showCharts ? "grid" : "hidden"} lg:grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4`}>
-        {/* Graph 1: Department Capacity & Course Load (Bar Chart) */}
+        {/* Graph 1: College Capacity & Department Count */}
         <Card className="flex flex-col min-h-[300px]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div>
-              <h2 className="text-[14px] font-semibold text-[#111c14]">Department Capacity &amp; Course Load</h2>
-              <p className="text-[12px] text-[#8fa394]">Assigned faculty vs. cataloged courses across colleges</p>
+              <h2 className="text-[14px] font-semibold text-[#111c14]">College Capacity &amp; Departments</h2>
+              <p className="text-[12px] text-[#8fa394]">Departments and faculty distribution across academic colleges</p>
             </div>
             <div className="flex items-center gap-3 text-[11px] font-medium">
               <span className="flex items-center gap-1.5 text-[#3d4a41]">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} /> Faculty
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: BRAND }} /> Departments
               </span>
               <span className="flex items-center gap-1.5 text-[#3d4a41]">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#3f8ecc" }} /> Courses
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#3f8ecc" }} /> Faculty
               </span>
             </div>
           </div>
           <div className="flex-1 w-full min-h-[200px] mt-2">
             <ResponsiveContainer width="100%" height={210}>
-              <BarChart data={deptChartData} margin={{ top: 10, right: 10, left: -24, bottom: 0 }}>
+              <BarChart data={collegeChartData} margin={{ top: 10, right: 10, left: -24, bottom: 0 }}>
                 <XAxis dataKey="code" tick={{ fill: "#8fa394", fontSize: 11 }} axisLine={{ stroke: "#eef1ef" }} tickLine={false} />
                 <YAxis allowDecimals={false} tick={{ fill: "#8fa394", fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomBarTooltip />} />
-                <Bar dataKey="faculty" fill={BRAND} radius={[5, 5, 0, 0]} maxBarSize={24} />
-                <Bar dataKey="courses" fill="#3f8ecc" radius={[5, 5, 0, 0]} maxBarSize={24} />
+                <Bar dataKey="departments" fill={BRAND} radius={[5, 5, 0, 0]} maxBarSize={24} />
+                <Bar dataKey="faculty" fill="#3f8ecc" radius={[5, 5, 0, 0]} maxBarSize={24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        {/* Graph 2: Academic Rank Distribution (Donut Chart) */}
+        {/* Graph 2: Academic Rank Distribution */}
         <Card className="relative z-10 flex flex-col min-h-[300px]">
           <div className="flex items-center justify-between mb-2">
             <div>
@@ -1171,13 +1508,11 @@ export default function Curriculum() {
           </div>
           <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
             <div className="relative w-full sm:w-1/2 h-[190px] flex items-center justify-center">
-              {/* center label: behind the chart */}
               <div className="absolute inset-0 z-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-[20px] font-bold text-[#111c14] leading-none">{totalFacultyCount}</span>
                 <span className="text-[10px] uppercase tracking-wide text-[#8fa394] mt-0.5 font-semibold">Faculty</span>
               </div>
 
-              {/* chart: in front */}
               <div className="relative z-[1] h-full w-full">
                 <ResponsiveContainer width="100%" height={190}>
                   <PieChart>
@@ -1222,7 +1557,6 @@ export default function Curriculum() {
           className="flex flex-col gap-2 border-b p-3 lg:flex-row lg:items-center lg:justify-between lg:p-4"
           style={{ borderColor: "#eef1ef" }}
         >
-          {/* Stacked on mobile, side by side on lg+. Each group scrolls on its own. */}
           <div className="flex min-w-0 flex-col gap-2 lg:flex-row lg:items-center">
             <div className="min-w-0 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
               <Tabs
@@ -1246,11 +1580,47 @@ export default function Curriculum() {
           />
         </div>
 
+        {/* --- COLLEGES --- */}
+        {activeTab === "Colleges" && (
+          <DataTable<College>
+            rows={filteredColleges}
+            primaryHeader="College Title"
+            columns={collegeColumns}
+            emptyText="No colleges found matching your criteria."
+            onRowClick={setViewCollegeMembers}
+            rowLabel={(c) => `View faculty in ${c.name}`}
+            menuLabel={(c) => `Actions for ${c.name}`}
+            mobileMeta={(c) => <StatusDot active={c.is_active} />}
+            renderPrimary={(col, i) => {
+              const { total } = countsFor(getCollegeMembers(col), col.professor_count ?? 0, col.is_active);
+              return (
+                <>
+                  <Avatar initials={col.code.slice(0, 2).toUpperCase()} color={initialsColor(i)} />
+                  <PrimaryText title={col.name} subtitle={`${col.code} • ${total} faculty`} />
+                </>
+              );
+            }}
+            getMenu={(col) => [
+              { label: "View faculty", onClick: () => setViewCollegeMembers(col) },
+              { label: "Edit details", onClick: () => openEditCollege(col) },
+              {
+                label: col.is_active ? "Deactivate" : "Reactivate",
+                onClick: () => setPendingToggle({ type: "college", id: col.id, name: col.name, active: col.is_active }),
+              },
+              {
+                label: "Delete",
+                danger: true,
+                onClick: () => setPendingDelete({ type: "college", id: col.id, name: col.name, count: col.professor_count }),
+              },
+            ]}
+          />
+        )}
+
         {/* --- DEPARTMENTS --- */}
         {activeTab === "Departments" && (
           <DataTable<Department>
             rows={filteredDepartments}
-            primaryHeader="Department / College"
+            primaryHeader="Department"
             columns={deptColumns}
             emptyText="No departments found matching your criteria."
             onRowClick={setViewDeptMembers}
@@ -1261,8 +1631,8 @@ export default function Curriculum() {
               const { total } = countsFor(getDeptMembers(dept), dept.professor_count ?? 0, dept.is_active);
               return (
                 <>
-                  <Avatar initials={dept.code.slice(0, 2).toUpperCase()} color={initialsColor(i)} />
-                  <PrimaryText title={dept.name} subtitle={`${dept.code} · ${total} faculty`} />
+                  <Avatar initials={dept.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 1)} />
+                  <PrimaryText title={dept.name} subtitle={`${dept.code} • ${total} faculty`} />
                 </>
               );
             }}
@@ -1277,6 +1647,40 @@ export default function Curriculum() {
                 label: "Delete",
                 danger: true,
                 onClick: () => setPendingDelete({ type: "department", id: dept.id, name: dept.name, count: dept.professor_count }),
+              },
+            ]}
+          />
+        )}
+
+        {/* --- PROGRAMS --- */}
+        {activeTab === "Programs" && (
+          <DataTable<Program>
+            rows={filteredPrograms}
+            primaryHeader="Program Degree"
+            columns={programColumns}
+            emptyText="No programs found matching your criteria."
+            onRowClick={() => {}}
+            rowLabel={(p) => `View details for ${p.name}`}
+            menuLabel={(p) => `Actions for ${p.name}`}
+            mobileMeta={(p) => <StatusDot active={p.is_active} />}
+            renderPrimary={(prog, i) => {
+              return (
+                <>
+                  <Avatar initials={prog.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 2)} />
+                  <PrimaryText title={prog.name} subtitle={`${prog.code} • ${prog.department_name || "General"}`} />
+                </>
+              );
+            }}
+            getMenu={(prog) => [
+              { label: "Edit details", onClick: () => openEditProgram(prog) },
+              {
+                label: prog.is_active ? "Deactivate" : "Reactivate",
+                onClick: () => setPendingToggle({ type: "program", id: prog.id, name: prog.name, active: prog.is_active }),
+              },
+              {
+                label: "Delete",
+                danger: true,
+                onClick: () => setPendingDelete({ type: "program", id: prog.id, name: prog.name }),
               },
             ]}
           />
@@ -1297,8 +1701,8 @@ export default function Curriculum() {
               const { total } = countsFor(getRankMembers(rank), rank.professor_count ?? 0, rank.is_active);
               return (
                 <>
-                  <Avatar initials={`L${rank.hierarchy_level}`} color={initialsColor(i + 2)} />
-                  <PrimaryText title={rank.name} subtitle={`Level ${rank.hierarchy_level} · ${total} faculty`} />
+                  <Avatar initials={`L${rank.hierarchy_level}`} color={initialsColor(i + 3)} />
+                  <PrimaryText title={rank.name} subtitle={`Level ${rank.hierarchy_level} • ${total} faculty`} />
                 </>
               );
             }}
@@ -1334,7 +1738,7 @@ export default function Curriculum() {
               return (
                 <>
                   <Avatar initials={course.code.slice(0, 2).toUpperCase()} color={initialsColor(i + 4)} />
-                  <PrimaryText title={course.title} subtitle={`${course.code} · ${total} faculty`} />
+                  <PrimaryText title={course.title} subtitle={`${course.code} • ${total} faculty`} />
                 </>
               );
             }}
@@ -1356,12 +1760,54 @@ export default function Curriculum() {
       </Card>
 
       {/* ============================================================== */}
-      {/* MODAL 1: Department Faculty Members List                       */}
+      {/* MODAL: College Faculty Members List                            */}
+      {/* ============================================================== */}
+      <Modal
+        isOpen={Boolean(viewCollegeMembers)}
+        onClose={() => setViewCollegeMembers(null)}
+        title={viewCollegeMembers ? `Faculty Members • ${viewCollegeMembers.name}` : ""}
+        align="left"
+        size="lg"
+        actions={
+          <MembersFooter
+            text={`${collegeMembersList.length} faculty member(s) found`}
+            onClose={() => setViewCollegeMembers(null)}
+          />
+        }
+      >
+        <div className="space-y-3 pt-1">
+          <p className="text-[12.5px] text-[#8fa394]">
+            Faculty assigned to <strong>{viewCollegeMembers?.name}</strong> ({viewCollegeMembers?.code}).
+            {viewCollegeMembers?.description ? ` ${viewCollegeMembers.description}` : ""}
+          </p>
+          <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
+            {collegeMembersList.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#e2e8e4] bg-[#fafbfa] py-8 text-center text-[#8fa394]">
+                <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned yet</p>
+                <p className="mt-0.5 text-[12px]">Faculty assigned to this college will appear here.</p>
+              </div>
+            ) : (
+              collegeMembersList.map((p, idx) => (
+                <MemberRow
+                  key={p.email || p.id || idx}
+                  p={p}
+                  colorIndex={idx}
+                  chip={p.rank}
+                  chipClass="bg-[#f0f2f0] text-[#3d4a41]"
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================================== */}
+      {/* MODAL: Department Faculty Members List                         */}
       {/* ============================================================== */}
       <Modal
         isOpen={Boolean(viewDeptMembers)}
         onClose={() => setViewDeptMembers(null)}
-        title={viewDeptMembers ? `Faculty Members · ${viewDeptMembers.name}` : ""}
+        title={viewDeptMembers ? `Faculty Members • ${viewDeptMembers.name}` : ""}
         align="left"
         size="lg"
         actions={
@@ -1387,7 +1833,7 @@ export default function Curriculum() {
                 <MemberRow
                   key={p.email || p.id || idx}
                   p={p}
-                  colorIndex={idx}
+                  colorIndex={idx + 1}
                   chip={p.rank}
                   chipClass="bg-[#f0f2f0] text-[#3d4a41]"
                 />
@@ -1398,7 +1844,7 @@ export default function Curriculum() {
       </Modal>
 
       {/* ============================================================== */}
-      {/* MODAL 2: Academic Rank Accounts List                           */}
+      {/* MODAL: Academic Rank Accounts List                             */}
       {/* ============================================================== */}
       <Modal
         isOpen={Boolean(viewRankMembers)}
@@ -1421,17 +1867,17 @@ export default function Curriculum() {
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
             {rankMembersList.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[#e2e8e4] bg-[#fafbfa] py-8 text-center text-[#8fa394]">
-                <p className="text-[13px] font-medium text-[#111c14]">No faculty assigned this rank</p>
-                <p className="mt-0.5 text-[12px]">Faculty appointed to this rank will appear here.</p>
+                <p className="text-[13px] font-medium text-[#111c14]">No faculty holding this rank yet</p>
+                <p className="mt-0.5 text-[12px]">Faculty with this rank will appear here.</p>
               </div>
             ) : (
               rankMembersList.map((p, idx) => (
                 <MemberRow
                   key={p.email || p.id || idx}
                   p={p}
-                  colorIndex={idx + 1}
+                  colorIndex={idx + 2}
                   chip={p.dept}
-                  chipClass="bg-[#eaf4ee] text-[#2f7043]"
+                  chipClass="bg-[#eef3ef] text-[#2f7043]"
                 />
               ))
             )}
@@ -1440,12 +1886,12 @@ export default function Curriculum() {
       </Modal>
 
       {/* ============================================================== */}
-      {/* MODAL 3: Course Assigned Faculty List                          */}
+      {/* MODAL: Course Faculty Members List                             */}
       {/* ============================================================== */}
       <Modal
         isOpen={Boolean(viewCourseMembers)}
         onClose={() => setViewCourseMembers(null)}
-        title={viewCourseMembers ? `Faculty for Course: ${viewCourseMembers.code}` : ""}
+        title={viewCourseMembers ? `Course: ${viewCourseMembers.code} - ${viewCourseMembers.title}` : ""}
         align="left"
         size="lg"
         actions={
@@ -1457,7 +1903,7 @@ export default function Curriculum() {
       >
         <div className="space-y-3 pt-1">
           <p className="text-[12.5px] text-[#8fa394]">
-            Faculty for <strong>{viewCourseMembers?.code} - {viewCourseMembers?.title}</strong> ({viewCourseMembers?.units} units · {viewCourseMembers?.department_name || "General Department"}).
+            Faculty for <strong>{viewCourseMembers?.code} - {viewCourseMembers?.title}</strong> ({viewCourseMembers?.units} units • {viewCourseMembers?.department_name || "General Department"}).
             {viewCourseMembers?.description ? ` ${viewCourseMembers.description}` : ""}
           </p>
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1 sm:max-h-[380px]">
@@ -1474,10 +1920,69 @@ export default function Curriculum() {
                   colorIndex={idx + 3}
                   chip={p.rank}
                   chipClass="bg-[#f0f2f0] text-[#3d4a41]"
-                  subtitle={`${p.email} · ${p.dept}`}
+                  subtitle={`${p.email} • ${p.dept}`}
                 />
               ))
             )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================================== */}
+      {/* MODAL: College Add/Edit                                        */}
+      {/* ============================================================== */}
+      <Modal
+        isOpen={collegeModalOpen}
+        onClose={() => setCollegeModalOpen(false)}
+        title={editingCollege ? "Edit College" : "Add College"}
+        align="left"
+        size="sm"
+        actions={
+          <div className="flex w-full items-center justify-end gap-2 pt-2">
+            <GhostButton onClick={() => setCollegeModalOpen(false)}>Cancel</GhostButton>
+            <PrimaryButton onClick={handleSaveCollege}>
+              {saving ? "Saving..." : editingCollege ? "Save Changes" : "Create College"}
+            </PrimaryButton>
+          </div>
+        }
+      >
+        <div className="space-y-4 pt-1">
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>
+              College Code <span className="text-red-500">*</span>
+            </label>
+            <input
+              placeholder="e.g. CLAS, CBA, CENG"
+              value={collegeCode}
+              onChange={(e) => setCollegeCode(e.target.value.toUpperCase())}
+              className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] uppercase font-mono outline-none focus:border-[#3a7d4e]"
+              style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+            />
+          </div>
+
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>
+              College Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              placeholder="e.g. College of Liberal Arts and Sciences"
+              value={collegeName}
+              onChange={(e) => setCollegeName(e.target.value)}
+              className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]"
+              style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+            />
+          </div>
+
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>Description</label>
+            <textarea
+              placeholder="College scope, academic disciplines, or overview..."
+              value={collegeDesc}
+              onChange={(e) => setCollegeDesc(e.target.value)}
+              rows={3}
+              className="w-full p-3 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e] resize-none"
+              style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+            />
           </div>
         </div>
       </Modal>
@@ -1506,7 +2011,7 @@ export default function Curriculum() {
               Department Code <span className="text-red-500">*</span>
             </label>
             <input
-              placeholder="e.g. ENG, CS, BUS"
+              placeholder="e.g. CSD, LANG, MATH"
               value={deptCode}
               onChange={(e) => setDeptCode(e.target.value.toUpperCase())}
               className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] uppercase font-mono outline-none focus:border-[#3a7d4e]"
@@ -1519,7 +2024,7 @@ export default function Curriculum() {
               Department Name <span className="text-red-500">*</span>
             </label>
             <input
-              placeholder="e.g. Computer Science"
+              placeholder="e.g. Computer Studies Department"
               value={deptName}
               onChange={(e) => setDeptName(e.target.value)}
               className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]"
@@ -1528,11 +2033,129 @@ export default function Curriculum() {
           </div>
 
           <div>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>College</label>
+            <select
+              value={deptCollegeName}
+              onChange={(e) => setDeptCollegeName(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border text-[13.5px] bg-white outline-none focus:border-[#3a7d4e]"
+              style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+            >
+              <option value="">None / Unassigned</option>
+              {overview.colleges.map((col) => (
+                <option key={col.id} value={col.name}>
+                  {col.name} ({col.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>Description</label>
             <textarea
               placeholder="Department purpose or overview..."
               value={deptDesc}
               onChange={(e) => setDeptDesc(e.target.value)}
+              rows={3}
+              className="w-full p-3 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e] resize-none"
+              style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================================== */}
+      {/* MODAL: Program Add/Edit                                        */}
+      {/* ============================================================== */}
+      <Modal
+        isOpen={programModalOpen}
+        onClose={() => setProgramModalOpen(false)}
+        title={editingProgram ? "Edit Academic Program" : "Add Academic Program"}
+        align="left"
+        size="sm"
+        actions={
+          <div className="flex w-full items-center justify-end gap-2 pt-2">
+            <GhostButton onClick={() => setProgramModalOpen(false)}>Cancel</GhostButton>
+            <PrimaryButton onClick={handleSaveProgram}>
+              {saving ? "Saving..." : editingProgram ? "Save Changes" : "Create Program"}
+            </PrimaryButton>
+          </div>
+        }
+      >
+        <div className="space-y-4 pt-1">
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>
+              Program Code <span className="text-red-500">*</span>
+            </label>
+            <input
+              placeholder="e.g. BSIT, BSCS, BSA"
+              value={programCode}
+              onChange={(e) => setProgramCode(e.target.value.toUpperCase())}
+              className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] uppercase font-mono outline-none focus:border-[#3a7d4e]"
+              style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+            />
+          </div>
+
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>
+              Program Name / Degree <span className="text-red-500">*</span>
+            </label>
+            <input
+              placeholder="e.g. Bachelor of Science in Information Technology"
+              value={programName}
+              onChange={(e) => setProgramName(e.target.value)}
+              className="w-full h-10 px-3.5 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e]"
+              style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>Department</label>
+              <select
+                value={programDeptName}
+                onChange={(e) => {
+                  const dName = e.target.value;
+                  setProgramDeptName(dName);
+                  const foundDept = overview.departments.find((d) => d.name === dName);
+                  if (foundDept && foundDept.college_name) {
+                    setProgramCollegeName(foundDept.college_name);
+                  }
+                }}
+                className="w-full h-10 px-2.5 rounded-xl border text-[13px] bg-white outline-none focus:border-[#3a7d4e]"
+                style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+              >
+                <option value="">None / Unassigned</option>
+                {overview.departments.map((d) => (
+                  <option key={d.id} value={d.name}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>College</label>
+              <select
+                value={programCollegeName}
+                onChange={(e) => setProgramCollegeName(e.target.value)}
+                className="w-full h-10 px-2.5 rounded-xl border text-[13px] bg-white outline-none focus:border-[#3a7d4e]"
+                style={{ borderColor: "#e2e8e4", color: "#111c14" }}
+              >
+                <option value="">None / Unassigned</option>
+                {overview.colleges.map((col) => (
+                  <option key={col.id} value={col.name}>
+                    {col.name} ({col.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[12.5px] font-medium block mb-1" style={{ color: "#3d4a41" }}>Description</label>
+            <textarea
+              placeholder="Program degree scope, curriculum objectives..."
+              value={programDesc}
+              onChange={(e) => setProgramDesc(e.target.value)}
               rows={3}
               className="w-full p-3 rounded-xl border text-[13.5px] outline-none focus:border-[#3a7d4e] resize-none"
               style={{ borderColor: "#e2e8e4", color: "#111c14" }}
