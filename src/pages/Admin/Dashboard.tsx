@@ -19,11 +19,7 @@ type CurriculumDepartment = {
   staff_count?: number;
 };
 
-function Delta({ v, up }: { v: string; up: boolean }) {
-  return (
-    <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md" style={{ background: up ? "#eaf4ee" : "#fbecec", color: up ? "#2f7043" : "#c0392b" }}>{v}</span>
-  );
-}
+
 function CardHead({ title, action, onActionClick }: { title: string; action?: string; onActionClick?: () => void }) {
   return (
     <CardHeader

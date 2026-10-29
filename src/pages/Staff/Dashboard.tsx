@@ -25,11 +25,11 @@ import {
   PrimaryButton,
 } from "@/components/ui";
 import Approvals, {
+  type ApprovalItem,
   approvalQueue,
   normalizeStaffRole,
   STAGES,
   STAGE_COLOR,
-  STAGE_OWNER,
 } from "./Approvals";
 import Announcements from "./Announcements";
 import UserSettings from "./UserSettings";
@@ -174,7 +174,8 @@ function CardHead({
   );
 }
 
-function CustomThroughputTooltip({ active, payload, label }: any) {
+type TooltipEntry = { name: string; color: string; value: number | string };
+function CustomThroughputTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipEntry[]; label?: string | number }) {
   if (active && payload && payload.length) {
     return (
       <div
@@ -183,7 +184,7 @@ function CustomThroughputTooltip({ active, payload, label }: any) {
       >
         <p className="font-semibold text-[#111c14] mb-1.5">{label}</p>
         <div className="space-y-1">
-          {payload.map((entry: any) => (
+          {payload.map((entry: TooltipEntry) => (
             <div key={entry.name} className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-1.5">
                 <span
@@ -742,7 +743,7 @@ function StaffDashboard() {
   const { data: profile } = useResource<{ position?: string | null }>("/users/me/profile", {});
   const staffRole = normalizeStaffRole(profile?.position || user?.position);
 
-  const { data: fetchedQueue } = useResource<any[]>("/approvals", []);
+  const { data: fetchedQueue } = useResource<ApprovalItem[]>("/approvals", []);
   const allQueue = Array.isArray(fetchedQueue) && fetchedQueue.length > 0 ? fetchedQueue : approvalQueue || [];
   const queue = useMemo(() => allQueue.filter((i) => i.stage === staffRole), [allQueue, staffRole]);
 

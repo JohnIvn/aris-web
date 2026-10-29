@@ -72,7 +72,9 @@ export default function PhotoCropModal({
     setIsDragging(false);
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {}
+    } catch {
+      // ignore pointer capture release error
+    }
   };
 
   const handleRotate = () => {

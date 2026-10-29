@@ -15,8 +15,6 @@ import {
   Modal,
   Toggle,
   initialsColor,
-  arTable,
-  dtrTable,
   SubmissionDetail,
   type RecordKind,
   type RecordPayload,
@@ -80,8 +78,6 @@ type ApprovalItem = {
   record: RecordPayload;
 };
 
-/** Fixed "current time" for the mock decision log. */
-const NOW = "Sep 17, 2026 · 2:45 PM";
 
 const initialsOf = (name: string) =>
   name

@@ -24,24 +24,7 @@ type PayrollClass = {
   color: string;
 };
 
-const demoRecords: PayrollRecord[] = [
-  { name: "Dr. Maria Santos", type: "DTR", period: "Sep 1–15", units: "22 days", rate: "₱2,150", amount: "₱47,300", status: "Approved" as const },
-  { name: "Prof. Lito Cruz", type: "AR", period: "Sep 1–15", units: "18 outputs", rate: "₱1,800", amount: "₱32,400", status: "Approved" as const },
-  { name: "James Reyes", type: "DTR", period: "Sep 1–15", units: "22 days", rate: "₱1,420", amount: "₱31,240", status: "Approved" as const },
-  { name: "Ana Bautista", type: "DTR", period: "Sep 1–15", units: "20 days", rate: "₱1,380", amount: "₱27,600", status: "Pending" as const },
-  { name: "Dr. Elena Reyes", type: "AR", period: "Sep 1–15", units: "15 outputs", rate: "₱2,000", amount: "₱30,000", status: "Approved" as const },
-  { name: "Marco Dela Cruz", type: "DTR", period: "Sep 1–15", units: "21 days", rate: "₱1,150", amount: "₱24,150", status: "Pending" as const },
-  { name: "Prof. Grace Lim", type: "AR", period: "Sep 1–15", units: "12 outputs", rate: "₱1,600", amount: "₱19,200", status: "Rejected" as const },
-  { name: "Paolo Garcia", type: "DTR", period: "Sep 1–15", units: "22 days", rate: "₱1,300", amount: "₱28,600", status: "Approved" as const },
-];
-
 const statusTone = { Approved: "green", Pending: "amber", Rejected: "red" } as const;
-
-const demoClasses: PayrollClass[] = [
-  { label: "Accepted", note: "312 records", value: "₱2.15M", pct: 84, color: "#4a9d62" },
-  { label: "Pending", note: "48 records", value: "₱0.33M", pct: 13, color: "#e0a63a" },
-  { label: "Rejected", note: "12 records", value: "₱0.08M", pct: 3, color: "#d0674a" },
-];
 
 export default function Payroll() {
   const navigate = useNavigate();

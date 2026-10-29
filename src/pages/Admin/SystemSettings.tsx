@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Badge, Card, PageTitle, PrimaryButton, Toggle } from "@/components/ui";
+import { Card, PageTitle, PrimaryButton, Toggle } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
 

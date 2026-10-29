@@ -279,7 +279,7 @@ function useDragScroll<T extends HTMLElement>() {
 /* Chart tooltips                                                      */
 /* ------------------------------------------------------------------ */
 
-function CustomBarTooltip({ active, payload, label }: any) {
+function CustomBarTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ payload: { name?: string; departments?: number; programs?: number } }>; label?: string | number }) {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -301,7 +301,7 @@ function CustomBarTooltip({ active, payload, label }: any) {
   return null;
 }
 
-function CustomPieTooltip({ active, payload }: any) {
+function CustomPieTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name?: string; level?: number; value?: number } }> }) {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -790,15 +790,6 @@ export default function Curriculum() {
   }, [overview.programs]);
 
   // Helper functions to get users/professors for ranks, courses
-  const getDeptMembers = (dept: Department) => {
-    const targetName = dept.name.toLowerCase().trim();
-    const targetCode = (dept.code || "").toLowerCase().trim();
-    return professors.filter((p) => {
-      const d = (p.dept || "").toLowerCase().trim();
-      return d === targetName || (targetCode && d === targetCode);
-    });
-  };
-
   const getRankMembers = (rank: AcademicRank) => {
     const targetRank = rank.name.toLowerCase().trim();
     const targetCode = (rank.code || "").toLowerCase().trim();
@@ -1693,13 +1684,13 @@ export default function Curriculum() {
                 tabs={categoryTabs}
                 value={activeTab}
                 onChange={(v) => {
-                  setActiveTab(v as any);
+                  setActiveTab(v as "Colleges" | "Departments" | "Programs" | "Academic Ranks" | "Courses");
                   setSearch("");
                 }}
               />
             </div>
             <div className="min-w-0 overflow-x-auto [&_button]:flex-shrink-0 [&_button]:whitespace-nowrap">
-              <Tabs tabs={statusTabs} value={tab} onChange={(v) => setTab(v as any)} />
+              <Tabs tabs={statusTabs} value={tab} onChange={(v) => setTab(v as "All" | "Active" | "Deactivated")} />
             </div>
           </div>
           <SearchInput

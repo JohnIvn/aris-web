@@ -83,9 +83,15 @@ const formatExportTime = (value: string) => {
   return Number.isNaN(date.getTime()) ? value : date.toISOString();
 };
 
-function CustomBarTooltip({ active, payload, label }: any) {
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload: Record<string, unknown> }>;
+  label?: string | number;
+};
+
+function CustomBarTooltip({ active, payload, label }: CustomTooltipProps) {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
+    const data = payload[0].payload as { name?: string; ar?: number; dtr?: number };
     return (
       <div className="bg-white rounded-xl shadow-lg border border-[#e2e8e4] p-3 text-[12px] space-y-1">
         <p className="font-bold text-[#111c14] border-b border-[#eef1ef] pb-1">
@@ -105,9 +111,9 @@ function CustomBarTooltip({ active, payload, label }: any) {
   return null;
 }
 
-function CustomPieTooltip({ active, payload }: any) {
+function CustomPieTooltip({ active, payload }: CustomTooltipProps) {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
+    const data = payload[0].payload as { name?: string; value?: number };
     return (
       <div className="bg-white rounded-xl shadow-lg border border-[#e2e8e4] p-2.5 text-[12px]">
         <p className="font-bold text-[#111c14]">{data.name}</p>
@@ -540,7 +546,7 @@ export default function Audit() {
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderColor: "#eef1ef" }}>
           <div className="flex flex-wrap items-center gap-2">
             <Tabs tabs={tabs} value={tab} onChange={setTab} />
-            <Tabs tabs={typeTabs} value={typeFilter} onChange={(v) => setTypeFilter(v as any)} />
+            <Tabs tabs={typeTabs} value={typeFilter} onChange={(v) => setTypeFilter(v as "All" | "AR" | "DTR")} />
 
             {/* Approval Stage Selector */}
             <div className="flex items-center gap-1.5 ml-1">

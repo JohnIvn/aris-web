@@ -233,8 +233,8 @@ export default function SoftwareMonitoring() {
   ];
 
   const handleExportCsv = () => {
-    let headers: string[] = [];
-    let lines: (string | number)[][] = [];
+    let headers: string[];
+    let lines: (string | number)[][];
 
     if (tab === "Top Endpoints") {
       headers = ["Method", "Endpoint Path", "Requests/sec", "P95 Latency", "Error Rate", "Status"];

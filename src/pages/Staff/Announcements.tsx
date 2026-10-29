@@ -59,13 +59,17 @@ export default function Announcements() {
       next.add(id);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-      } catch {}
+      } catch {
+        // ignore storage error
+      }
       return next;
     });
 
     try {
       await saveResource(`/notifications/${id}/read`, undefined, "PATCH");
-    } catch {}
+    } catch {
+      // ignore network error
+    }
   };
 
   const toggleRead = (id: string, e?: React.MouseEvent) => {
@@ -76,7 +80,9 @@ export default function Announcements() {
         next.delete(id);
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]));
-        } catch {}
+        } catch {
+          // ignore storage error
+        }
         return next;
       });
     } else {
@@ -90,7 +96,9 @@ export default function Announcements() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(allIds));
       await saveResource("/notifications/read-all", undefined, "PATCH");
-    } catch {}
+    } catch {
+      // ignore error
+    }
   };
 
   const unreadCount = useMemo(() => {

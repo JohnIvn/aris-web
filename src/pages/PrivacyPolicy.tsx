@@ -11,7 +11,6 @@ import {
   Building2,
   FileText,
   Clock,
-  Eye,
   Database,
   UserCheck,
   ExternalLink,

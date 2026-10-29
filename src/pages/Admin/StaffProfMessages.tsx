@@ -346,7 +346,7 @@ export default function StaffProfMessages() {
               <Tabs
                 tabs={["All", "Professors", "Staff"]}
                 value={roleFilter}
-                onChange={(t) => setRoleFilter(t as any)}
+                onChange={(t) => setRoleFilter(t as "All" | "Professors" | "Staff")}
               />
             </div>
             <SearchInput

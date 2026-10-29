@@ -58,14 +58,14 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     setReadIds((prev) => {
       const next = new Set(prev)
       next.add(id)
-      try { localStorage.setItem("aris_admin_read_notifications", JSON.stringify([...next])) } catch { }
+      try { localStorage.setItem("aris_admin_read_notifications", JSON.stringify([...next])) } catch { /* ignore storage error */ }
       return next
     })
   }
   const markAllRead = () => {
     const allIds = announcements.map((a) => a.id)
     setReadIds(new Set(allIds))
-    try { localStorage.setItem("aris_admin_read_notifications", JSON.stringify(allIds)) } catch { }
+    try { localStorage.setItem("aris_admin_read_notifications", JSON.stringify(allIds)) } catch { /* ignore storage error */ }
   }
   const unreadCount = announcements.filter((a) => !readIds.has(a.id)).length
 
