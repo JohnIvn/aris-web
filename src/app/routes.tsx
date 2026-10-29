@@ -12,6 +12,7 @@ import AddProfessor from "@/pages/Admin/AddProfessor";
 import Staff from "@/pages/Admin/Staff";
 import AddStaff from "@/pages/Admin/AddStaff";
 import Payroll from "@/pages/Admin/Payroll";
+import PayrollSettings from "@/pages/Admin/PayrollSettings";
 import AIML from "@/pages/Admin/AIML";
 import Audit from "@/pages/Admin/Audit";
 import SystemLogs from "@/pages/Admin/SystemLogs";
@@ -144,6 +145,7 @@ export const router = createBrowserRouter([
         ),
       },
       { path: "payroll", Component: Payroll },
+      { path: "payroll/settings", Component: PayrollSettings },
       { path: "aiml", Component: AIML },
       { path: "audit", Component: Audit },
       { path: "system-logs", Component: SystemLogs },

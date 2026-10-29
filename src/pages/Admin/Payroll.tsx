@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { BRAND, BRAND_DARK } from "@/config/navigation";
 import { Card, PageTitle, GhostButton, Badge, SearchInput } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
+import { useAuth } from "@/app/authContext";
 
 type PayrollRecord = {
   id?: string;
@@ -42,6 +44,9 @@ const demoClasses: PayrollClass[] = [
 ];
 
 export default function Payroll() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "administrator" || user?.role === "admin";
   const [search, setSearch] = useState("");
   const [recordFilter, setRecordFilter] = useState("All records");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -65,6 +70,15 @@ export default function Payroll() {
         subtitle="Amounts calculated from submitted AR / DTR records, classified by approval outcome."
         action={
           <div className="flex items-center gap-2">
+            {isAdmin && (
+              <GhostButton onClick={() => navigate("/payroll/settings")}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+                </svg>
+                Configure Rates
+              </GhostButton>
+            )}
             <GhostButton onClick={() => reload()}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4">
                 <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
