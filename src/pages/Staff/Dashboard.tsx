@@ -34,6 +34,7 @@ import Approvals, {
 import Announcements from "./Announcements";
 import UserSettings from "./UserSettings";
 import Tickets from "../Admin/Tickets";
+import Payroll from "../Admin/Payroll";
 
 type Profile = {
   firstname?: string;
@@ -87,6 +88,16 @@ const staffManagementNav: StaffNavItem[] = [
     path: "/approvals",
     label: "Approvals",
     icon: <path d="M5 12l4 4L19 6" />,
+  },
+  {
+    path: "/payroll",
+    label: "Payroll Records",
+    icon: (
+      <>
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M2 10h20M6 15h2M10 15h4" />
+      </>
+    ),
   },
 ];
 
@@ -628,6 +639,7 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           {(location.pathname === "/notifications" ||
             location.pathname === "/announcements") && <StaffNotifications />}
           {location.pathname === "/approvals" && <StaffApprovals />}
+          {location.pathname === "/payroll" && <Payroll />}
           {(location.pathname === "/tickets" ||
             location.pathname === "/support") && <Tickets />}
           {(location.pathname === "/settings" ||

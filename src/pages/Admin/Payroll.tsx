@@ -53,6 +53,11 @@ export default function Payroll() {
   });
   const acceptedCount = records.filter((record) => record.status === "Approved").length;
   const rejectedCount = records.filter((record) => record.status === "Rejected").length;
+  const payableAmount = records
+    .filter((record) => record.status === "Approved")
+    .reduce((sum, record) => sum + (Number(String(record.amount || 0).replace(/[^0-9.-]/g, "")) || 0), 0);
+  const totalComputedAmount = records
+    .reduce((sum, record) => sum + (Number(String(record.amount || 0).replace(/[^0-9.-]/g, "")) || 0), 0);
   return (
     <div className="pb-2">
       <PageTitle
@@ -66,10 +71,10 @@ export default function Payroll() {
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-widest font-semibold" style={{ color: "#5f8c6c" }}>Payable Now · Accepted</p>
-            <p className="text-[40px] font-bold leading-none tracking-tight mt-2" style={{ color: "#fff" }}>₱0</p>
+            <p className="text-[40px] font-bold leading-none tracking-tight mt-2" style={{ color: "#fff" }}>₱{payableAmount.toLocaleString()}</p>
             <p className="text-[12.5px] mt-2" style={{ color: "#7aaa86" }}>{acceptedCount} approved records</p>
             <div className="flex items-center gap-4 mt-4 text-[12.5px]">
-              <span style={{ color: "#7aaa86" }}>Total computed <span className="font-semibold" style={{ color: "#cfe3d6" }}>₱0</span></span>
+              <span style={{ color: "#7aaa86" }}>Total computed <span className="font-semibold" style={{ color: "#cfe3d6" }}>₱{totalComputedAmount.toLocaleString()}</span></span>
               <span className="w-1 h-1 rounded-full" style={{ background: "#2c4433" }} />
               <span style={{ color: "#7aaa86" }}>Rejected excluded <span className="font-semibold" style={{ color: "#d0674a" }}>{rejectedCount} records</span></span>
             </div>

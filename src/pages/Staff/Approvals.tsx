@@ -101,7 +101,16 @@ function stageStatus(
   const at = STAGES.indexOf(it.stage);
   const mine = STAGES.indexOf(role);
 
-  if (it.status === "Disapproved") {
+  const isResub =
+    it.event?.toLowerCase().includes("resubmit") ||
+    it.record?.remark?.toLowerCase().includes("resubmit") ||
+    it.record?.notes?.toLowerCase().includes("resubmit");
+
+  if (isResub && at === mine) {
+    return { label: "Pending", tone: "amber", note: "resubmitted · awaiting you" };
+  }
+
+  if (it.status === "Disapproved" && !isResub) {
     return { label: "Disapproved", tone: "red", note: `at ${it.stage}` };
   }
   if (it.status === "Approved") {
@@ -123,7 +132,10 @@ function stageStatus(
 function StageProgress({ item }: { item: ApprovalItem }) {
   const at = STAGES.indexOf(item.stage);
   const finished = item.status === "Approved";
-  const rejected = item.status === "Disapproved";
+  const isResub =
+    item.event?.toLowerCase().includes("resubmit") ||
+    item.record?.remark?.toLowerCase().includes("resubmit");
+  const rejected = item.status === "Disapproved" && !isResub;
 
   return (
     <div className="flex items-center gap-1.5 mt-4 flex-wrap">
@@ -325,19 +337,76 @@ export default function Approvals() {
   }, [queue, role]);
 
   const open = scopedQueue.find((it) => it.id === openId) ?? null;
+  const isResubmission = Boolean(
+    open && (
+      open.event?.toLowerCase().includes("resubmit") ||
+      open.record?.remark?.toLowerCase().includes("resubmit") ||
+      open.record?.notes?.toLowerCase().includes("resubmit")
+    )
+  );
   const openStatus = open ? stageStatus(open, role) : null;
-  const canAct = !!open && open.status === "Pending" && open.stage === role;
+  const canAct = !!open && (open.status === "Pending" || isResubmission) && open.stage === role;
   const next = open ? nextStageOf(open.stage) : undefined;
 
-  const awaiting = scopedQueue.filter((it) => it.status === "Pending").length;
-  const inPipeline = scopedQueue.filter((it) => it.status === "Pending").length;
+  // Calculation of estimated duty hours and amount for Accounting review
+  const accountingComputation = useMemo(() => {
+    if (!open || (role !== "Accounting" && open.stage !== "Accounting")) return null;
+    let totalHours = 0;
+    if (open.type === "DTR") {
+      const rows = open.record?.tables?.[0]?.rows || [];
+      for (const row of rows) {
+        const h = Number(row[3]);
+        totalHours += !isNaN(h) && h > 0 ? h : 8;
+      }
+      if (totalHours <= 0) totalHours = 80;
+      const rate = 250;
+      const amount = Math.round(totalHours * rate);
+      return { hours: totalHours, rate, amount, type: "DTR" as const };
+    } else {
+      const tables = open.record?.tables || [];
+      for (const t of tables) {
+        for (const row of t.rows || []) {
+          const shiftStr = String(row[4] || "");
+          if (shiftStr.includes("–") || shiftStr.includes("-")) {
+            const [s, e] = shiftStr.split(/[–-]/);
+            const [sh, sm] = (s || "").trim().split(":").map(Number);
+            const [eh, em] = (e || "").trim().split(":").map(Number);
+            if (!isNaN(sh) && !isNaN(eh)) {
+              const diff = (eh * 60 + (em || 0)) - (sh * 60 + (sm || 0));
+              totalHours += diff > 0 ? diff / 60 : 3;
+            } else {
+              totalHours += 3;
+            }
+          } else {
+            const units = Number(row[2]);
+            totalHours += !isNaN(units) && units > 0 ? units : 3;
+          }
+        }
+      }
+      if (totalHours <= 0) totalHours = 30;
+      const rate = 500;
+      const amount = Math.round(totalHours * rate);
+      return { hours: totalHours, rate, amount, type: "AR" as const };
+    }
+  }, [open, role]);
+
+  const awaiting = scopedQueue.filter((it) => {
+    const isResub =
+      it.event?.toLowerCase().includes("resubmit") ||
+      it.record?.remark?.toLowerCase().includes("resubmit");
+    return it.status === "Pending" || isResub;
+  }).length;
+  const inPipeline = awaiting;
 
   // Filtered rows for the Table (strictly scoped to this role)
   const filteredQueue = useMemo(() => {
     return scopedQueue.filter((it) => {
-      if (tab === "Pending" && it.status !== "Pending") return false;
+      const isResub =
+        it.event?.toLowerCase().includes("resubmit") ||
+        it.record?.remark?.toLowerCase().includes("resubmit");
+      if (tab === "Pending" && it.status !== "Pending" && !isResub) return false;
       if (tab === "Approved" && it.status !== "Approved") return false;
-      if (tab === "Disapproved" && it.status !== "Disapproved" && it.status !== "Flagged") return false;
+      if (tab === "Disapproved" && it.status !== "Disapproved" && it.status !== "Flagged" && !isResub) return false;
 
       if (query.trim()) {
         const q = query.trim().toLowerCase();
@@ -440,12 +509,42 @@ export default function Approvals() {
     setQueue(updatedQueue);
 
     try {
-      await saveResource(`/approvals/${item.id}`, {
+      const res = await saveResource<{
+        id: string;
+        action: string;
+        remark: string;
+        payroll?: {
+          id: string;
+          amount: number;
+          hours: number;
+          rate: number;
+          period: string;
+          units: string;
+          status: string;
+        };
+      }>(`/approvals/${item.id}`, {
         action,
         remark: decisionRemark,
         stage: item.stage,
         role,
       }, "PATCH");
+
+      if (action === "Approve" && (role === "Accounting" || item.stage === "Accounting")) {
+        const amt =
+          res?.payroll?.amount != null
+            ? `₱${Number(res.payroll.amount).toLocaleString()}`
+            : accountingComputation
+              ? `₱${accountingComputation.amount.toLocaleString()}`
+              : "";
+        const hrs =
+          res?.payroll?.hours != null
+            ? `${res.payroll.hours} hrs`
+            : accountingComputation
+              ? `${accountingComputation.hours.toFixed(1)} hrs`
+              : "";
+        const detail = [amt, hrs].filter(Boolean).join(" · ");
+        setFlash(`Approved · Cleared and recorded on payroll${detail ? ` (${detail})` : ""}`);
+      }
     } catch (err) {
       console.error("Failed to save approval decision:", err);
       setFlash(err instanceof Error ? err.message : "Unable to save decision to database.");
@@ -1040,7 +1139,46 @@ export default function Approvals() {
               </span>
             </div>
 
+            {isResubmission && (
+              <div
+                className="flex items-center gap-2.5 px-4 py-3 rounded-2xl text-[12.5px] border"
+                style={{ background: "#edf7f1", borderColor: "#c2e7d3", color: "#1e623a" }}
+              >
+                <span className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse" style={{ background: "#2f7043" }} />
+                <span className="font-semibold">Resubmitted Record:</span>
+                <span>The faculty member has resubmitted this report with corrections. You may review and proceed with it.</span>
+              </div>
+            )}
+
             <StageProgress item={open} />
+
+            {accountingComputation && (
+              <div
+                className="p-3.5 rounded-2xl border flex items-center justify-between gap-3 flex-wrap"
+                style={{ background: "#fcf8f0", borderColor: "#f1e2c6" }}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ background: "#d99a2b" }} />
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-[#8a5b14]">
+                      Automatic Payroll Computation (Accounting Stage)
+                    </p>
+                  </div>
+                  <p className="text-[12.5px] text-[#6e4e1a] mt-1 font-medium">
+                    Rendered Duty Time: <strong>{accountingComputation.hours.toFixed(1)} hrs</strong> · Assumed Rate: <strong>₱{accountingComputation.rate}/hr</strong>
+                  </p>
+                  <p className="text-[11.5px] text-[#996515] mt-0.5">
+                    Approving automatically computes and records this under Payroll Records.
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[11px] uppercase tracking-wide text-[#8a5b14] font-medium">Calculated Amount</p>
+                  <p className="text-[22px] font-bold text-[#8a5b14] leading-tight mt-0.5">
+                    ₱{accountingComputation.amount.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {!canAct && (
               <div
