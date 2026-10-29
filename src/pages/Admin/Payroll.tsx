@@ -45,7 +45,7 @@ export default function Payroll() {
   const [search, setSearch] = useState("");
   const [recordFilter, setRecordFilter] = useState("All records");
   const [filterOpen, setFilterOpen] = useState(false);
-  const { data, loading, error } = useResource<{ records: PayrollRecord[]; classes: PayrollClass[] }>("/payroll", { records: [], classes: [] });
+  const { data, loading, error, reload } = useResource<{ records: PayrollRecord[]; classes: PayrollClass[] }>("/payroll", { records: [], classes: [] });
   const { records, classes } = data;
   const filteredRecords = records.filter((record) => {
     const className = record.status === "Approved" ? "Accepted" : record.status;
@@ -63,7 +63,17 @@ export default function Payroll() {
       <PageTitle
         title="Payroll Computation"
         subtitle="Amounts calculated from submitted AR / DTR records, classified by approval outcome."
-        action={<GhostButton><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>Export</GhostButton>}
+        action={
+          <div className="flex items-center gap-2">
+            <GhostButton onClick={() => reload()}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4">
+                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </GhostButton>
+            <GhostButton><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-4 h-4"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>Export</GhostButton>
+          </div>
+        }
       />
 
       {/* Computation hero */}

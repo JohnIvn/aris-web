@@ -311,7 +311,9 @@ export default function Approvals() {
   }>("/users/me/profile", {});
 
   const staffPosition = profile?.position || user?.position || "";
-  const role: StageRole = normalizeStaffRole(staffPosition);
+  const detectedRole: StageRole = normalizeStaffRole(staffPosition);
+  const [selectedRole, setSelectedRole] = useState<StageRole | null>(null);
+  const role: StageRole = selectedRole || detectedRole;
   const staffName =
     [profile?.firstname, profile?.lastname].filter(Boolean).join(" ") ||
     user?.name ||
@@ -336,7 +338,7 @@ export default function Approvals() {
     return queue.filter((it) => it.stage === role);
   }, [queue, role]);
 
-  const open = scopedQueue.find((it) => it.id === openId) ?? null;
+  const open = scopedQueue.find((it) => it.id === openId) ?? queue.find((it) => it.id === openId) ?? null;
   const isResubmission = Boolean(
     open && (
       open.event?.toLowerCase().includes("resubmit") ||
@@ -345,8 +347,8 @@ export default function Approvals() {
     )
   );
   const openStatus = open ? stageStatus(open, role) : null;
-  const canAct = !!open && (open.status === "Pending" || isResubmission) && open.stage === role;
-  const next = open ? nextStageOf(open.stage) : undefined;
+  const canAct = !!open && (open.status === "Pending" || isResubmission) && (open.stage === role || role === "Accounting");
+  const next = role === "Accounting" ? undefined : (open ? nextStageOf(open.stage) : undefined);
 
   // Calculation of estimated duty hours and amount for Accounting review
   const accountingComputation = useMemo(() => {
@@ -509,6 +511,7 @@ export default function Approvals() {
     setQueue(updatedQueue);
 
     try {
+      const isAccounting = role === "Accounting" || item.stage === "Accounting";
       const res = await saveResource<{
         id: string;
         action: string;
@@ -525,11 +528,11 @@ export default function Approvals() {
       }>(`/approvals/${item.id}`, {
         action,
         remark: decisionRemark,
-        stage: item.stage,
-        role,
+        stage: isAccounting ? "Accounting" : item.stage,
+        role: isAccounting ? "Accounting" : role,
       }, "PATCH");
 
-      if (action === "Approve" && (role === "Accounting" || item.stage === "Accounting")) {
+      if (action === "Approve" && isAccounting) {
         const amt =
           res?.payroll?.amount != null
             ? `₱${Number(res.payroll.amount).toLocaleString()}`
@@ -545,6 +548,7 @@ export default function Approvals() {
         const detail = [amt, hrs].filter(Boolean).join(" · ");
         setFlash(`Approved · Cleared and recorded on payroll${detail ? ` (${detail})` : ""}`);
       }
+      await reload();
     } catch (err) {
       console.error("Failed to save approval decision:", err);
       setFlash(err instanceof Error ? err.message : "Unable to save decision to database.");
@@ -718,7 +722,35 @@ export default function Approvals() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1 bg-[#f4f6f5] p-1 rounded-xl border border-[#e2e8e4]">
+              {STAGES.map((s) => {
+                const count = queue.filter(
+                  (it) => it.stage === s && (it.status === "Pending" || it.event?.toLowerCase().includes("resubmit"))
+                ).length;
+                const isSelected = role === s;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setSelectedRole(s)}
+                    className={`px-2.5 py-1 rounded-lg text-[11.5px] font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      isSelected
+                        ? "bg-white text-[#111c14] shadow-xs border border-[#e2e8e4]"
+                        : "text-[#5a6b5e] hover:text-[#111c14]"
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: STAGE_COLOR[s] }} />
+                    <span>{s}</span>
+                    {count > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#fef3c7] text-[#92400e]">
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
             {viewMode === "board" && (
               <label
                 className="flex items-center gap-2 text-[12px] font-medium select-none cursor-pointer"
@@ -1110,7 +1142,11 @@ export default function Approvals() {
                     className="h-9 px-4 rounded-xl text-[13px] font-semibold text-white transition-transform active:scale-[0.99] cursor-pointer"
                     style={{ background: BRAND }}
                   >
-                    {next ? "Approve & forward" : "Approve & clear"}
+                    {role === "Accounting" || open.stage === "Accounting"
+                      ? "Approve & Clear for Payroll"
+                      : next
+                      ? "Approve & forward"
+                      : "Approve & clear"}
                   </button>
                 </div>
               </div>
