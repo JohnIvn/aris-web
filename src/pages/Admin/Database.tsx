@@ -969,138 +969,67 @@ export default function Database() {
 
         {/* Tab 4: Backup Settings & Schedule */}
         {activeTab === "Backup Settings" && (
-          <div className="p-4 sm:p-6 max-w-3xl space-y-6">
+          <div className="w-full space-y-6 p-4 sm:p-6">
             <div
-              className="flex items-center justify-between gap-3 pb-4 border-b"
+              className="flex items-center justify-between gap-3 border-b pb-4"
               style={{ borderColor: "#eef1ef" }}
             >
               <div className="min-w-0">
-                <h3
-                  className="text-[14.5px] font-semibold"
-                  style={{ color: "#111c14" }}
-                >
+                <h3 className="text-[14.5px] font-semibold" style={{ color: "#111c14" }}>
                   Automated Daily Snapshot Schedule
                 </h3>
-                <p
-                  className="text-[12.5px] mt-0.5"
-                  style={{ color: "#8fa394" }}
-                >
-                  Automatically capture full database state daily at off-peak
-                  hours.
+                <p className="mt-0.5 text-[12.5px]" style={{ color: "#8fa394" }}>
+                  Automatically capture full database state daily at off-peak hours.
                 </p>
               </div>
               <Toggle on={autoBackupEnabled} onChange={(value) => void updateBackupSetting("autoBackupEnabled", value)} />
             </div>
 
             <div
-              className="flex items-center justify-between gap-3 pb-4 border-b"
+              className="flex items-center justify-between gap-3 border-b pb-4"
               style={{ borderColor: "#eef1ef" }}
             >
               <div className="min-w-0">
-                <h3
-                  className="text-[14.5px] font-semibold"
-                  style={{ color: "#111c14" }}
-                >
+                <h3 className="text-[14.5px] font-semibold" style={{ color: "#111c14" }}>
                   Cross-Region Storage Replication
                 </h3>
-                <p
-                  className="text-[12.5px] mt-0.5"
-                  style={{ color: "#8fa394" }}
-                >
-                  Store backups in a configured secondary storage region when
-                  replication is available.
+                <p className="mt-0.5 text-[12.5px]" style={{ color: "#8fa394" }}>
+                  Store backups in a configured secondary storage region when replication is available.
                 </p>
               </div>
-              <Toggle
-                on={crossRegionEnabled}
-                onChange={(value) => void updateBackupSetting("crossRegionEnabled", value)}
-              />
+              <Toggle on={crossRegionEnabled} onChange={(value) => void updateBackupSetting("crossRegionEnabled", value)} />
             </div>
 
             <div
-              className="flex items-center justify-between gap-3 pb-4 border-b"
+              className="flex items-center justify-between gap-3 border-b pb-4"
               style={{ borderColor: "#eef1ef" }}
             >
               <div className="min-w-0">
-                <h3
-                  className="text-[14.5px] font-semibold"
-                  style={{ color: "#111c14" }}
-                >
+                <h3 className="text-[14.5px] font-semibold" style={{ color: "#111c14" }}>
                   Point-in-Time Recovery (WAL Archiving)
                 </h3>
-                <p
-                  className="text-[12.5px] mt-0.5"
-                  style={{ color: "#8fa394" }}
-                >
-                  Enable the database provider's point-in-time recovery policy
-                  for this environment.
+                <p className="mt-0.5 text-[12.5px]" style={{ color: "#8fa394" }}>
+                  Enable the database provider&apos;s point-in-time recovery policy for this environment.
                 </p>
               </div>
-              <Toggle
-                on={pointInTimeEnabled}
-                onChange={(value) => void updateBackupSetting("pointInTimeEnabled", value)}
-              />
+              <Toggle on={pointInTimeEnabled} onChange={(value) => void updateBackupSetting("pointInTimeEnabled", value)} />
             </div>
 
             <div className="pt-2">
-              <h3
-                className="text-[14.5px] font-semibold mb-3"
-                style={{ color: "#111c14" }}
-              >
-                Retention & Archival Policy
+              <h3 className="mb-3 text-[14.5px] font-semibold" style={{ color: "#111c14" }}>
+                Retention &amp; Archival Policy
               </h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div
-                  className="p-3.5 rounded-2xl border"
-                  style={{ borderColor: "#e2e8e4", background: "#fafbfa" }}
-                >
-                  <p
-                    className="text-[11px] uppercase tracking-wide font-semibold"
-                    style={{ color: "#8fa394" }}
-                  >
-                    Daily Backups
-                  </p>
-                  <p
-                    className="text-[18px] font-bold mt-1"
-                    style={{ color: "#111c14" }}
-                  >
-                    Retain 30 Days
-                  </p>
-                </div>
-                <div
-                  className="p-3.5 rounded-2xl border"
-                  style={{ borderColor: "#e2e8e4", background: "#fafbfa" }}
-                >
-                  <p
-                    className="text-[11px] uppercase tracking-wide font-semibold"
-                    style={{ color: "#8fa394" }}
-                  >
-                    Weekly Archives
-                  </p>
-                  <p
-                    className="text-[18px] font-bold mt-1"
-                    style={{ color: "#111c14" }}
-                  >
-                    Retain 12 Weeks
-                  </p>
-                </div>
-                <div
-                  className="p-3.5 rounded-2xl border"
-                  style={{ borderColor: "#e2e8e4", background: "#fafbfa" }}
-                >
-                  <p
-                    className="text-[11px] uppercase tracking-wide font-semibold"
-                    style={{ color: "#8fa394" }}
-                  >
-                    Monthly Snapshots
-                  </p>
-                  <p
-                    className="text-[18px] font-bold mt-1"
-                    style={{ color: "#111c14" }}
-                  >
-                    Retain 7 Years
-                  </p>
-                </div>
+                {[
+                  ["Daily Backups", "Retain 30 Days"],
+                  ["Weekly Archives", "Retain 12 Weeks"],
+                  ["Monthly Snapshots", "Retain 7 Years"],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl border p-3.5" style={{ borderColor: "#e2e8e4", background: "#fafbfa" }}>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "#8fa394" }}>{label}</p>
+                    <p className="mt-1 text-[18px] font-bold" style={{ color: "#111c14" }}>{value}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
