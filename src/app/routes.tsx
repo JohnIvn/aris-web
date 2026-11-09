@@ -4,6 +4,7 @@ import Root from "@/layouts/AdminLayout";
 import Login from "@/components/Login";
 import TermsOfService from "@/pages/TermsOfService";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import Downloads from "@/pages/Downloads";
 import Dashboard from "@/pages/Admin/Dashboard";
 import Announcements from "@/pages/Admin/Announcements";
 import Curriculum from "@/pages/Admin/Curriculum";
@@ -105,6 +106,21 @@ export const router = createBrowserRouter([
   {
     path: "/privacy-policy",
     Component: PrivacyPolicy,
+    ErrorBoundary: RouteErrorBoundary,
+  },
+  {
+    path: "/downloads",
+    Component: Downloads,
+    ErrorBoundary: RouteErrorBoundary,
+  },
+  {
+    path: "/download",
+    Component: Downloads,
+    ErrorBoundary: RouteErrorBoundary,
+  },
+  {
+    path: "/apps",
+    Component: Downloads,
     ErrorBoundary: RouteErrorBoundary,
   },
   {

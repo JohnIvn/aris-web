@@ -4,12 +4,12 @@ import { Mail } from "lucide-react"
 import arisLogo from "@/assets/brand/image.png"
 import { GhostButton, Modal, PrimaryButton } from "@/components/ui"
 
-const BRAND = "#3a7d4e"
-const BRAND_DARK = "#0d1a10"
-const SUPPORT_EMAIL = "admin@ucc.edu.ph"
+const BRAND = "#3a7d4e";
+const BRAND_DARK = "#0d1a10";
+const SUPPORT_EMAIL = "admin@ucc.edu.ph";
 
 const supportMailto = (subject: string, body: string) =>
-  `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
 export default function Login({
   onSignIn,
@@ -20,56 +20,65 @@ export default function Login({
   onCampusSso?: () => Promise<void> | void;
   audience?: string;
 }) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [show, setShow] = useState(false)
-  const [remember, setRemember] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [dialog, setDialog] = useState<"forgot" | "contact" | null>(null)
-  const resetFormRef = useRef<HTMLFormElement>(null)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [dialog, setDialog] = useState<"forgot" | "contact" | null>(null);
+  const resetFormRef = useRef<HTMLFormElement>(null);
 
   const handlePasswordReset = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const body = `Hello IT Administration,\n\nPlease help me reset the password for my ARIS ${audience} account.\n\nAccount email: ${email.trim()}`
-    window.location.href = supportMailto(`ARIS ${audience} password reset`, body)
-    setDialog(null)
-  }
+    event.preventDefault();
+    const body = `Hello IT Administration,\n\nPlease help me reset the password for my ARIS ${audience} account.\n\nAccount email: ${email.trim()}`;
+    window.location.href = supportMailto(
+      `ARIS ${audience} password reset`,
+      body,
+    );
+    setDialog(null);
+  };
 
   const contactSupport = () => {
-    const body = `Hello IT Administration,\n\nI need help with my ARIS ${audience} account.\n\nAccount email: ${email.trim() || "Not provided"}`
-    window.location.href = supportMailto("ARIS support request", body)
-    setDialog(null)
-  }
+    const body = `Hello IT Administration,\n\nI need help with my ARIS ${audience} account.\n\nAccount email: ${email.trim() || "Not provided"}`;
+    window.location.href = supportMailto("ARIS support request", body);
+    setDialog(null);
+  };
 
   const startCampusSso = async () => {
-    setError(null)
+    setError(null);
     if (!onCampusSso) {
-      setError("Campus SSO is not configured yet. Contact IT administration for access.")
-      return
+      setError(
+        "Campus SSO is not configured yet. Contact IT administration for access.",
+      );
+      return;
     }
-    setSubmitting(true)
+    setSubmitting(true);
     try {
-      await onCampusSso()
+      await onCampusSso();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to start campus SSO.")
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Unable to start campus SSO.",
+      );
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-    setError(null)
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
     try {
-      await onSignIn(email, password)
+      await onSignIn(email, password);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Unable to sign in.")
+      setError(reason instanceof Error ? reason.message : "Unable to sign in.");
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
     <div
@@ -135,8 +144,8 @@ export default function Login({
             className="text-[15px] mt-5 leading-relaxed max-w-sm"
             style={{ color: "#8fb69b" }}
           >
-            One secure place to manage your ARIS work.
-            academic record — no clutter.
+            One secure place to manage your ARIS work. academic record — no
+            clutter.
           </p>
         </div>
 
@@ -164,6 +173,13 @@ export default function Login({
           >
             <span>ARIS • UCC</span>
             <div className="flex items-center gap-3">
+              <Link
+                to="/downloads"
+                className="hover:text-[#8fb69b] transition-colors underline-offset-2 hover:underline text-[#7cb789] font-medium"
+              >
+                Download Apps
+              </Link>
+              <span>•</span>
               <Link
                 to="/terms"
                 className="hover:text-[#8fb69b] transition-colors underline-offset-2 hover:underline"
@@ -290,7 +306,10 @@ export default function Login({
             </label>
 
             <div className="flex items-center justify-between">
-              <div onClick={() => setRemember((r) => !r)} className="flex w-fit items-center gap-2.5 cursor-pointer select-none">
+              <div
+                onClick={() => setRemember((r) => !r)}
+                className="flex w-fit items-center gap-2.5 cursor-pointer select-none"
+              >
                 <button
                   type="button"
                   onClick={() => setRemember((r) => !r)}
@@ -319,7 +338,7 @@ export default function Login({
                   Remember me
                 </span>
               </div>
-              
+
               <button
                 type="button"
                 onClick={() => setDialog("forgot")}
@@ -341,7 +360,11 @@ export default function Login({
             >
               {submitting ? "Signing in..." : "Sign in"}
             </button>
-            {error && <p role="alert" className="text-[12px] text-red-700">{error}</p>}
+            {error && (
+              <p role="alert" className="text-[12px] text-red-700">
+                {error}
+              </p>
+            )}
           </form>
 
           <div className="my-5 flex items-center gap-3 text-[10px] text-[#a0aaa2]">
@@ -349,7 +372,13 @@ export default function Login({
             <span>OR</span>
             <span className="h-px flex-1 bg-[#e5eae5]" />
           </div>
-          <button type="button" disabled={submitting} onClick={startCampusSso} className="flex h-11 w-full items-center justify-center gap-3 leading-[0px] rounded-xl border bg-white text-[13px] font-medium text-[#3d4a41] transition-colors hover:bg-[#f7f9f8] disabled:opacity-60" style={{ borderColor: "#e2e8e4" }}>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={startCampusSso}
+            className="flex h-11 w-full items-center justify-center gap-3 leading-[0px] rounded-xl border bg-white text-[13px] font-medium text-[#3d4a41] transition-colors hover:bg-[#f7f9f8] disabled:opacity-60"
+            style={{ borderColor: "#e2e8e4" }}
+          >
             <Mail className="h-4 w-4" aria-hidden="true" />
             Continue with campus SSO
           </button>
@@ -368,16 +397,51 @@ export default function Login({
               Contact IT administration
             </button>
           </p>
+
+          <div className="mt-8 flex items-center justify-center gap-3 text-[11.5px] text-[#8fa394] lg:hidden">
+            <Link
+              to="/downloads"
+              className="hover:text-[#3a7d4e] transition-colors font-medium text-[#2f7043]"
+            >
+              Download Apps
+            </Link>
+            <span>•</span>
+            <Link
+              to="/terms"
+              className="hover:text-[#3a7d4e] transition-colors"
+            >
+              Terms
+            </Link>
+            <span>•</span>
+            <Link
+              to="/privacy"
+              className="hover:text-[#3a7d4e] transition-colors"
+            >
+              Privacy
+            </Link>
+          </div>
         </div>
       </div>
       <Modal
         isOpen={dialog !== null}
         onClose={() => setDialog(null)}
-        title={dialog === "forgot" ? "Reset your password" : "Contact IT administration"}
+        title={
+          dialog === "forgot"
+            ? "Reset your password"
+            : "Contact IT administration"
+        }
         align="left"
         icon={
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#eaf4ee] text-[#2f7043]">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-6 w-6"
+            >
               <rect x="3" y="5" width="18" height="14" rx="2" />
               <path d="m3 7 9 6 9-6" />
             </svg>
@@ -387,7 +451,9 @@ export default function Login({
           dialog === "forgot" ? (
             <>
               <GhostButton onClick={() => setDialog(null)}>Cancel</GhostButton>
-              <PrimaryButton onClick={() => resetFormRef.current?.requestSubmit()}>
+              <PrimaryButton
+                onClick={() => resetFormRef.current?.requestSubmit()}
+              >
                 Email IT
               </PrimaryButton>
             </>
@@ -402,11 +468,18 @@ export default function Login({
         {dialog === "forgot" ? (
           <>
             <p>
-              Enter your account email. ARIS will open a prefilled request to IT;
-              it does not send automatic reset links.
+              Enter your account email. ARIS will open a prefilled request to
+              IT; it does not send automatic reset links.
             </p>
-            <form ref={resetFormRef} onSubmit={handlePasswordReset} className="mt-4">
-              <label className="block text-[12.5px] font-medium" style={{ color: "#3d4a41" }}>
+            <form
+              ref={resetFormRef}
+              onSubmit={handlePasswordReset}
+              className="mt-4"
+            >
+              <label
+                className="block text-[12.5px] font-medium"
+                style={{ color: "#3d4a41" }}
+              >
                 Account email
                 <input
                   type="email"
@@ -427,7 +500,10 @@ export default function Login({
               IT administration.
             </p>
             <a
-              href={supportMailto("ARIS support request", `Hello IT Administration,\n\nI need help with my ARIS ${audience} account.`)}
+              href={supportMailto(
+                "ARIS support request",
+                `Hello IT Administration,\n\nI need help with my ARIS ${audience} account.`,
+              )}
               className="font-semibold underline underline-offset-2"
               style={{ color: BRAND }}
             >
@@ -437,5 +513,5 @@ export default function Login({
         )}
       </Modal>
     </div>
-  )
+  );
 }

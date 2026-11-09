@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Scale,
   Shield,
+  Download,
   Printer,
   Search,
   CheckCircle2,
@@ -74,6 +75,14 @@ export default function TermsOfService() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/downloads"
+              className="hidden items-center gap-1.5 rounded-xl border border-[#e2e8e4] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#3d4a41] transition hover:border-[#3a7d4e] hover:text-[#3a7d4e] sm:flex"
+            >
+              <Download className="h-3.5 w-3.5 text-[#3a7d4e]" />
+              <span>Downloads</span>
+            </Link>
+
             <Link
               to="/privacy"
               className="hidden items-center gap-1.5 rounded-xl border border-[#e2e8e4] bg-white px-3 py-1.5 text-[12.5px] font-medium text-[#3d4a41] transition hover:border-[#3a7d4e] hover:text-[#3a7d4e] sm:flex"
@@ -529,6 +538,12 @@ export default function TermsOfService() {
                 >
                   Return to Login
                 </button>
+                <Link
+                  to="/downloads"
+                  className="rounded-xl border border-[#cbe1d0] bg-[#eaf4ee] px-5 py-2.5 text-[13.5px] font-medium text-[#2f7043] transition hover:bg-[#dcefe1]"
+                >
+                  Download Apps
+                </Link>
                 <Link
                   to="/privacy"
                   className="rounded-xl border border-[#e2e8e4] bg-white px-5 py-2.5 text-[13.5px] font-medium text-[#3d4a41] transition hover:bg-[#f7f9f8]"
