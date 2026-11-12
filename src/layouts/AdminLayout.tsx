@@ -1,7 +1,7 @@
 import { Outlet, useLocation, useNavigate } from "react-router"
 import { useState, useEffect, useRef } from "react"
 import arisLogo from "@/assets/brand/image.png"
-import { BRAND, BRAND_DARK, mainNav, managementNav, settingsNav, supportNav, type NavItem } from "@/config/navigation"
+import { BRAND, BRAND_DARK, hardwareNav, mainNav, managementNav, settingsNav, supportNav, type NavItem } from "@/config/navigation"
 import type { UserAccount } from "@/data/demoAccounts"
 import { GhostButton, Modal, PrimaryButton, SearchInput } from "@/components/ui"
 import { useResource } from "@/hooks/useResource"
@@ -90,13 +90,14 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     onSignOut()
   }
 
-  const searchItems = [...mainNav, ...managementNav, ...supportNav, ...settingsNav].filter((item) =>
+  const searchItems = [...mainNav, ...managementNav, ...hardwareNav, ...supportNav, ...settingsNav].filter((item) =>
     item.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
   )
 
   const navSections = [
     { title: "Main", items: mainNav },
     { title: "Management", items: managementNav },
+    { title: "Hardware", items: hardwareNav },
     { title: "Support", items: supportNav },
     { title: "Settings", items: settingsNav },
   ]
@@ -211,6 +212,15 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
             Management
           </p>}
           {managementNav.map((item) => (
+            <NavButton key={item.path} item={item} />
+          ))}
+          {!sidebarCollapsed && <p
+            className="text-[10px] uppercase tracking-widest font-semibold px-3 pt-4 pb-1.5"
+            style={{ color: "#b6c3ba" }}
+          >
+            Hardware
+          </p>}
+          {hardwareNav.map((item) => (
             <NavButton key={item.path} item={item} />
           ))}
           {!sidebarCollapsed && <p

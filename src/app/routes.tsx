@@ -24,6 +24,7 @@ import Tickets from "@/pages/Admin/Tickets";
 import StaffProfMessages from "@/pages/Admin/StaffProfMessages";
 import HardwareMonitoring from "@/pages/Admin/HardwareMonitoring";
 import Enroll from "@/pages/Admin/Enroll";
+import OTA from "@/pages/Admin/OTA";
 import StaffDashboard from "@/pages/Staff/Dashboard";
 
 if (typeof window !== "undefined" && window.location.hash.startsWith("#/")) {
@@ -167,6 +168,7 @@ export const router = createBrowserRouter([
       { path: "system-logs", Component: SystemLogs },
       { path: "database", Component: Database },
       { path: "enroll", Component: Enroll },
+      { path: "ota", Component: OTA },
       { path: "hardware-monitoring", Component: HardwareMonitoring },
       { path: "software-monitoring", Component: SoftwareMonitoring },
       { path: "settings/user", Component: UserSettings },

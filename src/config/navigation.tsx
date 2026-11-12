@@ -95,6 +95,9 @@ export const managementNav: NavItem[] = [
       <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />,
     ),
   },
+];
+
+export const hardwareNav: NavItem[] = [
   {
     path: "/enroll",
     label: "Enroll",
@@ -109,6 +112,17 @@ export const managementNav: NavItem[] = [
         <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
         <path d="M8.65 22c.21-.66.45-1.32.57-2" />
         <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
+      </>
+    ),
+  },
+  {
+    path: "/ota",
+    label: "OTA",
+    icon: icon(
+      <>
+        <path d="M12 16V4" />
+        <path d="M7 9l5-5 5 5" />
+        <path d="M4 20h16" />
       </>
     ),
   },
@@ -193,6 +207,7 @@ export const settingsNav: NavItem[] = [
 export const allNav = [
   ...mainNav,
   ...managementNav,
+  ...hardwareNav,
   ...supportNav,
   ...settingsNav,
 ];
