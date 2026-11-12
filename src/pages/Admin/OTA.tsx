@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, FileCode2, Plus, RefreshCw, Upload, X, XCircle } from "lucide-react";
-import { Card, PageTitle } from "@/components/ui";
+import { Badge, Card, PageTitle } from "@/components/ui";
 import { apiClient } from "@/services/apiClient";
 
 const OTA_BUCKET =
@@ -13,6 +13,7 @@ type OTAFile = {
   mimetype: string | null;
   created_at: string | null;
   updated_at: string | null;
+  is_main: boolean;
 };
 
 function formatFileSize(size: number | null) {
@@ -36,6 +37,7 @@ export default function OTA() {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [settingMainFile, setSettingMainFile] = useState<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     setLoadingFiles(true);
@@ -102,6 +104,21 @@ export default function OTA() {
     setIsAddModalOpen(false);
   };
 
+  const setMainFile = async (name: string) => {
+    setSettingMainFile(name);
+    setMessage(null);
+    setError(null);
+    try {
+      await apiClient.post("/system/ota/main", { name });
+      setMessage(`${name} is now the main OTA file for client downloads.`);
+      await loadFiles();
+    } catch (requestError) {
+      setError(`Unable to set main OTA file: ${requestError instanceof Error ? requestError.message : "Request failed"}`);
+    } finally {
+      setSettingMainFile(null);
+    }
+  };
+
   return (
     <div className="pb-4">
       <PageTitle
@@ -158,19 +175,20 @@ export default function OTA() {
                 <th className="px-3 py-3 font-medium">Size</th>
                 <th className="px-3 py-3 font-medium">Uploaded</th>
                 <th className="px-3 py-3 font-medium">Updated</th>
+                <th className="px-3 py-3 font-medium">Client file</th>
               </tr>
             </thead>
             <tbody>
               {loadingFiles && files.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-[12px] text-[#8fa394]">
+                  <td colSpan={6} className="px-5 py-8 text-center text-[12px] text-[#8fa394]">
                     Loading uploaded files...
                   </td>
                 </tr>
               )}
               {!loadingFiles && files.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-[12px] text-[#8fa394]">
+                  <td colSpan={6} className="px-5 py-8 text-center text-[12px] text-[#8fa394]">
                     No OTA files have been uploaded yet.
                   </td>
                 </tr>
@@ -182,6 +200,20 @@ export default function OTA() {
                   <td className="px-3 py-3 whitespace-nowrap">{formatFileSize(file.size)}</td>
                   <td className="px-3 py-3 whitespace-nowrap">{formatDate(file.created_at)}</td>
                   <td className="px-3 py-3 whitespace-nowrap">{formatDate(file.updated_at)}</td>
+                  <td className="px-3 py-3">
+                    {file.is_main ? (
+                      <Badge tone="green" dot>Main file</Badge>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void setMainFile(file.name)}
+                        disabled={settingMainFile !== null}
+                        className="whitespace-nowrap rounded-lg border border-[#dce7df] px-2.5 py-1.5 text-[11px] font-medium text-[#3d4a41] hover:bg-[#f4f8f5] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {settingMainFile === file.name ? "Saving..." : "Set as main"}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
