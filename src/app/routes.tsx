@@ -23,6 +23,7 @@ import UserSettings from "@/pages/Admin/UserSettings";
 import Tickets from "@/pages/Admin/Tickets";
 import StaffProfMessages from "@/pages/Admin/StaffProfMessages";
 import HardwareMonitoring from "@/pages/Admin/HardwareMonitoring";
+import Authenticator from "@/pages/Admin/Authenticator";
 import Enroll from "@/pages/Admin/Enroll";
 import OTA from "@/pages/Admin/OTA";
 import StaffDashboard from "@/pages/Staff/Dashboard";
@@ -169,6 +170,7 @@ export const router = createBrowserRouter([
       { path: "database", Component: Database },
       { path: "enroll", Component: Enroll },
       { path: "ota", Component: OTA },
+      { path: "authenticator", Component: Authenticator },
       { path: "hardware-monitoring", Component: HardwareMonitoring },
       { path: "software-monitoring", Component: SoftwareMonitoring },
       { path: "settings/user", Component: UserSettings },

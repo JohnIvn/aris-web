@@ -116,6 +116,17 @@ export const hardwareNav: NavItem[] = [
     ),
   },
   {
+    path: "/authenticator",
+    label: "Authenticator",
+    icon: icon(
+      <>
+        <path d="M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+        <path d="M17.657 6.343A8 8 0 1 1 6.343 17.657 8 8 0 0 1 17.657 6.343" />
+        <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
+      </>
+    ),
+  },
+  {
     path: "/ota",
     label: "OTA",
     icon: icon(
