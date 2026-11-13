@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   Fingerprint,
-  Cpu,
   CheckCircle2,
   AlertCircle,
   RefreshCw,
@@ -155,7 +154,6 @@ function getInitialsColor(name: string) {
 export default function Enroll() {
   const {
     data: fetchedBiometrics,
-    loading: loadingBiometrics,
     reload: reloadBiometrics,
   } = useResource<EnrolledBiometric[]>("/biometrics", initialDemoEnrolled);
 
@@ -523,34 +521,7 @@ export default function Enroll() {
         />
       </StatGrid>
 
-      {/* Hardware Status Banner */}
-      <Card className="mb-5 !p-4 border border-[#e4ebe6] bg-gradient-to-r from-[#f7faf8] to-[#ffffff]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-[#eaf4ee] text-[#3a7d4e] flex items-center justify-center shrink-0">
-              <Cpu size={22} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-[14px] font-bold text-[#111c14]">Biometric Hardware Controller (ESP32 + AS608)</h3>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <p className="text-[12px] text-[#6a7c6f] mt-0.5">
-                Device ID: <code className="bg-[#eef4f0] px-1.5 py-0.5 rounded text-[11px] font-mono text-[#2f7043]">fingerprint-reader-01</code> · Model: AS608 Optical Sensor (0–127 ID capacity)
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => { reloadBiometrics(); reloadSlots(); showToast("Reloaded biometrics data from server."); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#d6e2d9] bg-white text-[12px] font-medium text-[#3d4a41] hover:bg-[#f0f5f1] transition-colors"
-            >
-              <RefreshCw size={13} className={loadingBiometrics ? "animate-spin" : ""} />
-              <span>Sync Device</span>
-            </button>
-          </div>
-        </div>
-      </Card>
+
 
       {/* Database Records Table Card */}
       <Card className="!p-0 overflow-hidden border border-[#e7ece8]">

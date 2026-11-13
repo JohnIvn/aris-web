@@ -25,10 +25,28 @@ type EventFilter = "All" | HardwareEvent["status"];
 export default function HardwareMonitoring() {
   const { data: events, loading, error } = useResource<HardwareEvent[]>("/system/hardware/events", demoEvents);
   const [filter, setFilter] = useState<EventFilter>("All");
+
   const filteredEvents = useMemo(
     () => events.filter((event) => filter === "All" || event.status === filter),
     [events, filter],
   );
+
+  // Online only if the most recent event is a successful "Device Connected" within 60 seconds
+  const isOnline = useMemo(() => {
+    if (!events.length) return false;
+    const latest = events[0];
+    const ageMs = Date.now() - new Date(latest.time).getTime();
+    return (
+      latest.event === "Device Connected" &&
+      latest.status === "Success" &&
+      ageMs < 60_000
+    );
+  }, [events]);
+
+  // Last successful transmission event
+  const lastTransmission = useMemo(() => {
+    return events.find((e) => e.event === "Data Sent" && e.status === "Success") ?? null;
+  }, [events]);
 
   return (
     <div className="pb-4">
@@ -41,35 +59,45 @@ export default function HardwareMonitoring() {
             <h2 className="text-[14px] font-semibold text-[#18251c]">Biometric Status</h2>
             <p className="mt-0.5 text-[12px] text-[#8fa394]">Current status of the fingerprint device and data transmission</p>
           </div>
-          <Badge tone="green" dot>Active</Badge>
+          <Badge tone={isOnline ? "green" : "gray"} dot>
+            {loading ? "Checking…" : isOnline ? "Online" : "Offline"}
+          </Badge>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#e7ece8] p-3 sm:p-4">
-            <span className="flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full bg-[#eaf4ee] text-[#3a7d4e]">
+            <span className={`flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full ${isOnline ? "bg-[#eaf4ee] text-[#3a7d4e]" : "bg-[#f1f4f1] text-[#9aaba0]"}`}>
               <Fingerprint size={30} strokeWidth={1.5} aria-hidden="true" />
             </span>
             <div>
               <p className="text-[11px] text-[#718076]">Hardware Status</p>
-              <p className="mt-0.5 text-[14px] font-semibold text-[#347849]">Active</p>
-              <p className="mt-0.5 text-[10px] text-[#8fa394]">The biometric device is active and operational</p>
+              <p className={`mt-0.5 text-[14px] font-semibold ${isOnline ? "text-[#347849]" : "text-[#8fa394]"}`}>
+                {loading ? "Checking…" : isOnline ? "Online" : "Offline"}
+              </p>
+              <p className="mt-0.5 text-[10px] text-[#8fa394]">
+                {isOnline ? "Device successfully connected and communicating" : "No active device connection detected"}
+              </p>
             </div>
           </div>
 
           <div className="flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#e7ece8] p-3 sm:p-4">
-            <span className="flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full bg-[#eaf4ee] text-[#3a7d4e]">
+            <span className={`flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full ${lastTransmission ? "bg-[#eaf4ee] text-[#3a7d4e]" : "bg-[#f1f4f1] text-[#9aaba0]"}`}>
               <CloudUpload size={30} strokeWidth={1.5} aria-hidden="true" />
             </span>
             <div>
               <p className="text-[11px] text-[#718076]">Data Transmission</p>
-              <p className="mt-0.5 text-[14px] font-semibold text-[#347849]">Sending</p>
-              <p className="mt-0.5 text-[10px] text-[#8fa394]">Device is sending data to the server</p>
+              <p className={`mt-0.5 text-[14px] font-semibold ${lastTransmission ? "text-[#347849]" : "text-[#8fa394]"}`}>
+                {loading ? "Checking…" : lastTransmission ? "Active" : "No Data"}
+              </p>
+              <p className="mt-0.5 text-[10px] text-[#8fa394]">
+                {lastTransmission ? lastTransmission.details : "No data transmission recorded"}
+              </p>
             </div>
           </div>
         </div>
       </Card>
 
-      <Card className="!p-13 sm:!p-10">
+      <Card className="!p-4 sm:!p-5">
         <div className="mb-3 inline-flex rounded-xl bg-[#f1f4f1] p-1" role="group" aria-label="Filter hardware events">
           {(["All", "Success", "Failure"] as const).map((option) => (
             <button

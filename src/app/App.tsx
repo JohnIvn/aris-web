@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { RouterProvider } from "react-router";
 import { AuthContext, EMPTY_USER } from "@/app/authContext";
+import { SerialProvider } from "@/app/serialContext";
 import { router } from "@/app/routes";
 import type { UserAccount } from "@/data/demoAccounts";
 import {
@@ -113,7 +114,9 @@ export default function App() {
         isLoading: isCheckingSession,
       }}
     >
-      <RouterProvider router={router} />
+      <SerialProvider>
+        <RouterProvider router={router} />
+      </SerialProvider>
     </AuthContext.Provider>
   );
 }
