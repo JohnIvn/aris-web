@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { apiClient } from "@/services/apiClient";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -227,9 +228,20 @@ export function SerialProvider({ children }: { children: ReactNode }) {
       if (helloData && helloData.protocol === "aris-biometric") {
         setConnectedDevice(helloData);
         setUsbState("connected");
+        void apiClient
+          .post("/system/hardware/ping", {
+            deviceId: helloData.deviceId,
+            firmwareVersion: helloData.firmwareVersion,
+          })
+          .catch(() => undefined);
       } else {
         setConnectedDevice(null);
         setUsbState("connected");
+        void apiClient
+          .post("/system/hardware/ping", {
+            deviceId: "ARIS-USB-Device",
+          })
+          .catch(() => undefined);
         setUsbError(
           "Connected but device did not respond to ARIS handshake. It may not be an ARIS biometric device.",
         );

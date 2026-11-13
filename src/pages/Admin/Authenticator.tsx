@@ -150,14 +150,10 @@ export default function Authenticator() {
     return () => clearInterval(timer);
   }, [fetchNetStatus, fetchProvisioner]);
 
-  // "Online" = backend reports a successful Device Connected event within the last 60s
-  const netOnline = (() => {
-    if (!netStatus?.connected) return false;
-    if (!netStatus.lastSeen) return false;
-    return Date.now() - new Date(netStatus.lastSeen).getTime() < 60_000;
-  })();
-
   const usbConnected = usbState === "connected";
+  // Overall biometric device connection status (USB or Network)
+  const isDeviceOnline = usbConnected || (netStatus?.connected ?? false);
+
   const isConnecting = usbState === "connecting";
 
   return (
@@ -329,25 +325,25 @@ export default function Authenticator() {
         )}
       </Card>
 
-      {/* ── Network Status (from backend event log) ───────── */}
+      {/* ── Biometric Device Status ───────── */}
       <Card className="!p-4 sm:!p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-[14px] font-semibold text-[#18251c]">Network Status</h2>
+            <h2 className="text-[14px] font-semibold text-[#18251c]">Biometric Status</h2>
             <p className="mt-0.5 text-[12px] text-[#8fa394]">
-              Device connection status via backend hardware event log
+              Overall connection and operational status of the biometric authenticator
             </p>
           </div>
-          {loadingStatus ? (
+          {loadingStatus && !usbConnected ? (
             <span className="text-[11px] text-[#8fa394]">Checking…</span>
           ) : (
-            <Badge tone={netOnline ? "green" : "gray"} dot>
-              {netOnline ? "Online" : "Offline"}
+            <Badge tone={isDeviceOnline ? "green" : "gray"} dot>
+              {isDeviceOnline ? "Online" : "Offline"}
             </Badge>
           )}
         </div>
 
-        {statusError && (
+        {statusError && !usbConnected && (
           <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
             {statusError}
           </p>
@@ -355,45 +351,63 @@ export default function Authenticator() {
 
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <div className="flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#e7ece8] p-3 sm:p-4">
-            <span className={`flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full ${netOnline ? "bg-[#eaf4ee] text-[#3a7d4e]" : "bg-[#f1f4f1] text-[#9aaba0]"}`}>
-              {netOnline
+            <span className={`flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full ${isDeviceOnline ? "bg-[#eaf4ee] text-[#3a7d4e]" : "bg-[#f1f4f1] text-[#9aaba0]"}`}>
+              {isDeviceOnline
                 ? <Wifi size={28} strokeWidth={1.5} aria-hidden />
                 : <WifiOff size={28} strokeWidth={1.5} aria-hidden />}
             </span>
             <div>
-              <p className="text-[11px] text-[#718076]">Network Status</p>
-              <p className={`mt-0.5 text-[14px] font-semibold ${netOnline ? "text-[#347849]" : "text-[#8fa394]"}`}>
-                {loadingStatus ? "Checking…" : netOnline ? "Online" : "Offline"}
+              <p className="text-[11px] text-[#718076]">Connection Status</p>
+              <p className={`mt-0.5 text-[14px] font-semibold ${isDeviceOnline ? "text-[#347849]" : "text-[#8fa394]"}`}>
+                {loadingStatus && !usbConnected ? "Checking…" : isDeviceOnline ? "Active" : "Offline"}
               </p>
               <p className="mt-0.5 text-[10px] text-[#8fa394]">
-                {netOnline
-                  ? "Device successfully connected to ARIS"
-                  : "No active connection in the last 60 seconds"}
+                {usbConnected
+                  ? `Direct USB serial connection (${connectedDevice?.deviceId || "ARIS Authenticator"})`
+                  : netStatus?.connected
+                    ? "Connected to ARIS server via Wi-Fi / network"
+                    : "No active device connection detected"}
               </p>
             </div>
           </div>
 
           <div className="flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#e7ece8] p-3 sm:p-4">
-            <span className={`flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full ${netOnline ? "bg-[#eaf4ee] text-[#3a7d4e]" : "bg-[#f1f4f1] text-[#9aaba0]"}`}>
+            <span className={`flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full ${isDeviceOnline ? "bg-[#eaf4ee] text-[#3a7d4e]" : "bg-[#f1f4f1] text-[#9aaba0]"}`}>
               <Fingerprint size={28} strokeWidth={1.5} aria-hidden />
             </span>
             <div>
-              <p className="text-[11px] text-[#718076]">Last Seen</p>
-              <p className={`mt-0.5 text-[14px] font-semibold ${netOnline ? "text-[#347849]" : "text-[#8fa394]"}`}>
-                {loadingStatus ? "—" : timeAgo(netStatus?.lastSeen ?? null)}
+              <p className="text-[11px] text-[#718076]">Last Activity</p>
+              <p className={`mt-0.5 text-[14px] font-semibold ${isDeviceOnline ? "text-[#347849]" : "text-[#8fa394]"}`}>
+                {usbConnected ? "Active Now" : loadingStatus ? "—" : timeAgo(netStatus?.lastSeen ?? null)}
               </p>
               <p className="mt-0.5 text-[10px] text-[#8fa394]">
-                {netStatus?.lastSeen ? fmtDate(netStatus.lastSeen) : "No connection recorded"}
+                {usbConnected
+                  ? "Live USB connection"
+                  : netStatus?.lastSeen
+                    ? fmtDate(netStatus.lastSeen)
+                    : "No connection recorded"}
               </p>
             </div>
           </div>
         </div>
 
-        {!loadingStatus && (netStatus?.deviceId || netStatus?.ip || netStatus?.firmwareVersion) && (
+        {(usbConnected || netStatus?.deviceId || netStatus?.ip || netStatus?.firmwareVersion) && (
           <div className="mt-3 rounded-xl border border-[#e7ece8] bg-[#f8faf8] p-3 divide-y divide-[#edf0ed]">
-            <InfoRow label="Device ID" value={netStatus.deviceId ?? "—"} />
-            <InfoRow label="IP Address" value={netStatus.ip ?? "—"} />
-            <InfoRow label="Firmware Version" value={netStatus.firmwareVersion ?? "—"} />
+            <InfoRow
+              label="Device ID"
+              value={connectedDevice?.deviceId ?? netStatus?.deviceId ?? (usbConnected ? "ARIS-USB-Device" : "—")}
+            />
+            {netStatus?.ip && <InfoRow label="IP Address" value={netStatus.ip} />}
+            <InfoRow
+              label="Firmware Version"
+              value={connectedDevice?.firmwareVersion ?? netStatus?.firmwareVersion ?? "—"}
+            />
+            {connectedDevice?.model && (
+              <InfoRow label="Sensor Model" value={connectedDevice.model} />
+            )}
+            {connectedDevice?.sensorStatus && (
+              <InfoRow label="Sensor Status" value={connectedDevice.sensorStatus} />
+            )}
           </div>
         )}
       </Card>

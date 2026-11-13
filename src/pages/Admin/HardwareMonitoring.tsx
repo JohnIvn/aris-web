@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { CloudUpload, Fingerprint } from "lucide-react";
 import { Badge, Card, PageTitle } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
+import { useSerial } from "@/app/serialContext";
 
 type HardwareEvent = {
   id: string;
@@ -23,6 +24,7 @@ const demoEvents: HardwareEvent[] = [
 type EventFilter = "All" | HardwareEvent["status"];
 
 export default function HardwareMonitoring() {
+  const { usbState, connectedDevice } = useSerial();
   const { data: events, loading, error } = useResource<HardwareEvent[]>("/system/hardware/events", demoEvents);
   const [filter, setFilter] = useState<EventFilter>("All");
 
@@ -31,17 +33,17 @@ export default function HardwareMonitoring() {
     [events, filter],
   );
 
-  // Online only if the most recent event is a successful "Device Connected" within 60 seconds
-  const isOnline = useMemo(() => {
+  const isUsbConnected = usbState === "connected";
+
+  // Check if events indicate an active connection (latest event is successful within active session window)
+  const isNetOnline = useMemo(() => {
     if (!events.length) return false;
     const latest = events[0];
     const ageMs = Date.now() - new Date(latest.time).getTime();
-    return (
-      latest.event === "Device Connected" &&
-      latest.status === "Success" &&
-      ageMs < 60_000
-    );
+    return latest.status === "Success" && (isNaN(ageMs) || ageMs < 900_000);
   }, [events]);
+
+  const isOnline = isUsbConnected || isNetOnline;
 
   // Last successful transmission event
   const lastTransmission = useMemo(() => {
@@ -60,7 +62,7 @@ export default function HardwareMonitoring() {
             <p className="mt-0.5 text-[12px] text-[#8fa394]">Current status of the fingerprint device and data transmission</p>
           </div>
           <Badge tone={isOnline ? "green" : "gray"} dot>
-            {loading ? "Checking…" : isOnline ? "Online" : "Offline"}
+            {loading && !isUsbConnected ? "Checking…" : isOnline ? "Active" : "Offline"}
           </Badge>
         </div>
 
@@ -72,25 +74,35 @@ export default function HardwareMonitoring() {
             <div>
               <p className="text-[11px] text-[#718076]">Hardware Status</p>
               <p className={`mt-0.5 text-[14px] font-semibold ${isOnline ? "text-[#347849]" : "text-[#8fa394]"}`}>
-                {loading ? "Checking…" : isOnline ? "Online" : "Offline"}
+                {loading && !isUsbConnected ? "Checking…" : isOnline ? "Active" : "Offline"}
               </p>
               <p className="mt-0.5 text-[10px] text-[#8fa394]">
-                {isOnline ? "Device successfully connected and communicating" : "No active device connection detected"}
+                {isUsbConnected
+                  ? `Connected via USB (${connectedDevice?.deviceId || "ARIS Authenticator"})`
+                  : isOnline
+                    ? "The biometric device is active and operational"
+                    : "No active device connection detected"}
               </p>
             </div>
           </div>
 
           <div className="flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#e7ece8] p-3 sm:p-4">
-            <span className={`flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full ${lastTransmission ? "bg-[#eaf4ee] text-[#3a7d4e]" : "bg-[#f1f4f1] text-[#9aaba0]"}`}>
+            <span className={`flex h-14 w-14 aspect-square shrink-0 items-center justify-center rounded-full ${isOnline ? "bg-[#eaf4ee] text-[#3a7d4e]" : "bg-[#f1f4f1] text-[#9aaba0]"}`}>
               <CloudUpload size={30} strokeWidth={1.5} aria-hidden="true" />
             </span>
             <div>
               <p className="text-[11px] text-[#718076]">Data Transmission</p>
-              <p className={`mt-0.5 text-[14px] font-semibold ${lastTransmission ? "text-[#347849]" : "text-[#8fa394]"}`}>
-                {loading ? "Checking…" : lastTransmission ? "Active" : "No Data"}
+              <p className={`mt-0.5 text-[14px] font-semibold ${isOnline ? "text-[#347849]" : "text-[#8fa394]"}`}>
+                {isOnline ? "Ready / Active" : "Idle"}
               </p>
               <p className="mt-0.5 text-[10px] text-[#8fa394]">
-                {lastTransmission ? lastTransmission.details : "No data transmission recorded"}
+                {isUsbConnected
+                  ? "USB serial communication established"
+                  : lastTransmission
+                    ? lastTransmission.details
+                    : isOnline
+                      ? "Device is ready to send data"
+                      : "No data transmission recorded"}
               </p>
             </div>
           </div>
