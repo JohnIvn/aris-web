@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, FileCode2, Plus, RefreshCw, Upload, X, XCircle } from "lucide-react";
+import { CheckCircle2, Download, FileCode2, Plus, RefreshCw, Upload, X, XCircle } from "lucide-react";
 import { Badge, Card, PageTitle } from "@/components/ui";
 import { apiClient } from "@/services/apiClient";
 
@@ -31,6 +31,7 @@ function formatDate(value: string | null) {
 export default function OTA() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedOtaFile, setSelectedOtaFile] = useState<OTAFile | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [files, setFiles] = useState<OTAFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(true);
@@ -38,12 +39,20 @@ export default function OTA() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [settingMainFile, setSettingMainFile] = useState<string | null>(null);
+  const [downloadingFileName, setDownloadingFileName] = useState<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     setLoadingFiles(true);
     try {
       const response = await apiClient.get<OTAFile[]>("/system/ota/files");
       setFiles(response.data);
+      setSelectedOtaFile((prev) => {
+        if (!prev) {
+          const main = response.data.find((f) => f.is_main);
+          return main ?? (response.data.length > 0 ? response.data[0] : null);
+        }
+        return response.data.find((f) => f.name === prev.name) ?? (response.data.length > 0 ? response.data[0] : null);
+      });
     } catch (listError) {
       setError(`Unable to load OTA files: ${listError instanceof Error ? listError.message : "Request failed"}`);
     } finally {
@@ -119,6 +128,43 @@ export default function OTA() {
     }
   };
 
+  const downloadFile = async (name: string) => {
+    setDownloadingFileName(name);
+    setMessage(null);
+    setError(null);
+    try {
+      const response = await apiClient.get<{ name?: string; content?: string }>(
+        `/system/ota/files/${encodeURIComponent(name)}`,
+      );
+      const payload = (response.data as { data?: { name?: string; content?: string } })?.data ?? response.data;
+      if (!payload?.content) {
+        throw new Error("File content is missing from the server response.");
+      }
+
+      const binaryString = atob(payload.content);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = payload.name || name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setMessage(`${name} downloaded successfully.`);
+    } catch (downloadError) {
+      setError(`Unable to download ${name}: ${downloadError instanceof Error ? downloadError.message : "Request failed"}`);
+    } finally {
+      setDownloadingFileName(null);
+    }
+  };
+
   return (
     <div className="pb-4">
       <PageTitle
@@ -147,75 +193,142 @@ export default function OTA() {
         </p>
       )}
 
+      {error && !isAddModalOpen && (
+        <p role="alert" className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">
+          <XCircle size={15} aria-hidden="true" />
+          {error}
+        </p>
+      )}
+
       <Card className="mt-4 !p-0">
-        <div className="flex items-center justify-between gap-3 border-b border-[#edf0ed] px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edf0ed] px-5 py-4 sm:px-6">
           <div>
             <h2 className="text-[15px] font-semibold text-[#18251c]">Uploaded files</h2>
             <p className="mt-0.5 text-[12px] text-[#8fa394]">
-              Files currently available in the OTA bucket.
+              {selectedOtaFile
+                ? `Selected: ${selectedOtaFile.name}`
+                : "Files currently available in the OTA bucket."}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void loadFiles()}
-            disabled={loadingFiles}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce7df] px-3 py-2 text-[12px] font-medium text-[#3d4a41] transition-colors hover:bg-[#f4f8f5] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw size={14} className={loadingFiles ? "animate-spin" : ""} aria-hidden="true" />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => selectedOtaFile && void downloadFile(selectedOtaFile.name)}
+              disabled={!selectedOtaFile || downloadingFileName !== null}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#3a7d4e] px-3.5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[#2f7043] disabled:cursor-not-allowed disabled:opacity-50"
+              title={selectedOtaFile ? `Download ${selectedOtaFile.name}` : "Select a file below to download"}
+            >
+              <Download size={14} className={downloadingFileName === selectedOtaFile?.name ? "animate-bounce" : ""} aria-hidden="true" />
+              {downloadingFileName === selectedOtaFile?.name ? "Downloading..." : "Download selected"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadFiles()}
+              disabled={loadingFiles}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#dce7df] px-3 py-2 text-[12px] font-medium text-[#3d4a41] transition-colors hover:bg-[#f4f8f5] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw size={14} className={loadingFiles ? "animate-spin" : ""} aria-hidden="true" />
+              Refresh
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left">
+          <table className="w-full min-w-[720px] text-left">
             <thead>
               <tr className="bg-[#f8faf8] text-[10px] uppercase tracking-wide text-[#9aaba0]">
+                <th className="w-12 px-3 py-3 font-medium text-center">Select</th>
                 <th className="px-5 py-3 font-medium sm:px-6">File</th>
                 <th className="px-3 py-3 font-medium">Type</th>
                 <th className="px-3 py-3 font-medium">Size</th>
                 <th className="px-3 py-3 font-medium">Uploaded</th>
                 <th className="px-3 py-3 font-medium">Updated</th>
                 <th className="px-3 py-3 font-medium">Client file</th>
+                <th className="px-5 py-3 font-medium text-right sm:pr-6">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loadingFiles && files.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-[12px] text-[#8fa394]">
+                  <td colSpan={8} className="px-5 py-8 text-center text-[12px] text-[#8fa394]">
                     Loading uploaded files...
                   </td>
                 </tr>
               )}
               {!loadingFiles && files.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-5 py-8 text-center text-[12px] text-[#8fa394]">
+                  <td colSpan={8} className="px-5 py-8 text-center text-[12px] text-[#8fa394]">
                     No OTA files have been uploaded yet.
                   </td>
                 </tr>
               )}
-              {files.map((file) => (
-                <tr key={file.id || file.name} className="border-t border-[#edf0ed] text-[12px] text-[#536258]">
-                  <td className="px-5 py-3 font-medium text-[#3d4a41] sm:px-6">{file.name}</td>
-                  <td className="px-3 py-3">{file.mimetype || "PowerShell script"}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">{formatFileSize(file.size)}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(file.created_at)}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">{formatDate(file.updated_at)}</td>
-                  <td className="px-3 py-3">
-                    {file.is_main ? (
-                      <Badge tone="green" dot>Main file</Badge>
-                    ) : (
+              {files.map((file) => {
+                const isSelected = selectedOtaFile?.name === file.name;
+                const isDownloading = downloadingFileName === file.name;
+
+                return (
+                  <tr
+                    key={file.id || file.name}
+                    onClick={() => setSelectedOtaFile(file)}
+                    className={`border-t border-[#edf0ed] text-[12px] text-[#536258] cursor-pointer transition-colors ${
+                      isSelected ? "bg-[#f2f8f4]" : "hover:bg-[#fafcfa]"
+                    }`}
+                  >
+                    <td className="px-3 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="radio"
+                        name="selected-ota-file"
+                        checked={isSelected}
+                        onChange={() => setSelectedOtaFile(file)}
+                        className="h-4 w-4 text-[#3a7d4e] accent-[#3a7d4e] cursor-pointer"
+                        aria-label={`Select ${file.name}`}
+                      />
+                    </td>
+                    <td className="px-5 py-3 font-medium text-[#3d4a41] sm:px-6">
+                      <div className="flex items-center gap-2">
+                        <FileCode2 size={16} className={isSelected ? "text-[#3a7d4e]" : "text-[#8fa394]"} aria-hidden="true" />
+                        <span className="truncate max-w-xs">{file.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">{file.mimetype || "PowerShell script"}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">{formatFileSize(file.size)}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">{formatDate(file.created_at)}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">{formatDate(file.updated_at)}</td>
+                    <td className="px-3 py-3">
+                      {file.is_main ? (
+                        <Badge tone="green" dot>Main file</Badge>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void setMainFile(file.name);
+                          }}
+                          disabled={settingMainFile !== null}
+                          className="whitespace-nowrap rounded-lg border border-[#dce7df] px-2.5 py-1.5 text-[11px] font-medium text-[#3d4a41] hover:bg-[#f4f8f5] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {settingMainFile === file.name ? "Saving..." : "Set as main"}
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-right sm:pr-6" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
-                        onClick={() => void setMainFile(file.name)}
-                        disabled={settingMainFile !== null}
-                        className="whitespace-nowrap rounded-lg border border-[#dce7df] px-2.5 py-1.5 text-[11px] font-medium text-[#3d4a41] hover:bg-[#f4f8f5] disabled:cursor-not-allowed disabled:opacity-50"
+                        onClick={() => {
+                          setSelectedOtaFile(file);
+                          void downloadFile(file.name);
+                        }}
+                        disabled={downloadingFileName !== null}
+                        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#dce7df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#3d4a41] shadow-2xs hover:bg-[#f4f8f5] disabled:cursor-not-allowed disabled:opacity-50"
+                        title={`Download ${file.name}`}
                       >
-                        {settingMainFile === file.name ? "Saving..." : "Set as main"}
+                        <Download size={13} className={isDownloading ? "animate-bounce" : ""} aria-hidden="true" />
+                        {isDownloading ? "Downloading..." : "Download"}
                       </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
