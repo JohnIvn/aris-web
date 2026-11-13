@@ -47,11 +47,8 @@ export default function OTA() {
       const response = await apiClient.get<OTAFile[]>("/system/ota/files");
       setFiles(response.data);
       setSelectedOtaFile((prev) => {
-        if (!prev) {
-          const main = response.data.find((f) => f.is_main);
-          return main ?? (response.data.length > 0 ? response.data[0] : null);
-        }
-        return response.data.find((f) => f.name === prev.name) ?? (response.data.length > 0 ? response.data[0] : null);
+        if (!prev) return null;
+        return response.data.find((f) => f.name === prev.name) ?? null;
       });
     } catch (listError) {
       setError(`Unable to load OTA files: ${listError instanceof Error ? listError.message : "Request failed"}`);
@@ -269,7 +266,7 @@ export default function OTA() {
                 return (
                   <tr
                     key={file.id || file.name}
-                    onClick={() => setSelectedOtaFile(file)}
+                    onClick={() => setSelectedOtaFile((prev) => (prev?.name === file.name ? null : file))}
                     className={`border-t border-[#edf0ed] text-[12px] text-[#536258] cursor-pointer transition-colors ${
                       isSelected ? "bg-[#f2f8f4]" : "hover:bg-[#fafcfa]"
                     }`}
@@ -280,6 +277,9 @@ export default function OTA() {
                         name="selected-ota-file"
                         checked={isSelected}
                         onChange={() => setSelectedOtaFile(file)}
+                        onClick={() => {
+                          if (isSelected) setSelectedOtaFile(null);
+                        }}
                         className="h-4 w-4 text-[#3a7d4e] accent-[#3a7d4e] cursor-pointer"
                         aria-label={`Select ${file.name}`}
                       />
@@ -314,10 +314,7 @@ export default function OTA() {
                     <td className="px-5 py-3 text-right sm:pr-6" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
-                        onClick={() => {
-                          setSelectedOtaFile(file);
-                          void downloadFile(file.name);
-                        }}
+                        onClick={() => void downloadFile(file.name)}
                         disabled={downloadingFileName !== null}
                         className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#dce7df] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#3d4a41] shadow-2xs hover:bg-[#f4f8f5] disabled:cursor-not-allowed disabled:opacity-50"
                         title={`Download ${file.name}`}
