@@ -14,6 +14,10 @@ import {
   Plug,
   PlugZap,
   AlertTriangle,
+  Key,
+  Eye,
+  EyeOff,
+  Check,
 } from "lucide-react";
 import { Badge, Card, PageTitle } from "@/components/ui";
 import { apiClient } from "@/services/apiClient";
@@ -86,11 +90,24 @@ export default function Authenticator() {
     usbState,
     usbError,
     connectedDevice,
+    enrollmentToken,
+    isTokenConfigured,
+    saveEnrollmentToken,
+    clearEnrollmentToken,
     refreshSerialPorts,
     requestPort,
     connect: handleConnect,
     disconnect: handleDisconnect,
   } = useSerial();
+
+  // ── Enrollment Token Local State ─────────────────────────────────────────
+  const [tokenInput, setTokenInput] = useState(enrollmentToken);
+  const [showToken, setShowToken] = useState(false);
+  const [tokenSavedMessage, setTokenSavedMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTokenInput(enrollmentToken);
+  }, [enrollmentToken]);
 
   // ── Backend / network state ──────────────────────────────────────────────
   const [netStatus, setNetStatus] = useState<DeviceStatus | null>(null);
@@ -322,6 +339,86 @@ export default function Authenticator() {
               </p>
             )}
           </>
+        )}
+      </Card>
+
+      {/* ── Enrollment Token Authorization ────────────────── */}
+      <Card className="mb-3 !p-4 sm:!p-5">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 className="text-[14px] font-semibold text-[#18251c] flex items-center gap-2">
+              <Key size={15} className="text-[#3a7d4e]" aria-hidden />
+              Enrollment Token
+            </h2>
+            <p className="mt-0.5 text-[12px] text-[#8fa394]">
+              Hardware authorization secret (corresponds to <code className="rounded bg-[#f1f4f1] px-1 py-0.5 text-[11px] font-mono text-[#2f7043]">ENROLL_AUTH_TOKEN</code> in the ESP32 firmware).
+            </p>
+          </div>
+          <Badge tone={isTokenConfigured ? "green" : "gray"} dot>
+            {isTokenConfigured ? "Configured" : "Not configured"}
+          </Badge>
+        </div>
+
+        {connectedDevice && connectedDevice.enrollAuthRequired === false && (
+          <p className="mb-3 text-[12px] text-[#8fa394]">
+            The connected device does not require an authorization token for enrollment.
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[240px]">
+            <input
+              type={showToken ? "text" : "password"}
+              autoComplete="off"
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+              placeholder="Enter device enrollment token..."
+              className="w-full rounded-xl border border-[#e2e8e4] bg-white pl-3 pr-10 py-1.5 text-[12px] text-[#3d4a41] focus:outline-none focus:ring-2 focus:ring-[#3a7d4e]/30"
+            />
+            <button
+              type="button"
+              onClick={() => setShowToken((prev) => !prev)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8fa394] hover:text-[#3d4a41]"
+              title={showToken ? "Hide token" : "Show token"}
+            >
+              {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            disabled={!tokenInput.trim()}
+            onClick={() => {
+              saveEnrollmentToken(tokenInput);
+              setTokenSavedMessage("Token saved successfully.");
+              setTimeout(() => setTokenSavedMessage(null), 3000);
+            }}
+            className="flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-[12px] font-semibold text-white transition-colors disabled:opacity-40"
+            style={{ background: "#3a7d4e" }}
+          >
+            Save Token
+          </button>
+
+          <button
+            type="button"
+            disabled={!isTokenConfigured}
+            onClick={() => {
+              clearEnrollmentToken();
+              setTokenInput("");
+              setTokenSavedMessage("Token removed.");
+              setTimeout(() => setTokenSavedMessage(null), 3000);
+            }}
+            className="flex items-center gap-1 rounded-xl border border-[#e2e8e4] bg-white px-4 py-1.5 text-[12px] font-medium text-[#3d4a41] hover:bg-[#f7f9f8] transition-colors disabled:opacity-40"
+          >
+            Remove
+          </button>
+        </div>
+
+        {tokenSavedMessage && (
+          <p className="mt-2 text-[12px] text-[#3a7d4e] flex items-center gap-1 font-medium">
+            <Check size={13} />
+            {tokenSavedMessage}
+          </p>
         )}
       </Card>
 

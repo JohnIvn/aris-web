@@ -11,6 +11,7 @@ import {
   Plus,
   Users,
   Info,
+  Key,
 } from "lucide-react";
 import {
   Card,
@@ -29,6 +30,8 @@ import {
 import { BRAND } from "@/config/navigation";
 import { useResource } from "@/hooks/useResource";
 import { saveResource } from "@/services/dataSource";
+import { apiClient } from "@/services/apiClient";
+import { useSerial } from "@/app/serialContext";
 
 export type EnrolledBiometric = {
   id: string;
@@ -169,6 +172,19 @@ export default function Enroll() {
 
   const [biometricsList, setBiometricsList] = useState<EnrolledBiometric[]>(initialDemoEnrolled);
 
+  const {
+    usbState,
+    connectedDevice,
+    enrollmentToken,
+    isTokenConfigured,
+    saveEnrollmentToken,
+    enroll: serialEnroll,
+    cancelEnroll: serialCancelEnroll,
+    deleteTemplate: serialDeleteTemplate,
+    isEnrolling,
+  } = useSerial();
+  const usbConnected = usbState === "connected";
+
   useEffect(() => {
     if (Array.isArray(fetchedBiometrics) && fetchedBiometrics.length > 0) {
       setBiometricsList(fetchedBiometrics);
@@ -186,6 +202,14 @@ export default function Enroll() {
   const [personnelSearch, setPersonnelSearch] = useState("");
   const [assignedSlotId, setAssignedSlotId] = useState<string>("");
   const [deviceName, setDeviceName] = useState("fingerprint-reader-01");
+  const [modalTokenInput, setModalTokenInput] = useState(enrollmentToken);
+  const [showTokenPrompt, setShowTokenPrompt] = useState(false);
+
+  useEffect(() => {
+    if (enrollmentToken) {
+      setModalTokenInput(enrollmentToken);
+    }
+  }, [enrollmentToken]);
   const [scanStep, setScanStep] = useState<"idle" | "scanning_1" | "lift" | "scanning_2" | "matched">("idle");
   const [scanProgress, setScanProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -330,22 +354,86 @@ export default function Enroll() {
     setShowEnrollModal(true);
   };
 
-  // Interactive scan simulation
-  const handleStartScan = () => {
-    setScanStep("scanning_1");
-    setScanProgress(20);
-    setTimeout(() => {
-      setScanProgress(50);
-      setScanStep("lift");
+  // Real Hardware or Simulation Scan
+  const handleStartScan = async () => {
+    setModalFeedback(null);
+    const slotNum = parseInt(assignedSlotId, 10);
+    if (isNaN(slotNum) || slotNum < 0 || slotNum > 127) {
+      setModalFeedback({ type: "error", message: "Slot ID must be between 0 and 127." });
+      return;
+    }
+
+    if (usbConnected) {
+      if (connectedDevice?.enrollAuthRequired !== false && !isTokenConfigured) {
+        setShowTokenPrompt(true);
+        setModalFeedback({
+          type: "error",
+          message: "Device requires an Enrollment Token (ENROLL_AUTH_TOKEN) to authorize enrollment. Enter your token below.",
+        });
+        return;
+      }
+
+      setScanStep("scanning_1");
+      setScanProgress(20);
+      try {
+        const res = await serialEnroll(slotNum, 25000, (ev) => {
+          if (ev.step === "place_finger") {
+            if (ev.sample === 2) {
+              setScanStep("scanning_2");
+              setScanProgress(65);
+            } else {
+              setScanStep("scanning_1");
+              setScanProgress(25);
+            }
+          } else if (ev.step === "finger_detected") {
+            setScanProgress((p) => Math.max(p, ev.sample === 2 ? 80 : 45));
+          } else if (ev.step === "remove_finger") {
+            setScanStep("lift");
+            setScanProgress(55);
+          } else if (ev.step === "processing") {
+            setScanProgress(90);
+          } else if (ev.retry) {
+            setModalFeedback({
+              type: "error",
+              message: `Sensor scan retry: ${ev.retry.replace(/_/g, " ")}. Adjust finger on sensor.`,
+            });
+          }
+        });
+        setScanProgress(100);
+        setScanStep("matched");
+        setModalFeedback({
+          type: "success",
+          message: `Fingerprint stored on sensor hardware (Slot #${res.fingerprintId}). Click Save to register to personnel.`,
+        });
+      } catch (err: unknown) {
+        setScanStep("idle");
+        setScanProgress(0);
+        const errMsg = err instanceof Error ? err.message : "Hardware enrollment failed on sensor.";
+        if (errMsg.toLowerCase().includes("token") || errMsg.toLowerCase().includes("unauthorized")) {
+          setShowTokenPrompt(true);
+        }
+        setModalFeedback({
+          type: "error",
+          message: errMsg,
+        });
+      }
+    } else {
+      // Simulation fallback when no USB device is connected
+      setScanStep("scanning_1");
+      setScanProgress(20);
       setTimeout(() => {
-        setScanStep("scanning_2");
-        setScanProgress(75);
+        setScanProgress(50);
+        setScanStep("lift");
         setTimeout(() => {
-          setScanProgress(100);
-          setScanStep("matched");
-        }, 1200);
+          setScanStep("scanning_2");
+          setScanProgress(75);
+          setTimeout(() => {
+            setScanProgress(100);
+            setScanStep("matched");
+          }, 1200);
+        }, 1500);
       }, 1500);
-    }, 1500);
+    }
   };
 
   // Submit enrollment to database
@@ -364,21 +452,24 @@ export default function Enroll() {
     setIsSubmitting(true);
     setModalFeedback(null);
 
+    const tag =
+      connectedDevice?.deviceId && /^(auth-\d{5,}|[A-Za-z0-9_-]{3,32})$/.test(connectedDevice.deviceId)
+        ? connectedDevice.deviceId
+        : "auth-00001";
+
     const payload = {
-      professor_id: enrollRole === "professor" ? selectedPerson.id : undefined,
-      staff_id: enrollRole === "staff" ? selectedPerson.id : undefined,
-      biometrics_id: assignedSlotId.trim(),
-      biometrics_fingerprint: `fp_hash_${Date.now().toString(16)}_${assignedSlotId}`,
-      device_name: deviceName,
+      user_id: selectedPerson.id,
+      authenticator_tag: tag,
+      biometrics_fingerprint: String(slotNum),
     };
 
     try {
-      await saveResource("/biometrics/enroll", payload, "POST");
+      await apiClient.post("/biometrics/enroll", payload);
 
       const newEntry: EnrolledBiometric = {
         id: `bio-${Date.now()}`,
-        biometrics_id: assignedSlotId.trim(),
-        biometrics_fingerprint: payload.biometrics_fingerprint,
+        biometrics_id: String(slotNum),
+        biometrics_fingerprint: `Slot #${slotNum}`,
         user_type: enrollRole,
         employee_id: selectedPerson.employee_id,
         name: selectedPerson.name,
@@ -390,20 +481,22 @@ export default function Enroll() {
       };
 
       setBiometricsList((prev) => {
-        const filtered = prev.filter((b) => b.biometrics_id !== assignedSlotId.trim() && b.employee_id !== selectedPerson.employee_id);
+        const filtered = prev.filter(
+          (b) => b.biometrics_id !== String(slotNum) && b.employee_id !== selectedPerson.employee_id,
+        );
         return [newEntry, ...filtered];
       });
 
-      showToast(`Fingerprint for ${selectedPerson.name} stored at slot #${assignedSlotId}!`);
+      showToast(`Fingerprint for ${selectedPerson.name} saved at slot #${slotNum}!`);
       setShowEnrollModal(false);
       reloadBiometrics();
       reloadSlots();
     } catch (err: unknown) {
-      console.warn("Backend API returned error, saving locally:", err);
+      console.warn("Backend save error, saving locally:", err);
       const newEntry: EnrolledBiometric = {
         id: `bio-${Date.now()}`,
-        biometrics_id: assignedSlotId.trim(),
-        biometrics_fingerprint: payload.biometrics_fingerprint,
+        biometrics_id: String(slotNum),
+        biometrics_fingerprint: `Slot #${slotNum}`,
         user_type: enrollRole,
         employee_id: selectedPerson.employee_id,
         name: selectedPerson.name,
@@ -415,12 +508,16 @@ export default function Enroll() {
       };
 
       setBiometricsList((prev) => {
-        const filtered = prev.filter((b) => b.biometrics_id !== assignedSlotId.trim() && b.employee_id !== selectedPerson.employee_id);
+        const filtered = prev.filter(
+          (b) => b.biometrics_id !== String(slotNum) && b.employee_id !== selectedPerson.employee_id,
+        );
         return [newEntry, ...filtered];
       });
 
-      showToast(`Fingerprint registered at slot #${assignedSlotId} for ${selectedPerson.name}`);
+      showToast(`Fingerprint registered at slot #${slotNum} for ${selectedPerson.name}`);
       setShowEnrollModal(false);
+      reloadBiometrics();
+      reloadSlots();
     } finally {
       setIsSubmitting(false);
     }
@@ -431,6 +528,14 @@ export default function Enroll() {
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
+      if (usbConnected) {
+        const slotNum = parseInt(deleteTarget.biometrics_id, 10);
+        if (!isNaN(slotNum)) {
+          await serialDeleteTemplate(slotNum).catch((e) => {
+            console.warn("Hardware deleteTemplate failed:", e);
+          });
+        }
+      }
       await saveResource(`/biometrics/${deleteTarget.id}`, {}, "DELETE");
       setBiometricsList((prev) => prev.filter((b) => b.id !== deleteTarget.id));
       showToast(`Biometric Slot #${deleteTarget.biometrics_id} freed and deleted.`);
@@ -873,14 +978,102 @@ export default function Enroll() {
             </div>
           </div>
 
-          {/* 4. Interactive Scanner Capture Box */}
+          {/* 4. Scanner Capture Box */}
           <div className="p-4 rounded-2xl border border-[#e0e8e2] bg-[#f9fbf9]">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#6a7c6f]">
-                Fingerprint Capture Simulation
+                {usbConnected ? "Hardware Fingerprint Capture (Live Sensor)" : "Fingerprint Capture Simulation"}
               </span>
-              <span className="text-[11px] text-[#3a7d4e] font-semibold">AS608 UART Ready</span>
+              <span
+                className={`text-[11px] font-semibold flex items-center gap-1.5 ${
+                  usbConnected ? "text-[#2f7043]" : "text-[#718276]"
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    usbConnected ? "bg-emerald-500 animate-pulse" : "bg-gray-400"
+                  }`}
+                />
+                {usbConnected
+                  ? `Live AS608 (${connectedDevice?.deviceId || "Connected"})`
+                  : "No USB Dongle (Demo Mode)"}
+              </span>
             </div>
+
+            {!usbConnected && (
+              <div className="mb-3 p-2.5 rounded-xl border border-amber-200 bg-amber-50 text-[11.5px] text-amber-800 flex items-start gap-2">
+                <AlertCircle size={15} className="shrink-0 mt-0.5 text-amber-600" />
+                <span>
+                  USB authenticator is not connected. Connect your ARIS biometric dongle on the{" "}
+                  <a href="/authenticator" className="font-semibold underline">
+                    Authenticator page
+                  </a>{" "}
+                  for live physical sensor enrollment, or use Demo Simulation below.
+                </span>
+              </div>
+            )}
+
+            {usbConnected && connectedDevice?.enrollAuthRequired !== false && (
+              <div className="mb-3 p-2.5 rounded-xl border border-[#e0e8e2] bg-white">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11.5px] font-semibold text-[#18251c] flex items-center gap-1.5">
+                    <Key size={13} className="text-[#3a7d4e]" />
+                    Device Enrollment Token:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10.5px] font-medium px-2 py-0.5 rounded-full ${
+                        isTokenConfigured
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border border-amber-200"
+                      }`}
+                    >
+                      {isTokenConfigured ? "Configured" : "Token Required"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowTokenPrompt((prev) => !prev)}
+                      className="text-[11px] text-[#3a7d4e] hover:underline font-medium"
+                    >
+                      {showTokenPrompt ? "Hide" : isTokenConfigured ? "Change" : "Enter Token"}
+                    </button>
+                  </div>
+                </div>
+
+                {showTokenPrompt && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!modalTokenInput.trim()) return;
+                      saveEnrollmentToken(modalTokenInput);
+                      setShowTokenPrompt(false);
+                      setModalTokenInput("");
+                      setModalFeedback({
+                        type: "success",
+                        message: "Enrollment token saved. You can now start the hardware scan.",
+                      });
+                    }}
+                    className="mt-2 pt-2 border-t border-[#edf0ed] flex items-center gap-2"
+                  >
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      placeholder="Enter ENROLL_AUTH_TOKEN..."
+                      value={modalTokenInput}
+                      onChange={(e) => setModalTokenInput(e.target.value)}
+                      className="flex-1 h-8 px-2.5 text-[12px] rounded-lg border border-[#d6dfd8] focus:outline-none focus:border-[#3a7d4e]"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!modalTokenInput.trim()}
+                      className="h-8 px-3 rounded-lg text-[12px] font-medium text-white bg-[#3a7d4e] hover:bg-[#2f7043] transition-colors disabled:opacity-50"
+                    >
+                      Save Token
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col items-center justify-center py-4 text-center">
               <div
@@ -902,37 +1095,47 @@ export default function Enroll() {
                 {scanStep === "idle" && (
                   <>
                     <p className="text-[13px] font-bold text-[#111c14]">Ready to Scan</p>
-                    <p className="text-[11.5px] text-[#8fa394] max-w-xs mt-0.5">
-                      Place finger on the connected AS608 optical sensor, or click below to trigger sensor scan.
-                    </p>
+                    {modalFeedback?.type === "error" ? (
+                      <p className="text-[12px] text-red-600 font-medium max-w-sm mt-1 px-2 py-1 rounded-lg bg-red-50 border border-red-200">
+                        {modalFeedback.message}
+                      </p>
+                    ) : (
+                      <p className="text-[11.5px] text-[#8fa394] max-w-xs mt-0.5">
+                        {usbConnected
+                          ? "Click below to begin hardware capture on the optical sensor."
+                          : "Trigger simulated scan or plug in the ARIS USB dongle."}
+                      </p>
+                    )}
                   </>
                 )}
                 {scanStep === "scanning_1" && (
                   <>
-                    <p className="text-[13px] font-bold text-[#2f7043] animate-pulse">Capturing First Image...</p>
-                    <p className="text-[11.5px] text-[#8fa394]">Keep finger steady on the glass sensor</p>
+                    <p className="text-[13px] font-bold text-[#2f7043] animate-pulse">Place Finger on Sensor...</p>
+                    <p className="text-[11.5px] text-[#8fa394]">Rest finger flat on the optical prism</p>
                   </>
                 )}
                 {scanStep === "lift" && (
                   <>
                     <p className="text-[13px] font-bold text-amber-700">Remove Finger Now</p>
-                    <p className="text-[11.5px] text-[#8fa394]">First image converted to template</p>
+                    <p className="text-[11.5px] text-[#8fa394]">First image captured. Lift finger briefly.</p>
                   </>
                 )}
                 {scanStep === "scanning_2" && (
                   <>
                     <p className="text-[13px] font-bold text-[#2f7043] animate-pulse">Place SAME Finger Again...</p>
-                    <p className="text-[11.5px] text-[#8fa394]">Confirming biometric characteristics</p>
+                    <p className="text-[11.5px] text-[#8fa394]">Confirming template consistency</p>
                   </>
                 )}
                 {scanStep === "matched" && (
                   <>
                     <div className="inline-flex items-center gap-1.5 text-[#2f7043] font-bold text-[13px]">
                       <CheckCircle2 size={16} />
-                      <span>Fingerprint Matched & Model Created!</span>
+                      <span>Fingerprint Verified & Template Ready!</span>
                     </div>
                     <p className="text-[11.5px] text-[#6a7c6f] mt-0.5">
-                      Confidence score: 98.4% · Ready to store into database
+                      {usbConnected
+                        ? "Sensor flash programmed. Ready to link to database."
+                        : "Simulation complete. Ready to link to database."}
                     </p>
                   </>
                 )}
@@ -952,10 +1155,24 @@ export default function Enroll() {
                 {scanStep === "idle" && (
                   <button
                     type="button"
+                    disabled={isEnrolling}
                     onClick={handleStartScan}
-                    className="px-3.5 py-1.5 rounded-xl bg-white border border-[#3a7d4e] text-[#2f7043] text-[12px] font-semibold hover:bg-[#eef6f0] transition-colors"
+                    className="px-3.5 py-1.5 rounded-xl bg-white border border-[#3a7d4e] text-[#2f7043] text-[12px] font-semibold hover:bg-[#eef6f0] transition-colors disabled:opacity-50"
                   >
-                    Trigger Sensor Capture
+                    {isEnrolling
+                      ? "Sensor Active..."
+                      : usbConnected
+                      ? "Start Hardware Sensor Scan"
+                      : "Trigger Simulation Scan"}
+                  </button>
+                )}
+                {isEnrolling && (
+                  <button
+                    type="button"
+                    onClick={serialCancelEnroll}
+                    className="px-3.5 py-1.5 rounded-xl bg-white border border-red-300 text-red-600 text-[12px] font-semibold hover:bg-red-50 transition-colors"
+                  >
+                    Cancel Scan
                   </button>
                 )}
                 {scanStep === "matched" && (
