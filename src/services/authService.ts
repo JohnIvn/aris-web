@@ -21,13 +21,13 @@ interface SignInEnvelope {
 
 export function getStoredToken(): string | null {
 	if (typeof window === "undefined") return null;
-	return localStorage.getItem("aris-token") || sessionStorage.getItem("aris-token");
+	return localStorage.getItem("aris-token");
 }
 
 export function getStoredUser(): UserAccount | null {
 	if (typeof window === "undefined") return null;
 	try {
-		const raw = localStorage.getItem("aris-user") || sessionStorage.getItem("aris-user");
+		const raw = localStorage.getItem("aris-user");
 		if (!raw) return null;
 		const user = JSON.parse(raw) as UserAccount | null;
 		return user?.id && user?.email && isUserRole(user.role) ? user : null;
