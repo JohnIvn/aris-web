@@ -25,8 +25,105 @@ import {
   Shield,
   Clock,
   Building2,
+  GitBranch,
+  ExternalLink,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import arisLogo from "@/assets/brand/image.png";
+import { useLatestClientRelease } from "@/hooks/useLatestClientRelease";
+import { RELEASE_REPOS } from "@/services/githubReleases";
+
+type FeedStatus = "loading" | "live" | "fallback";
+
+function ReleaseFeedBadge({
+  status,
+  repo,
+  onRetry,
+}: {
+  status: FeedStatus;
+  repo: string;
+  onRetry: () => void;
+}) {
+  if (status === "fallback") {
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        title={`GitHub Releases (${repo}) is unavailable — it may be rate limited or offline. Showing the last known published build. Click to retry.`}
+        className="inline-flex items-center gap-1.5 rounded-full border border-[#f0d9a8] bg-[#fdf6e6] px-2.5 py-1 text-[11px] font-semibold text-[#8a6413] transition hover:bg-[#fbeecf]"
+      >
+        <AlertTriangle className="h-3 w-3" />
+        <span>Last known build</span>
+        <RefreshCw className="h-3 w-3" />
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={`https://github.com/${repo}/releases`}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Live release feed: github.com/${repo}/releases`}
+      className="inline-flex items-center gap-1.5 rounded-full border border-[#d2e4d6] bg-[#eaf4ee] px-2.5 py-1 text-[11px] font-semibold text-[#2f7043] transition hover:bg-[#dff0e4]"
+    >
+      <GitBranch className="h-3 w-3" />
+      <span>{status === "loading" ? "Checking GitHub…" : "Latest GitHub release"}</span>
+    </a>
+  );
+}
+
+function ChecksumBox({
+  hash,
+  copied,
+  onCopy,
+}: {
+  hash: string | null;
+  copied: boolean;
+  onCopy: (hash: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-[#edf1ee] bg-[#f9fbf9] p-3.5">
+      <div className="flex items-center justify-between text-[11.5px] text-[#5a6b5e] mb-1.5">
+        <span className="font-medium flex items-center gap-1.5">
+          <FileCode className="h-3.5 w-3.5 text-[#3a7d4e]" />
+          SHA-256 Integrity Checksum
+        </span>
+        {hash && (
+          <button
+            type="button"
+            onClick={() => onCopy(hash)}
+            className="inline-flex items-center gap-1 text-[#2f7043] font-semibold hover:underline"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                <span>Copy Hash</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+      {hash ? (
+        <code className="block font-mono text-[11px] text-[#3d4a41] break-all bg-white p-2 rounded-lg border border-[#e2e8e4]">
+          {hash}
+        </code>
+      ) : (
+        <p className="text-[11px] leading-relaxed text-[#5a6b5e]">
+          GitHub has not published a digest for this asset yet. Compare your downloaded
+          file against the checksum listed on the release page.
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function Downloads() {
   const navigate = useNavigate();
@@ -34,32 +131,34 @@ export default function Downloads() {
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const desktopRelease = {
+  const {
+    release: desktopRelease,
+    status: desktopStatus,
+    refresh: refreshDesktop,
+  } = useLatestClientRelease("desktop");
+  const {
+    release: mobileRelease,
+    status: mobileStatus,
+    refresh: refreshMobile,
+  } = useLatestClientRelease("mobile");
+
+  const currentDesktop = {
+    ...desktopRelease,
     osName: "Windows",
     arch: "x64 (Windows 10, 11)",
-    fileFormat: ".exe installer",
-    fileName: "ARIS-Desktop-Setup-0.1.0-x64.exe",
-    version: "v0.1.0-alpha",
-    size: "18.4 MB",
-    date: "October 2026",
-    sha256: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     badge: "Official Windows Release",
     instructions: [
-      "Download ARIS-Desktop-Setup-0.1.0-x64.exe to your PC.",
+      `Download ${desktopRelease.fileName} to your PC.`,
       "Launch the installer. If Microsoft Defender SmartScreen prompts 'Windows protected your PC', click 'More info' and then 'Run anyway'.",
       "Follow the on-screen setup wizard to complete installation.",
       "Open ARIS Desktop and log in using your UCC institutional credentials.",
     ],
   };
 
-  const mobileRelease = {
+  const currentMobile = {
+    ...mobileRelease,
     osName: "Android",
     arch: "Android 8.0 (Oreo) and above",
-    fileFormat: ".apk package",
-    fileName: "aris-mobile-release-v1.0.1.apk",
-    version: "v1.0.1+1",
-    size: "24.6 MB",
-    date: "October 2026",
     badge: "Direct APK Package",
     instructions: [
       "Tap 'Download Android APK' on your device or scan the QR code with your phone camera.",
@@ -75,28 +174,24 @@ export default function Downloads() {
     setTimeout(() => setCopiedHash(null), 2500);
   };
 
-  const triggerDownload = (fileName: string, platform: string) => {
-    setDownloadNotice(`Preparing download for ${fileName} (${platform})...`);
-    // Create simulated file download
-    const dummyBlob = new Blob([
-      `ARIS Client Application Package: ${fileName}\nUniversity of Caloocan City - Academic Records & Information System\nBuild: 2026-Enterprise\nOfficial Repository: https://ucc.edu.ph/aris\n`
-    ], { type: "text/plain" });
-    const url = URL.createObjectURL(dummyBlob);
+  const triggerDownload = (url: string, fileName: string, platform: string) => {
+    setDownloadNotice(`Starting download for ${fileName} (${platform})...`);
+
+    // The asset URL is a GitHub Releases download link; GitHub answers with a
+    // Content-Disposition attachment, so the page itself stays put.
     const link = document.createElement("a");
     link.href = url;
     link.download = fileName;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
 
     setTimeout(() => {
       setDownloadNotice(null);
     }, 4500);
   };
-
-  const currentDesktop = desktopRelease;
-  const currentMobile = mobileRelease;
 
   const faqs = [
     {
@@ -278,11 +373,11 @@ export default function Downloads() {
                   </span>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#eaf4ee] text-[11px] font-semibold text-[#2f7043] border border-[#d2e4d6]">
-                <Check className="h-3 w-3" />
-                Official Installer
-              </span>
-            </div>
+              <ReleaseFeedBadge
+                status={desktopStatus}
+                repo={RELEASE_REPOS.desktop}
+                onRetry={refreshDesktop}
+              />            </div>
 
             {/* Desktop Card Details */}
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -323,50 +418,74 @@ export default function Downloads() {
                 </div>
 
                 {/* Action button */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => triggerDownload(currentDesktop.fileName, currentDesktop.osName)}
-                    className="flex items-center justify-center gap-2.5 rounded-xl bg-[#3a7d4e] px-6 py-3.5 text-[14px] font-bold text-white shadow-[0_4px_14px_rgba(58,125,78,0.32)] transition hover:bg-[#326d44] active:scale-[0.99]"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Download for {currentDesktop.osName}</span>
-                  </button>
+                <div className="space-y-3 pt-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        triggerDownload(
+                          currentDesktop.downloadUrl,
+                          currentDesktop.fileName,
+                          currentDesktop.osName,
+                        )
+                      }
+                      className="flex items-center justify-center gap-2.5 rounded-xl bg-[#3a7d4e] px-6 py-3.5 text-[14px] font-bold text-white shadow-[0_4px_14px_rgba(58,125,78,0.32)] transition hover:bg-[#326d44] active:scale-[0.99]"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Download for {currentDesktop.osName}</span>
+                    </button>
 
-                  <span className="text-[12px] text-[#718576] text-center sm:text-left">
-                    File: <code className="font-mono text-[#334638] bg-[#f0f4f1] px-1.5 py-0.5 rounded">{currentDesktop.fileName}</code>
-                  </span>
+                    <span className="text-[12px] text-[#718576] text-center sm:text-left">
+                      {currentDesktop.size} &middot;{" "}
+                      <code className="font-mono text-[#334638] bg-[#f0f4f1] px-1.5 py-0.5 rounded">
+                        {currentDesktop.fileName}
+                      </code>
+                    </span>
+                  </div>
+
+                  {/* Release metadata pulled live from GitHub Releases */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-[#718576]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-[#3a7d4e]" />
+                      Released {currentDesktop.date}
+                    </span>
+                    {currentDesktop.alternate && (
+                      <a
+                        href={currentDesktop.alternate.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-[#2f7043] hover:underline"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        {currentDesktop.alternate.label} ({currentDesktop.alternate.size})
+                      </a>
+                    )}
+                    <a
+                      href={currentDesktop.releaseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-[#2f7043] hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Release notes
+                    </a>
+                    <a
+                      href={currentDesktop.releasesUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-[#2f7043] hover:underline"
+                    >
+                      All releases
+                    </a>
+                  </div>
                 </div>
 
                 {/* SHA-256 Checksum Box */}
-                <div className="rounded-xl border border-[#edf1ee] bg-[#f9fbf9] p-3.5">
-                  <div className="flex items-center justify-between text-[11.5px] text-[#5a6b5e] mb-1.5">
-                    <span className="font-medium flex items-center gap-1.5">
-                      <FileCode className="h-3.5 w-3.5 text-[#3a7d4e]" />
-                      SHA-256 Integrity Checksum
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyHash(currentDesktop.sha256)}
-                      className="inline-flex items-center gap-1 text-[#2f7043] font-semibold hover:underline"
-                    >
-                      {copiedHash === currentDesktop.sha256 ? (
-                        <>
-                          <Check className="h-3 w-3" />
-                          <span>Copied!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3" />
-                          <span>Copy Hash</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  <code className="block font-mono text-[11px] text-[#3d4a41] break-all bg-white p-2 rounded-lg border border-[#e2e8e4]">
-                    {currentDesktop.sha256}
-                  </code>
-                </div>
+                <ChecksumBox
+                  hash={currentDesktop.sha256}
+                  copied={copiedHash === currentDesktop.sha256}
+                  onCopy={handleCopyHash}
+                />
               </div>
 
               {/* Right Column: Desktop Features & Instructions */}
@@ -447,10 +566,11 @@ export default function Downloads() {
                   </span>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#eaf4ee] text-[11px] font-semibold text-[#2f7043] border border-[#d2e4d6]">
-                <Check className="h-3 w-3" />
-                Direct APK Package
-              </span>
+              <ReleaseFeedBadge
+                status={mobileStatus}
+                repo={RELEASE_REPOS.mobile}
+                onRetry={refreshMobile}
+              />
             </div>
 
             {/* Mobile Content */}
@@ -492,20 +612,74 @@ export default function Downloads() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => triggerDownload(currentMobile.fileName, "Android APK")}
-                    className="flex items-center justify-center gap-2.5 rounded-xl bg-[#3a7d4e] px-6 py-3.5 text-[14px] font-bold text-white shadow-[0_4px_14px_rgba(58,125,78,0.32)] transition hover:bg-[#326d44] active:scale-[0.99]"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Download Android APK</span>
-                  </button>
+                <div className="space-y-3 pt-2">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        triggerDownload(
+                          currentMobile.downloadUrl,
+                          currentMobile.fileName,
+                          "Android APK",
+                        )
+                      }
+                      className="flex items-center justify-center gap-2.5 rounded-xl bg-[#3a7d4e] px-6 py-3.5 text-[14px] font-bold text-white shadow-[0_4px_14px_rgba(58,125,78,0.32)] transition hover:bg-[#326d44] active:scale-[0.99]"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Download Android APK</span>
+                    </button>
 
-                  <span className="text-[12px] text-[#718576] text-center sm:text-left">
-                    Direct installation: No registration required for UCC domain emails.
-                  </span>
+                    <span className="text-[12px] text-[#718576] text-center sm:text-left">
+                      {currentMobile.size} &middot;{" "}
+                      <code className="font-mono text-[#334638] bg-[#f0f4f1] px-1.5 py-0.5 rounded">
+                        {currentMobile.fileName}
+                      </code>
+                    </span>
+                  </div>
+
+                  {/* Release metadata pulled live from GitHub Releases */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-[#718576]">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-[#3a7d4e]" />
+                      Released {currentMobile.date}
+                    </span>
+                    {currentMobile.alternate && (
+                      <a
+                        href={currentMobile.alternate.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-[#2f7043] hover:underline"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        {currentMobile.alternate.label} ({currentMobile.alternate.size})
+                      </a>
+                    )}
+                    <a
+                      href={currentMobile.releaseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-[#2f7043] hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Release notes
+                    </a>
+                    <a
+                      href={currentMobile.releasesUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-medium text-[#2f7043] hover:underline"
+                    >
+                      All releases
+                    </a>
+                  </div>
                 </div>
+
+                {/* SHA-256 Checksum Box */}
+                <ChecksumBox
+                  hash={currentMobile.sha256}
+                  copied={copiedHash === currentMobile.sha256}
+                  onCopy={handleCopyHash}
+                />
 
                 {/* Mobile Features List */}
                 <div className="rounded-xl border border-[#edf1ee] bg-[#f8faf8] p-4">
@@ -547,64 +721,34 @@ export default function Downloads() {
                   Point your mobile device camera at the QR code below to download the {currentMobile.osName} client immediately.
                 </p>
 
-                {/* Crisp SVG QR Code */}
-                <div className="mx-auto w-48 h-48 bg-white p-3.5 rounded-2xl border border-[#d6e2d9] shadow-sm flex flex-col items-center justify-center relative">
-                  <svg
-                    viewBox="0 0 120 120"
-                    className="w-full h-full text-[#111c14]"
-                    fill="currentColor"
-                  >
-                    {/* Corner Position Detection Squares */}
-                    {/* Top-Left */}
-                    <rect x="10" y="10" width="30" height="30" rx="4" />
-                    <rect x="16" y="16" width="18" height="18" fill="#fff" />
-                    <rect x="20" y="20" width="10" height="10" />
-
-                    {/* Top-Right */}
-                    <rect x="80" y="10" width="30" height="30" rx="4" />
-                    <rect x="86" y="16" width="18" height="18" fill="#fff" />
-                    <rect x="90" y="20" width="10" height="10" />
-
-                    {/* Bottom-Left */}
-                    <rect x="10" y="80" width="30" height="30" rx="4" />
-                    <rect x="16" y="86" width="18" height="18" fill="#fff" />
-                    <rect x="20" y="90" width="10" height="10" />
-
-                    {/* Timing & Alignment Patterns */}
-                    <rect x="46" y="16" width="6" height="6" />
-                    <rect x="58" y="16" width="6" height="6" />
-                    <rect x="70" y="16" width="6" height="6" />
-                    <rect x="16" y="46" width="6" height="6" />
-                    <rect x="16" y="58" width="6" height="6" />
-                    <rect x="16" y="70" width="6" height="6" />
-
-                    {/* Data payload mock cells */}
-                    <rect x="46" y="30" width="6" height="6" />
-                    <rect x="58" y="30" width="6" height="6" />
-                    <rect x="70" y="30" width="6" height="6" />
-                    <rect x="46" y="44" width="6" height="6" />
-                    <rect x="58" y="44" width="6" height="6" />
-                    <rect x="70" y="44" width="6" height="6" />
-                    <rect x="46" y="58" width="6" height="6" />
-                    <rect x="58" y="58" width="6" height="6" />
-                    <rect x="70" y="58" width="6" height="6" />
-                    <rect x="84" y="46" width="6" height="6" />
-                    <rect x="96" y="58" width="6" height="6" />
-                    <rect x="84" y="70" width="6" height="6" />
-                    <rect x="46" y="84" width="6" height="6" />
-                    <rect x="58" y="96" width="6" height="6" />
-                    <rect x="70" y="84" width="6" height="6" />
-                    <rect x="84" y="84" width="6" height="6" />
-                    <rect x="96" y="96" width="6" height="6" />
-                    <rect x="84" y="96" width="6" height="6" />
-                    <rect x="96" y="84" width="6" height="6" />
-                  </svg>
+                {/* Live QR code pointing at the latest GitHub APK asset */}
+                <a
+                  href={currentMobile.downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Download ${currentMobile.fileName}`}
+                  className="mx-auto block w-48 h-48 bg-white p-3.5 rounded-2xl border border-[#d6e2d9] shadow-sm relative transition hover:border-[#3a7d4e]"
+                >
+                  <QRCodeSVG
+                    value={currentMobile.downloadUrl}
+                    size={164}
+                    level="H"
+                    bgColor="#ffffff"
+                    fgColor="#111c14"
+                    title={`Download ARIS Mobile ${currentMobile.version}`}
+                    className="h-full w-full"
+                  />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-8 h-8 rounded-lg bg-white p-1 shadow-sm border border-[#e2e8e4] flex items-center justify-center">
-                      <img src={arisLogo} alt="ARIS" className="w-5 h-5 object-contain" />
+                      <img src={arisLogo} alt="" className="w-5 h-5 object-contain" />
                     </div>
                   </div>
-                </div>
+                </a>
+
+                <p className="text-[11px] text-[#718576]">
+                  {currentMobile.version} &middot; {currentMobile.size} &middot; updates
+                  automatically with every GitHub release
+                </p>
 
                 <div className="text-left bg-white p-3.5 rounded-xl border border-[#e2e8e4]">
                   <p className="text-[11.5px] font-bold text-[#111c14] mb-1.5 flex items-center gap-1.5">

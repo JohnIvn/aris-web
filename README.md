@@ -16,6 +16,26 @@ Support tickets use the server's `/support/tickets` API. Set
 enable Supabase Realtime updates for new tickets and replies. The server adds
 the ticket tables to the `supabase_realtime` publication during startup.
 
+## Client Downloads
+
+The `/downloads` page reads the newest published builds from GitHub Releases instead of hard-coded values:
+
+| Client | Repository | Asset picked |
+| --- | --- | --- |
+| ARIS Desktop (Windows) | `UnexpectedFeatures/aris-app` | `*-setup.exe` (MSI offered as an alternate) |
+| ARIS Mobile (Android) | `JohnIvn/aris-mobile` | `*.apk` (IPA offered as an alternate) |
+
+The GitHub REST API is called directly from the browser and results are cached in `localStorage` for an hour. Unauthenticated calls are limited to 60 requests per hour per IP, so the page falls back to the last known good build (with a "Last known build" badge and retry action) when the API is rate limited or unreachable.
+
+Optional environment overrides:
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_GITHUB_DESKTOP_REPO` | Repository serving the desktop installer |
+| `VITE_GITHUB_MOBILE_REPO` | Repository serving the mobile APK |
+| `VITE_GITHUB_TOKEN` | Read-only token that raises the API limit to 5,000 requests/hour |
+| `VITE_GITHUB_API_BASE` | API base URL (e.g. a caching proxy); defaults to `https://api.github.com` |
+
 ## Demo Accounts
 
 | Role | Email | Password |
