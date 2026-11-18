@@ -442,9 +442,6 @@ export default function Announcements() {
                 <p className="text-[12.5px] mt-1" style={{ color: "#8fa394" }}>
                   Try adjusting your search criteria or create a new notification broadcast.
                 </p>
-                <div className="mt-4">
-                  <GhostButton onClick={openCreateModal}>Create Announcement</GhostButton>
-                </div>
               </Card>
             )}
 

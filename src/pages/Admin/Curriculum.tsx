@@ -1388,32 +1388,6 @@ export default function Curriculum() {
   const collegeColumns: TableColumn<College>[] = [
     { header: "Code", cell: (c) => <span className="font-mono font-medium">{c.code}</span> },
     {
-      header: "Assigned Programs / Offerings",
-      maxWidth: 420,
-      minWidth: 260,
-      cell: (c) => {
-        const progs = getCollegePrograms(c);
-        if (progs.length === 0) return <span className="text-[#8fa394]">No programs assigned</span>;
-        return (
-          <div className="flex flex-wrap gap-1.5 py-1">
-            {progs.slice(0, 3).map((p, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center rounded-md bg-[#eef3ef] px-2 py-0.5 text-[11.5px] font-medium text-[#2f7043]"
-              >
-                {p}
-              </span>
-            ))}
-            {progs.length > 3 && (
-              <span className="inline-flex items-center rounded-md bg-[#f0f2f0] px-1.5 py-0.5 text-[11px] font-medium text-[#5a6b5e]">
-                +{progs.length - 3} more
-              </span>
-            )}
-          </div>
-        );
-      },
-    },
-    {
       header: "Departments",
       cell: (c) => (
         <span className="font-medium" style={{ color: "#111c14" }}>
@@ -1435,33 +1409,6 @@ export default function Curriculum() {
   const deptColumns: TableColumn<Department>[] = [
     { header: "Code", cell: (d) => <span className="font-mono font-medium">{d.code}</span> },
     { header: "College", maxWidth: 220, minWidth: 140, cell: (d) => d.college_name || "Unassigned" },
-    {
-      header: "Assigned Programs / Offerings",
-      maxWidth: 320,
-      minWidth: 200,
-      cell: (d) => {
-        const progs = getDeptPrograms(d);
-        if (progs.length === 0) return <span className="text-[#8fa394] text-[12px] italic">None assigned</span>;
-        return (
-          <div className="flex flex-wrap items-center gap-1.5 py-1">
-            {progs.slice(0, 2).map((prog, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-[#f0f4f1] text-[#2b5a38] border border-[#d8e2da] max-w-[150px] truncate"
-                title={prog}
-              >
-                {prog}
-              </span>
-            ))}
-            {progs.length > 2 && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#eef1ef] text-[#556359]">
-                +{progs.length - 2} more
-              </span>
-            )}
-          </div>
-        );
-      },
-    },
     {
       header: "Programs Count",
       cell: (d) => (
@@ -1514,7 +1461,7 @@ export default function Curriculum() {
     <div className="pb-2">
       <PageTitle
         title="Curriculum Management"
-        subtitle={`${overview.colleges.length} colleges, ${overview.departments.length} departments, ${overview.programs.length} programs, and ${overview.courses.length} courses.`}
+        subtitle="School Information"
         action={
           <div className="flex flex-wrap items-center gap-2">
             <GhostButton onClick={reload}>
@@ -1570,7 +1517,7 @@ export default function Curriculum() {
 
       {saveError && <p role="alert" className="mb-3 text-[12px] text-red-700">{saveError}</p>}
 
-      <StatGrid className="mb-4">
+      <StatGrid className="mb-4" columns={5}>
         {stats.map(([l, v]) => (
           <StatCard key={l} label={l} value={v} />
         ))}

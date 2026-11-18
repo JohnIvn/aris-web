@@ -596,7 +596,7 @@ export function SubmissionDetail({
   /** Optional one-line event summary, e.g. "AR submitted · Sep Cycle 1 · 18 outputs". */
   event?: string;
 }) {
-  const nextNum = String(3 + r.tables.length).padStart(2, "0");
+  const nextNum = String(3 + r.tables.length + (event ? 1 : 0)).padStart(2, "0");
   const hasContent = Boolean(r.topics || r.tasks || r.notes || r.attachment);
   const tone = statusTone[status];
 
@@ -648,7 +648,16 @@ export function SubmissionDetail({
         </div>
       </DetailSection>
 
-      <DetailSection title="02 · Faculty Information">
+      {event && (
+        <DetailSection title="02 · Action Details">
+          <div className="grid grid-cols-2 gap-4">
+            <DetailField label="Action" value={<span className="font-medium">{event}</span>} />
+            <DetailField label="Status" value={<Badge tone={tone} dot>{status}</Badge>} />
+          </div>
+        </DetailSection>
+      )}
+
+      <DetailSection title="03 · Faculty Information">
         <div className="grid grid-cols-3 gap-4">
           <DetailField label="Name" value={r.facultyName} />
           <DetailField label="Faculty #" value={r.facultyNumber} />
@@ -660,7 +669,7 @@ export function SubmissionDetail({
         r.tables.map((t, i) => (
           <DetailTable
             key={t.title}
-            num={String(3 + i).padStart(2, "0")}
+            num={String(4 + i).padStart(2, "0")}
             table={t}
           />
         ))
@@ -715,17 +724,12 @@ export function SubmissionDetail({
         </DetailSection>
       )}
 
-      <DetailSection title="Status">
+      <DetailSection title="Status & Review">
         <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge tone={tone} dot>
               {status}
             </Badge>
-            {event && (
-              <span className="text-[12.5px]" style={{ color: "#5a6b5e" }}>
-                {event}
-              </span>
-            )}
           </div>
           <DetailField label="Reviewed At" value={r.reviewedAt} />
           <DetailField

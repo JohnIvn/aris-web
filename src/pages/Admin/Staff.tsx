@@ -439,7 +439,6 @@ export default function Staff() {
   type Row = (typeof staff)[number];
 
   const columns: TableColumn<Row>[] = [
-    { header: "Staff ID", cell: (s) => <span className="text-[12.5px] font-semibold tabular-nums">{s.id || "—"}</span> },
     {
       header: "Role",
       cell: (s) => (
@@ -450,6 +449,17 @@ export default function Staff() {
       ),
     },
     { header: "Department", maxWidth: 220, minWidth: 140, cell: (s) => s.dept },
+      {
+        header: "Contact",
+        maxWidth: 280,
+        minWidth: 180,
+        cell: (s) => (
+          <div className="text-[12.5px]" style={{ color: "#5a6b5e" }}>
+            {s.email}
+            {s.phone && <span className="ml-2">• {s.phone}</span>}
+          </div>
+        ),
+      },
     { header: "Status", cell: (s) => <Badge tone={staffStatusTone[s.status]} dot>{s.status}</Badge> },
   ];
 
@@ -519,13 +529,9 @@ export default function Staff() {
                 initials={s.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
                 color={roleColor[s.role] ?? "#8fa394"}
               />
-              {/* Desktop shows the email; mobile shows ID • role so the row stays brief */}
               <div className="min-w-0">
                 <p className="truncate text-[13.5px] font-medium" style={{ color: "#111c14" }}>{s.name}</p>
-                <p className="hidden truncate text-[11.5px] lg:block" style={{ color: "#8fa394" }}>{s.email}</p>
-                <p className="truncate text-[11.5px] lg:hidden" style={{ color: "#8fa394" }}>
-                  {s.id ? `${s.id} • ${s.role}` : s.role}
-                </p>
+                          <p className="truncate text-[11.5px]" style={{ color: "#8fa394" }}>{s.email}</p>
               </div>
             </>
           )}

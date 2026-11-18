@@ -639,13 +639,14 @@ export default function Audit() {
 
             {/* Event & Stage */}
             <div className="min-w-0 pr-2">
-              <span className="text-[13px] font-medium truncate block" style={{ color: "#3d4a41" }}>
-                {l.action}
-              </span>
               {l.stage && (
-                <span className="text-[11.5px] text-[#2b6ca3] flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#2b6ca3]" />
-                  Stage: {l.stage} {l.payroll_availability ? "· Payroll Ready" : ""}
+                <span className="text-[13px] font-medium truncate block" style={{ color: "#2b6ca3" }}>
+                  {l.stage} {l.payroll_availability ? "· Payroll Ready" : ""}
+                </span>
+              )}
+              {!l.stage && (
+                <span className="text-[13px] font-medium truncate block" style={{ color: "#8fa394" }}>
+                  —
                 </span>
               )}
             </div>
