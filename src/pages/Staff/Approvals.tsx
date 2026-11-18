@@ -342,7 +342,7 @@ export default function Approvals() {
     )
   );
   const openStatus = open ? stageStatus(open, role) : null;
-  const canAct = !!open && (open.status === "Pending" || isResubmission) && (open.stage === role || role === "Accounting");
+  const canAct = !!open && (open.status === "Pending" || isResubmission || (role === "Accounting" && open.status !== "Approved")) && (open.stage === role || role === "Accounting");
   const next = role === "Accounting" ? undefined : (open ? nextStageOf(open.stage) : undefined);
 
   // Calculation of estimated duty hours and amount for Accounting review
@@ -476,6 +476,7 @@ export default function Approvals() {
           : `Approved · ${item.type} cleared for payroll`,
     );
 
+    const previousQueue = queue;
     const updatedQueue = queue.map((it) => {
       if (it.id !== item.id) return it;
       if (action === "Disapprove") {
@@ -544,13 +545,13 @@ export default function Approvals() {
         setFlash(`Approved · Cleared and recorded on payroll${detail ? ` (${detail})` : ""}`);
       }
       await reload();
+      setOpenId(null);
+      setRemark("");
     } catch (err) {
       console.error("Failed to save approval decision:", err);
+      setQueue(previousQueue);
       setFlash(err instanceof Error ? err.message : "Unable to save decision to database.");
     }
-
-    setOpenId(null);
-    setRemark("");
   };
 
   const close = () => {

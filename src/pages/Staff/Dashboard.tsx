@@ -121,12 +121,6 @@ const staffSettingsNav: StaffNavItem[] = [
   },
 ];
 
-const staffNavigation: StaffNavItem[] = [
-  ...staffMainNav,
-  ...staffManagementNav,
-  ...staffSupportNav,
-  ...staffSettingsNav,
-];
 
 function StaffIcon({ children }: { children: ReactNode }) {
   return (
@@ -241,6 +235,24 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
 
   const displayName =
     [profile.firstname, profile.lastname].filter(Boolean).join(" ") || user.name;
+
+  const staffRole = normalizeStaffRole(profile?.position || user?.position);
+  const isAccounting = staffRole === "Accounting";
+
+  const managementNav = useMemo(() => {
+    return isAccounting
+      ? staffManagementNav
+      : staffManagementNav.filter((item) => item.path !== "/payroll");
+  }, [isAccounting]);
+
+  const staffNavigation = useMemo(() => {
+    return [
+      ...staffMainNav,
+      ...managementNav,
+      ...staffSupportNav,
+      ...staffSettingsNav,
+    ];
+  }, [managementNav]);
 
   const allowedPath =
     staffNavigation.some((item) => item.path === location.pathname) ||
@@ -396,7 +408,7 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
               Management
             </p>
           )}
-          {staffManagementNav.map((item) => (
+          {managementNav.map((item) => (
             <NavButton key={item.path} item={item} />
           ))}
 
@@ -640,7 +652,7 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
           {(location.pathname === "/notifications" ||
             location.pathname === "/announcements") && <StaffNotifications />}
           {location.pathname === "/approvals" && <StaffApprovals />}
-          {location.pathname === "/payroll" && <Payroll />}
+          {location.pathname === "/payroll" && isAccounting && <Payroll />}
           {(location.pathname === "/tickets" ||
             location.pathname === "/support") && <Tickets />}
           {(location.pathname === "/settings" ||

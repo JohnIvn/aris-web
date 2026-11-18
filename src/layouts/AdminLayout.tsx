@@ -27,7 +27,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const { data: rawAnnouncements } = useResource<AdminAnnouncement[]>("/announcements", [])
   const announcements = Array.isArray(rawAnnouncements) ? rawAnnouncements : []
-  const { data: profile, reload: reloadProfile } = useResource<{ avatar_url?: string | null }>("/users/me/profile", {})
+  const { data: profile, reload: reloadProfile } = useResource<{ avatar_url?: string | null; position?: string | null }>("/users/me/profile", {})
   const [imgError, setImgError] = useState(false)
 
   useEffect(() => {
@@ -90,13 +90,21 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
     onSignOut()
   }
 
-  const searchItems = [...mainNav, ...managementNav, ...hardwareNav, ...supportNav, ...settingsNav].filter((item) =>
+  const userPosition = profile?.position || user.position || ""
+  const isRestrictedRole =
+    /check|sec|hr|human/i.test(userPosition) &&
+    !/account|payroll|admin/i.test(userPosition)
+  const visibleManagementNav = isRestrictedRole
+    ? managementNav.filter((item) => !item.path.startsWith("/payroll"))
+    : managementNav
+
+  const searchItems = [...mainNav, ...visibleManagementNav, ...hardwareNav, ...supportNav, ...settingsNav].filter((item) =>
     item.label.toLowerCase().includes(searchQuery.trim().toLowerCase()),
   )
 
   const navSections = [
     { title: "Main", items: mainNav },
-    { title: "Management", items: managementNav },
+    { title: "Management", items: visibleManagementNav },
     { title: "Hardware", items: hardwareNav },
     { title: "Support", items: supportNav },
     { title: "Settings", items: settingsNav },
@@ -211,7 +219,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
           >
             Management
           </p>}
-          {managementNav.map((item) => (
+          {visibleManagementNav.map((item) => (
             <NavButton key={item.path} item={item} />
           ))}
           {!sidebarCollapsed && <p
