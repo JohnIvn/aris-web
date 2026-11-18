@@ -257,12 +257,9 @@ export default function Audit() {
 
   const tabs = [
     "All",
-    "Submitted",
     "Approved",
     "Pending",
     "Rejected",
-    "Flagged",
-    "Missing",
   ];
 
   const typeTabs = ["All", "AR", "DTR"];
@@ -290,8 +287,8 @@ export default function Audit() {
   const stats = [
     ["Total Submissions", String(logs.length)],
     ["Approved / Released", String(count("Approved"))],
-    ["Pending / Submitted", String(count("Pending") + count("Submitted"))],
-    ["Flagged / Overdue", String(count("Flagged") + count("Missing"))],
+    ["Pending", String(count("Pending"))],
+    ["Rejected", String(count("Rejected"))],
   ];
 
   // --- CHART 1: Pipeline across Stages ---
@@ -315,15 +312,12 @@ export default function Audit() {
   // --- CHART 2: Outcomes Distribution ---
   const outcomePalette: Record<string, string> = {
     Approved: BRAND,
-    Submitted: "#3f8ecc",
     Pending: "#d99a2b",
-    Flagged: "#e67e22",
     Rejected: "#c0392b",
-    Missing: "#8fa394",
   };
 
   const outcomeChartData = useMemo(() => {
-    const categories: StatusKind[] = ["Approved", "Submitted", "Pending", "Flagged", "Rejected", "Missing"];
+    const categories: StatusKind[] = ["Approved", "Pending", "Rejected"];
     return categories
       .map((cat) => ({
         name: cat,
