@@ -98,16 +98,15 @@ function stageStatus(
   const mine = STAGES.indexOf(role);
 
   const isResub =
-    it.event?.toLowerCase().includes("resubmit") ||
-    it.record?.remark?.toLowerCase().includes("resubmit") ||
-    it.record?.notes?.toLowerCase().includes("resubmit");
+    it.status === "Pending" &&
+    (it.event?.toLowerCase().includes("resubmit") ||
+      it.record?.notes?.toLowerCase().includes("resubmit"));
 
+  if (it.status === "Disapproved") {
+    return { label: "Disapproved", tone: "red", note: `at ${it.stage}` };
+  }
   if (isResub && at === mine) {
     return { label: "Pending", tone: "amber", note: "resubmitted · awaiting you" };
-  }
-
-  if (it.status === "Disapproved" && !isResub) {
-    return { label: "Disapproved", tone: "red", note: `at ${it.stage}` };
   }
   if (it.status === "Approved") {
     return { label: "Done", tone: "green", note: "cleared by Accounting" };
@@ -128,10 +127,7 @@ function stageStatus(
 function StageProgress({ item }: { item: ApprovalItem }) {
   const at = STAGES.indexOf(item.stage);
   const finished = item.status === "Approved";
-  const isResub =
-    item.event?.toLowerCase().includes("resubmit") ||
-    item.record?.remark?.toLowerCase().includes("resubmit");
-  const rejected = item.status === "Disapproved" && !isResub;
+  const rejected = item.status === "Disapproved";
 
   return (
     <div className="flex items-center gap-1.5 mt-4 flex-wrap">
@@ -335,14 +331,13 @@ export default function Approvals() {
 
   const open = scopedQueue.find((it) => it.id === openId) ?? queue.find((it) => it.id === openId) ?? null;
   const isResubmission = Boolean(
-    open && (
-      open.event?.toLowerCase().includes("resubmit") ||
-      open.record?.remark?.toLowerCase().includes("resubmit") ||
-      open.record?.notes?.toLowerCase().includes("resubmit")
-    )
+    open &&
+      open.status === "Pending" &&
+      (open.event?.toLowerCase().includes("resubmit") ||
+        open.record?.notes?.toLowerCase().includes("resubmit"))
   );
   const openStatus = open ? stageStatus(open, role) : null;
-  const canAct = !!open && (open.status === "Pending" || isResubmission || (role === "Accounting" && open.status !== "Approved")) && (open.stage === role || role === "Accounting");
+  const canAct = !!open && (open.status === "Pending" || (role === "Accounting" && open.status !== "Approved")) && (open.stage === role || role === "Accounting");
   const next = role === "Accounting" ? undefined : (open ? nextStageOf(open.stage) : undefined);
 
   // Calculation of estimated duty hours and amount for Accounting review
@@ -387,23 +382,15 @@ export default function Approvals() {
     }
   }, [open, role]);
 
-  const awaiting = scopedQueue.filter((it) => {
-    const isResub =
-      it.event?.toLowerCase().includes("resubmit") ||
-      it.record?.remark?.toLowerCase().includes("resubmit");
-    return it.status === "Pending" || isResub;
-  }).length;
+  const awaiting = scopedQueue.filter((it) => it.status === "Pending").length;
   const inPipeline = awaiting;
 
   // Filtered rows for the Table (strictly scoped to this role)
   const filteredQueue = useMemo(() => {
     return scopedQueue.filter((it) => {
-      const isResub =
-        it.event?.toLowerCase().includes("resubmit") ||
-        it.record?.remark?.toLowerCase().includes("resubmit");
-      if (tab === "Pending" && it.status !== "Pending" && !isResub) return false;
+      if (tab === "Pending" && it.status !== "Pending") return false;
       if (tab === "Approved" && it.status !== "Approved") return false;
-      if (tab === "Disapproved" && it.status !== "Disapproved" && it.status !== "Flagged" && !isResub) return false;
+      if (tab === "Disapproved" && it.status !== "Disapproved" && it.status !== "Flagged") return false;
 
       if (query.trim()) {
         const q = query.trim().toLowerCase();
@@ -483,6 +470,7 @@ export default function Approvals() {
         return {
           ...it,
           status: "Disapproved" as StatusKind,
+          event: `${it.type} returned for correction`,
           record: {
             ...it.record,
             reviewer,

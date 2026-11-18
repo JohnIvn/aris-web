@@ -36,6 +36,7 @@ export type StatusKind =
   | "Submitted"
   | "Approved"
   | "Rejected"
+  | "Disapproved"
   | "Flagged"
   | "Pending"
   | "Missing";
@@ -46,6 +47,7 @@ export const statusTone: Record<StatusKind, Tone> = {
   Submitted: "blue",
   Approved: "green",
   Rejected: "red",
+  Disapproved: "red",
   Flagged: "amber",
   Pending: "amber",
   Missing: "gray",
@@ -211,7 +213,9 @@ export function SubmissionDetail({
           <Avatar
             initials={initials}
             color={
-              status === "Rejected" ? "#c0392b" : initialsColor(colorIndex)
+              status === "Rejected" || status === "Disapproved"
+                ? "#c0392b"
+                : initialsColor(colorIndex)
             }
             size={38}
           />
