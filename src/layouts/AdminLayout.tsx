@@ -448,7 +448,7 @@ export default function Root({ onSignOut, user }: { onSignOut: () => void; user:
                   {user.name}
                 </p>
                 <p className="text-[12.5px] mt-1" style={{ color: "#8fa394" }}>
-                  Welcome back to ARIS 👋
+                  Welcome back to ARIS
                 </p>
               </div>
             </div>

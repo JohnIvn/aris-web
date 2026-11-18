@@ -1,14 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { LineChart, Line, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
+import { LineChart, Line, Tooltip, AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer } from "recharts";
 import { BRAND } from "@/config/navigation";
 import { Card, CardHeader } from "@/components/ui";
 import { useResource } from "@/hooks/useResource";
 
-type Person = { department?: string | null; dept?: string | null; status?: string };
+type Person = {
+  department?: string | null;
+  dept?: string | null;
+  status?: string;
+  created_at?: string | Date | null;
+};
 type PayrollItem = { amount?: string | number; status?: string };
 type DashboardAudit = { action?: string; result?: string };
 type DashboardTicket = { status?: string };
+type DashboardAnnouncement = {
+  id?: string;
+  title?: string;
+  created_at?: string | Date | null;
+  createdAt?: string | Date | null;
+  published_at?: string | Date | null;
+};
 type CurriculumDepartment = {
   id: string;
   code: string;
@@ -18,6 +30,7 @@ type CurriculumDepartment = {
   professor_count?: number;
   staff_count?: number;
 };
+type RangeType = "1W" | "1M" | "1Y";
 
 
 function CardHead({ title, action, onActionClick }: { title: string; action?: string; onActionClick?: () => void }) {
@@ -40,12 +53,12 @@ const fallbackDepts: CurriculumDepartment[] = [
 ];
 
 export default function Dashboard() {
-  const [range, setRange] = useState("1M");
+  const [range, setRange] = useState<RangeType>("1M");
   const navigate = useNavigate();
   const { data: rawProfessors } = useResource<Person[]>("/professors", []);
   const { data: rawStaff } = useResource<Person[]>("/staff", []);
   const { data: rawPayroll } = useResource<{ records?: PayrollItem[]; classes?: unknown[] }>("/payroll", { records: [], classes: [] });
-  const { data: rawAnnouncements } = useResource<unknown[]>("/announcements", []);
+  const { data: rawAnnouncements } = useResource<DashboardAnnouncement[]>("/announcements", []);
   const { data: rawAudit } = useResource<DashboardAudit[] | { logs?: DashboardAudit[] }>("/audit", []);
   const { data: rawTickets } = useResource<DashboardTicket[]>("/support/tickets", []);
   const { data: curriculumDepartments } = useResource<CurriculumDepartment[]>("/curriculum/departments", fallbackDepts);
@@ -69,25 +82,115 @@ export default function Dashboard() {
     const amount = typeof record.amount === "number" ? record.amount : Number(String(record.amount ?? "").replace(/[^\d.-]/g, ""));
     return total + (Number.isFinite(amount) ? amount : 0);
   }, 0);
+  const approvedAmount = approvedPayroll.reduce((total, record) => {
+    const amount = typeof record.amount === "number" ? record.amount : Number(String(record.amount ?? "").replace(/[^\d.-]/g, ""));
+    return total + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
+  const pendingAmount = pendingPayroll.reduce((total, record) => {
+    const amount = typeof record.amount === "number" ? record.amount : Number(String(record.amount ?? "").replace(/[^\d.-]/g, ""));
+    return total + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
+  const rejectedAmount = rejectedPayroll.reduce((total, record) => {
+    const amount = typeof record.amount === "number" ? record.amount : Number(String(record.amount ?? "").replace(/[^\d.-]/g, ""));
+    return total + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
   const formatAmount = (amount: number) => amount ? `₱${amount.toLocaleString("en-PH", { maximumFractionDigits: 0 })}` : "₱0";
-  const enrollmentTotal = professors.length + staff.length;
-  const enrollmentData = [professors.length, staff.length, announcements.length, auditLogs.length].map((v, i) => ({ i, v }));
+  const allPersonnel = [...professors, ...staff];
+  const enrollmentTotal = allPersonnel.length;
+
+  const now = new Date();
+  const getRangeMs = (r: RangeType) => {
+    if (r === "1W") return 7 * 24 * 60 * 60 * 1000;
+    if (r === "1Y") return 365 * 24 * 60 * 60 * 1000;
+    return 30 * 24 * 60 * 60 * 1000; // 1M default
+  };
+
+  const rangeStartTime = new Date(now.getTime() - getRangeMs(range));
+
+  // Determine dynamic checkpoints for the LineChart based on range
+  const enrollmentData = (() => {
+    if (range === "1W") {
+      // 7 daily checkpoints (from 6 days ago up to today)
+      return Array.from({ length: 7 }).map((_, idx) => {
+        const d = new Date(now.getTime() - (6 - idx) * 24 * 60 * 60 * 1000);
+        d.setHours(23, 59, 59, 999);
+        const label = d.toLocaleDateString("en-US", { weekday: "short" });
+        const count = allPersonnel.filter((p) => {
+          if (!p.created_at) return true;
+          return new Date(p.created_at) <= d;
+        }).length;
+        return { label, v: count };
+      });
+    }
+
+    if (range === "1M") {
+      // 5 checkpoints across the last 30 days
+      return [28, 21, 14, 7, 0].map((daysAgo) => {
+        const d = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+        d.setHours(23, 59, 59, 999);
+        const label = daysAgo === 0 ? "Today" : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        const count = allPersonnel.filter((p) => {
+          if (!p.created_at) return true;
+          return new Date(p.created_at) <= d;
+        }).length;
+        return { label, v: count };
+      });
+    }
+
+    // 1Y: 12 monthly checkpoints
+    return Array.from({ length: 12 }).map((_, idx) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (11 - idx), 1);
+      const endOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+      const label = d.toLocaleDateString("en-US", { month: "short" });
+      const count = allPersonnel.filter((p) => {
+        if (!p.created_at) return true;
+        return new Date(p.created_at) <= endOfMonth;
+      }).length;
+      return { label, v: count };
+    });
+  })();
+
+  const newProfessors = professors.filter((p) => p.created_at && new Date(p.created_at) >= rangeStartTime).length;
+  const newStaff = staff.filter((s) => s.created_at && new Date(s.created_at) >= rangeStartTime).length;
+  const newAnnouncements = announcements.filter((a) => {
+    const raw = a.created_at || a.createdAt || a.published_at;
+    return raw && new Date(raw) >= rangeStartTime;
+  }).length;
+
+  const rangeSuffix = range === "1W" ? "this wk" : range === "1M" ? "this mo" : "this yr";
+
+  const programData = [
+    {
+      name: "Professors",
+      value: professors.length.toLocaleString(),
+      delta: newProfessors > 0 ? `+${newProfessors} ${rangeSuffix}` : "",
+      up: true,
+    },
+    {
+      name: "Staff",
+      value: staff.length.toLocaleString(),
+      delta: newStaff > 0 ? `+${newStaff} ${rangeSuffix}` : "",
+      up: true,
+    },
+    {
+      name: "Announcements",
+      value: announcements.length.toLocaleString(),
+      delta: newAnnouncements > 0 ? `+${newAnnouncements} ${rangeSuffix}` : "",
+      up: true,
+    },
+  ];
+
   const payrollData = [
-    { m: "TOTAL", v: totalPayroll },
-    { m: "APPROVED", v: approvedPayroll.length },
-    { m: "PENDING", v: pendingPayroll.length },
-    { m: "REJECTED", v: rejectedPayroll.length },
+    { m: "TOTAL", v: totalPayroll, count: payrollRecords.length, label: "Total Computed" },
+    { m: "APPROVED", v: approvedAmount, count: approvedPayroll.length, label: "Processed (Approved)" },
+    { m: "PENDING", v: pendingAmount, count: pendingPayroll.length, label: "Pending Verification" },
+    { m: "REJECTED", v: rejectedAmount, count: rejectedPayroll.length, label: "Rejected" },
   ];
   const activityData = [
     { axis: "Announcements", a: announcements.length, b: announcements.length },
     { axis: "Payroll", a: payrollRecords.length, b: approvedPayroll.length },
     { axis: "Audit", a: auditLogs.length, b: auditLogs.filter((log) => log.result === "Approved").length },
     { axis: "Tickets", a: tickets.length, b: tickets.filter((ticket) => ticket.status === "Open").length },
-  ];
-  const programData = [
-    { name: "Professors", value: professors.length.toLocaleString(), delta: "", up: true },
-    { name: "Staff", value: staff.length.toLocaleString(), delta: "", up: true },
-    { name: "Announcements", value: announcements.length.toLocaleString(), delta: "", up: true },
   ];
 
   // Curriculum-based Department Load calculation
@@ -138,13 +241,39 @@ export default function Dashboard() {
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>{enrollmentTotal.toLocaleString()}</p>
         </div>
         <div className="flex gap-1 mt-3 p-0.5 rounded-lg w-fit" style={{ background: "#f4f6f5" }}>
-          {["1W", "1M", "1S", "1Y"].map((r) => (
-            <button key={r} onClick={() => setRange(r)} className="text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors" style={{ background: range === r ? "#fff" : "transparent", color: range === r ? "#111c14" : "#8fa394", boxShadow: range === r ? "0 1px 2px rgba(0,0,0,0.06)" : "none" }}>{r}</button>
+          {(["1W", "1M", "1Y"] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRange(r)}
+              className="text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors"
+              style={{
+                background: range === r ? "#fff" : "transparent",
+                color: range === r ? "#111c14" : "#8fa394",
+                boxShadow: range === r ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+              }}
+            >
+              {r}
+            </button>
           ))}
         </div>
         <div className="flex-1 min-h-0 my-2 -mx-1">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={enrollmentData} margin={{ top: 6, right: 6, bottom: 0, left: 6 }}>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const item = payload[0].payload as { label: string; v: number };
+                    return (
+                      <div className="bg-white px-2 py-1 rounded shadow-sm border text-[11px] text-[#111c14]">
+                        <span className="font-semibold">{item.label}: </span>
+                        <span>{item.v} personnel</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Line type="monotone" dataKey="v" stroke={BRAND} strokeWidth={2.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -194,10 +323,16 @@ export default function Dashboard() {
           <p className="text-[28px] font-bold leading-none tracking-tight" style={{ color: "#111c14" }}>{formatAmount(totalPayroll)}</p>
         </div>
         <div className="space-y-2 mt-4">
-          {[{ l: "Processed", v: approvedPayroll.length }, { l: "Pending", v: pendingPayroll.length }, { l: "Rejected", v: rejectedPayroll.length }].map((r) => (
+          {[
+            { l: "Processed", v: approvedPayroll.length, amt: approvedAmount },
+            { l: "Pending", v: pendingPayroll.length, amt: pendingAmount },
+            { l: "Rejected", v: rejectedPayroll.length, amt: rejectedAmount },
+          ].map((r) => (
             <div key={r.l} className="flex items-center">
               <span className="text-[12.5px] flex-1" style={{ color: "#5a6b5e" }}>{r.l}</span>
-              <span className="text-[12.5px] font-semibold mr-3" style={{ color: "#111c14" }}>{r.v}</span>
+              <span className="text-[12.5px] font-semibold mr-3" style={{ color: "#111c14" }}>
+                {r.v} <span className="text-[11px] font-normal text-[#8fa394]">({formatAmount(r.amt)})</span>
+              </span>
             </div>
           ))}
         </div>
@@ -210,6 +345,21 @@ export default function Dashboard() {
                   <stop offset="100%" stopColor={BRAND} stopOpacity={0} />
                 </linearGradient>
               </defs>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const item = payload[0].payload as { m: string; v: number; count: number; label: string };
+                    return (
+                      <div className="bg-white px-2.5 py-1.5 rounded-lg shadow-md border text-[11px] text-[#111c14] space-y-0.5">
+                        <p className="font-semibold">{item.label}</p>
+                        <p className="text-[12px] font-bold text-[#2f7043]">{formatAmount(item.v)}</p>
+                        <p className="text-[10px] text-[#8fa394]">{item.count} records</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Area type="monotone" dataKey="v" stroke={BRAND} strokeWidth={2.5} fill="url(#pg)" />
             </AreaChart>
           </ResponsiveContainer>

@@ -549,7 +549,7 @@ export default function Dashboard({ onSignOut }: { onSignOut: () => void }) {
                   {displayName}
                 </p>
                 <p className="text-[12.5px] mt-1" style={{ color: "#8fa394" }}>
-                  Welcome back to ARIS 👋 · {profile.department || "Academic Affairs Staff"}
+                  Welcome back to ARIS · {profile.department || "Academic Affairs Staff"}
                 </p>
               </div>
             </div>
