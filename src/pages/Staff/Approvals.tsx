@@ -312,7 +312,7 @@ export default function Approvals() {
 
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("All");
-  const [viewMode, setViewMode] = useState<"table" | "board">("table");
+  const [viewMode, setViewMode] = useState<"table" | "board" | "unified">("table");
   const [showDecided, setShowDecided] = useState(true);
   const { data: rawQueue, setData: setQueue, loading, error, reload } = useResource<ApprovalItem[]>("/approvals", []);
   const queue = Array.isArray(rawQueue) ? rawQueue : [];
@@ -433,6 +433,65 @@ export default function Approvals() {
       );
     });
   }, [scopedQueue, showDecided, query]);
+
+  // Unified cycle view: group items by period + faculty
+  type CycleGroup = {
+    period: string;
+    faculty: string;
+    facultyNumber: string;
+    ar: ApprovalItem | null;
+    dtr: ApprovalItem | null;
+    readiness: "ready" | "pending" | "blocked";
+  };
+
+  const unifiedGroups: CycleGroup[] = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const source = scopedQueue.filter((it) => {
+      if (!q) return true;
+      return (
+        it.faculty.toLowerCase().includes(q) ||
+        it.reference.toLowerCase().includes(q) ||
+        it.period.toLowerCase().includes(q) ||
+        it.type.toLowerCase().includes(q)
+      );
+    });
+
+    const map = new Map<string, { ar: ApprovalItem | null; dtr: ApprovalItem | null }>();
+    for (const it of source) {
+      const key = `${it.period}|||${it.faculty}`;
+      const existing = map.get(key) ?? { ar: null, dtr: null };
+      if (it.type === "AR") existing.ar = it;
+      else existing.dtr = it;
+      map.set(key, existing);
+    }
+
+    return Array.from(map.entries()).map(([key, { ar, dtr }]) => {
+      const [period, faculty] = key.split("|||");
+      const item = ar ?? dtr;
+      const arStatus = ar?.status ?? "missing";
+      const dtrStatus = dtr?.status ?? "missing";
+      const isBlocked =
+        arStatus === "Disapproved" || arStatus === "Flagged" ||
+        dtrStatus === "Disapproved" || dtrStatus === "Flagged";
+      const isReady = arStatus === "Approved" && dtrStatus === "Approved";
+
+      return {
+        period,
+        faculty,
+        facultyNumber: item?.facultyNumber ?? "",
+        ar,
+        dtr,
+        readiness: isBlocked ? "blocked" as const : isReady ? "ready" as const : "pending" as const,
+      };
+    });
+  }, [scopedQueue, query]);
+
+  const unifiedStats = useMemo(() => ({
+    total: unifiedGroups.length,
+    ready: unifiedGroups.filter((g) => g.readiness === "ready").length,
+    pending: unifiedGroups.filter((g) => g.readiness === "pending").length,
+    blocked: unifiedGroups.filter((g) => g.readiness === "blocked").length,
+  }), [unifiedGroups]);
 
   const decide = async (item: ApprovalItem, action: "Approve" | "Disapprove") => {
     const reviewer = `${staffName} (${role})`;
@@ -666,6 +725,29 @@ export default function Approvals() {
                   <rect x="10.5" y="2" width="3.5" height="12" rx="1" />
                 </svg>
                 Pipeline Board
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("unified")}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors cursor-pointer"
+                style={{
+                  background: viewMode === "unified" ? "#fff" : "transparent",
+                  color: viewMode === "unified" ? "#111c14" : "#5a6b5e",
+                  boxShadow:
+                    viewMode === "unified" ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
+                }}
+              >
+                <svg
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  className="w-3.5 h-3.5"
+                >
+                  <rect x="2" y="2" width="5" height="12" rx="1" />
+                  <rect x="9" y="2" width="5" height="12" rx="1" />
+                </svg>
+                Unified Cycle
               </button>
             </div>
             <GhostButton onClick={() => setShowExportConfirm(true)}>
@@ -983,6 +1065,170 @@ export default function Approvals() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ─── UNIFIED CYCLE VIEW: AR + DTR SIDE BY SIDE PER PERIOD ──────────── */}
+      {viewMode === "unified" && (
+        <div className="space-y-4">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: "Total Periods", value: unifiedStats.total, color: "#111c14" },
+              { label: "Payroll Ready", value: unifiedStats.ready, color: "#2f7043" },
+              { label: "Pending Review", value: unifiedStats.pending, color: "#996515" },
+              { label: "Blocked", value: unifiedStats.blocked, color: "#c0392b" },
+            ].map((s) => (
+              <Card key={s.label} className="p-3.5 text-center">
+                <p className="text-[22px] font-bold tabular-nums" style={{ color: s.color }}>
+                  {s.value}
+                </p>
+                <p className="text-[11.5px] font-medium mt-0.5" style={{ color: "#8fa394" }}>
+                  {s.label}
+                </p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 mb-1">
+            <SearchInput
+              placeholder="Search by faculty, period, reference..."
+              value={query}
+              onChange={setQuery}
+              className="w-72"
+            />
+          </div>
+
+          {unifiedGroups.length === 0 ? (
+            <Card className="py-12 text-center">
+              <p className="text-[13px]" style={{ color: "#8fa394" }}>
+                {query ? "No matching periods found." : "No submissions recorded in this queue."}
+              </p>
+            </Card>
+          ) : (
+            unifiedGroups.map((group, gi) => {
+              const readinessColor =
+                group.readiness === "ready" ? "#2f7043"
+                  : group.readiness === "blocked" ? "#c0392b"
+                    : "#996515";
+              const readinessBg =
+                group.readiness === "ready" ? "#eaf4ee"
+                  : group.readiness === "blocked" ? "#fbecec"
+                    : "#fbf1de";
+              const readinessLabel =
+                group.readiness === "ready" ? "Payroll Ready"
+                  : group.readiness === "blocked" ? "Blocked"
+                    : "Pending Review";
+              const readinessIcon =
+                group.readiness === "ready" ? "M5 13l4 4L19 7"
+                  : group.readiness === "blocked" ? "M6 6l12 12M18 6L6 18"
+                    : "M12 7v5l3 2";
+
+              const renderSide = (item: ApprovalItem | null, kind: "AR" | "DTR") => {
+                if (!item) {
+                  return (
+                    <div
+                      className="flex-1 rounded-xl border-2 border-dashed p-4 flex flex-col items-center justify-center gap-1.5 min-h-[100px]"
+                      style={{ borderColor: "#e2e8e4" }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#b6c3ba" strokeWidth="1.6" className="w-5 h-5">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M9 12h6M12 9v6" strokeLinecap="round" />
+                      </svg>
+                      <p className="text-[11.5px] font-medium" style={{ color: "#b6c3ba" }}>
+                        No {kind} submitted
+                      </p>
+                    </div>
+                  );
+                }
+
+                const st = stageStatus(item, role);
+                return (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenId(item.id);
+                      setRemark("");
+                      setFlash(null);
+                    }}
+                    className="flex-1 rounded-xl border p-3.5 text-left transition-all hover:shadow-md cursor-pointer min-h-[100px]"
+                    style={{
+                      borderColor:
+                        item.status === "Approved" ? "#cfe6d8"
+                          : item.status === "Disapproved" ? "#f0cfcb"
+                            : "#e8eeea",
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <Badge tone={kind === "AR" ? "blue" : "green"}>{kind}</Badge>
+                      <Badge tone={statusTone[item.status] || "gray"} dot>
+                        {item.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Avatar
+                        initials={initialsOf(item.faculty)}
+                        color={item.status === "Approved" ? "#2f7043" : item.status === "Disapproved" ? "#c0392b" : STAGE_COLOR[item.stage]}
+                        size={24}
+                      />
+                      <p className="text-[12px] font-semibold truncate" style={{ color: "#111c14" }}>
+                        {item.faculty}
+                      </p>
+                    </div>
+                    <p className="text-[10.5px] truncate" style={{ color: "#8fa394" }}>
+                      Ref {item.reference}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: STAGE_COLOR[item.stage] }} />
+                      <span className="text-[11px] font-medium" style={{ color: "#5a6b5e" }}>
+                        {item.stage}
+                      </span>
+                      <span className="text-[10.5px]" style={{ color: "#b6c3ba" }}>
+                        · {st.note}
+                      </span>
+                    </div>
+                  </button>
+                );
+              };
+
+              return (
+                <Card key={`${group.period}-${group.faculty}-${gi}`} className="p-4">
+                  <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="min-w-0">
+                        <p className="text-[13.5px] font-bold" style={{ color: "#111c14" }}>
+                          {group.period}
+                        </p>
+                        <p className="text-[11.5px]" style={{ color: "#8fa394" }}>
+                          {group.faculty} · #{group.facultyNumber}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold flex-shrink-0"
+                      style={{ background: readinessBg, color: readinessColor }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+                        {group.readiness === "ready" ? (
+                          <path d={readinessIcon} />
+                        ) : group.readiness === "blocked" ? (
+                          <path d={readinessIcon} />
+                        ) : (
+                          <><circle cx="12" cy="12" r="9" /><path d={readinessIcon} /></>
+                        )}
+                      </svg>
+                      {readinessLabel}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {renderSide(group.ar, "AR")}
+                    {renderSide(group.dtr, "DTR")}
+                  </div>
+                </Card>
+              );
+            })
+          )}
         </div>
       )}
 
