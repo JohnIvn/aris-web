@@ -27,6 +27,7 @@ import Authenticator from "@/pages/Admin/Authenticator";
 import Enroll from "@/pages/Admin/Enroll";
 import OTA from "@/pages/Admin/OTA";
 import StaffDashboard from "@/pages/Staff/Dashboard";
+import Devices from "@/pages/Admin/Devices";
 
 if (typeof window !== "undefined" && window.location.hash.startsWith("#/")) {
   window.history.replaceState(null, "", window.location.hash.slice(1));
@@ -34,18 +35,27 @@ if (typeof window !== "undefined" && window.location.hash.startsWith("#/")) {
 
 function RouteErrorBoundary() {
   const error = useRouteError();
-  const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+  const errorMessage =
+    error instanceof Error ? error.message : "An unexpected error occurred.";
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
       <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-red-50 text-[#c0392b] mb-4">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-7 h-7">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="w-7 h-7"
+        >
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
       </div>
-      <h2 className="text-[18px] font-bold text-[#111c14] mb-1">Something went wrong</h2>
+      <h2 className="text-[18px] font-bold text-[#111c14] mb-1">
+        Something went wrong
+      </h2>
       <p className="text-[13px] text-[#5a6b5e] max-w-md mb-4">{errorMessage}</p>
       <div className="flex items-center gap-2">
         <button
@@ -169,6 +179,7 @@ export const router = createBrowserRouter([
       { path: "system-logs", Component: SystemLogs },
       { path: "database", Component: Database },
       { path: "enroll", Component: Enroll },
+      { path: "devices", Component: Devices },
       { path: "ota", Component: OTA },
       { path: "authenticator", Component: Authenticator },
       { path: "hardware-monitoring", Component: HardwareMonitoring },
