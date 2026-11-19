@@ -551,7 +551,7 @@ export default function PayrollSettings() {
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: BRAND }} />
                 <h4 className="text-[13px] font-bold tracking-wide uppercase" style={{ color: "#cfe3d6" }}>
-                  Live Calculation Simulator
+                  Live Computation
                 </h4>
               </div>
               <Badge tone="green">Preview</Badge>
