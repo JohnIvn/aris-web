@@ -78,6 +78,41 @@ type ApprovalItem = {
   record: RecordPayload;
 };
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+] as const;
+
+function formatApprovalMonth(period: string, submittedAt: string) {
+  const monthMatch = period.trim().match(/^([A-Za-z]+)(?:\s+(\d{4}))?(?:\s+(I|II|Full))?/i);
+  if (monthMatch) {
+    const monthIndex = MONTH_NAMES.findIndex(
+      (name) =>
+        name.toLowerCase() === monthMatch[1].toLowerCase() ||
+        name.slice(0, 3).toLowerCase() === monthMatch[1].toLowerCase(),
+    );
+    if (monthIndex >= 0) {
+      const submittedYear = submittedAt.match(/(?:^|[,\s])(\d{4})(?:-|[,\s]|$)/)?.[1];
+      const year = monthMatch[2] ? Number(monthMatch[2]) : Number(submittedYear);
+      if (year) return `${MONTH_NAMES[monthIndex]} ${year}`;
+    }
+  }
+
+  const isoMatch = period.trim().match(/^(\d{4})-(\d{1,2})(?:-|$)/);
+  if (isoMatch) {
+    const monthIndex = Number(isoMatch[2]) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) return `${MONTH_NAMES[monthIndex]} ${isoMatch[1]}`;
+  }
+
+  const submittedIso = submittedAt.match(/^(\d{4})-(\d{1,2})-/);
+  if (submittedIso) {
+    const monthIndex = Number(submittedIso[2]) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) return `${MONTH_NAMES[monthIndex]} ${submittedIso[1]}`;
+  }
+
+  return period;
+}
+
 
 const initialsOf = (name: string) =>
   name
@@ -448,24 +483,31 @@ export default function Approvals() {
     const q = query.trim().toLowerCase();
     const source = scopedQueue.filter((it) => {
       if (!q) return true;
+      const month = formatApprovalMonth(it.period, it.submitted).toLowerCase();
       return (
         it.faculty.toLowerCase().includes(q) ||
         it.reference.toLowerCase().includes(q) ||
         it.period.toLowerCase().includes(q) ||
+        month.includes(q) ||
         it.type.toLowerCase().includes(q)
       );
     });
 
     const map = new Map<string, { ar: ApprovalItem | null; dtr: ApprovalItem | null }>();
     for (const it of source) {
-      const key = `${it.period}|||${it.faculty}`;
+      const month = formatApprovalMonth(it.period, it.submitted);
+      const key = `${month}|||${it.faculty}`;
       const existing = map.get(key) ?? { ar: null, dtr: null };
       if (it.type === "AR") existing.ar = it;
       else existing.dtr = it;
       map.set(key, existing);
     }
 
-    return Array.from(map.entries()).map(([key, { ar, dtr }]) => {
+    return Array.from(map.entries()).sort(([keyA], [keyB]) => {
+      const [monthA] = keyA.split("|||");
+      const [monthB] = keyB.split("|||");
+      return monthB.localeCompare(monthA, undefined, { numeric: true });
+    }).map(([key, { ar, dtr }]) => {
       const [period, faculty] = key.split("|||");
       const item = ar ?? dtr;
       const arStatus = ar?.status ?? "missing";
@@ -747,7 +789,7 @@ export default function Approvals() {
                   <rect x="2" y="2" width="5" height="12" rx="1" />
                   <rect x="9" y="2" width="5" height="12" rx="1" />
                 </svg>
-                Unified Cycle
+                Unified Month
               </button>
             </div>
             <GhostButton onClick={() => setShowExportConfirm(true)}>
@@ -1068,13 +1110,13 @@ export default function Approvals() {
         </div>
       )}
 
-      {/* ─── UNIFIED CYCLE VIEW: AR + DTR SIDE BY SIDE PER PERIOD ──────────── */}
+      {/* ─── UNIFIED MONTH VIEW: AR + DTR SIDE BY SIDE PER MONTH ────────────── */}
       {viewMode === "unified" && (
         <div className="space-y-4">
           {/* Summary Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Total Periods", value: unifiedStats.total, color: "#111c14" },
+              { label: "Total Months", value: unifiedStats.total, color: "#111c14" },
               { label: "Payroll Ready", value: unifiedStats.ready, color: "#2f7043" },
               { label: "Pending Review", value: unifiedStats.pending, color: "#996515" },
               { label: "Blocked", value: unifiedStats.blocked, color: "#c0392b" },
@@ -1102,7 +1144,7 @@ export default function Approvals() {
           {unifiedGroups.length === 0 ? (
             <Card className="py-12 text-center">
               <p className="text-[13px]" style={{ color: "#8fa394" }}>
-                {query ? "No matching periods found." : "No submissions recorded in this queue."}
+                {query ? "No matching months found." : "No submissions recorded in this queue."}
               </p>
             </Card>
           ) : (
