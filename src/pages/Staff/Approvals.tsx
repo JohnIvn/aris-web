@@ -356,6 +356,10 @@ export default function Approvals() {
   const [flash, setFlash] = useState<string | null>(null);
   const [showExportConfirm, setShowExportConfirm] = useState(false);
   const [showExportSuccess, setShowExportSuccess] = useState(false);
+  const [pendingDecision, setPendingDecision] = useState<{
+    item: ApprovalItem;
+    action: "Approve" | "Disapprove";
+  } | null>(null);
 
   const tabs = ["All", "Pending", "Approved", "Disapproved"];
 
@@ -646,6 +650,13 @@ export default function Approvals() {
   const close = () => {
     setOpenId(null);
     setRemark("");
+  };
+
+  const confirmDecision = async () => {
+    if (!pendingDecision) return;
+    const { item, action } = pendingDecision;
+    setPendingDecision(null);
+    await decide(item, action);
   };
 
   const handleExportCsv = () => {
@@ -1370,7 +1381,7 @@ export default function Approvals() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => decide(open, "Disapprove")}
+                    onClick={() => setPendingDecision({ item: open, action: "Disapprove" })}
                     className="h-9 px-4 rounded-xl text-[13px] font-semibold border transition-colors hover:bg-[#fdf3f2] cursor-pointer"
                     style={{
                       borderColor: "#edc9c5",
@@ -1382,7 +1393,7 @@ export default function Approvals() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => decide(open, "Approve")}
+                    onClick={() => setPendingDecision({ item: open, action: "Approve" })}
                     className="h-9 px-4 rounded-xl text-[13px] font-semibold text-white transition-transform active:scale-[0.99] cursor-pointer"
                     style={{ background: BRAND }}
                   >
@@ -1506,6 +1517,50 @@ export default function Approvals() {
             />
           </div>
         )}
+      </Modal>
+
+      {/* Confirmation Modal for approval decisions; rendered last to sit above the review overlay. */}
+      <Modal
+        isOpen={!!pendingDecision}
+        onClose={() => setPendingDecision(null)}
+        title={pendingDecision?.action === "Approve" ? "Confirm Approval" : "Confirm Disapproval"}
+        icon={
+          <div
+            className={`w-14 h-14 rounded-full flex items-center justify-center ${
+              pendingDecision?.action === "Approve"
+                ? "bg-[#eaf4ee] text-[#2f7043]"
+                : "bg-[#fbecec] text-[#c0392b]"
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-7 h-7"
+            >
+              {pendingDecision?.action === "Approve" ? (
+                <path d="M5 13l4 4L19 7" />
+              ) : (
+                <path d="M6 6l12 12M18 6L6 18" />
+              )}
+            </svg>
+          </div>
+        }
+        actions={
+          <>
+            <GhostButton onClick={() => setPendingDecision(null)}>Cancel</GhostButton>
+            <PrimaryButton onClick={confirmDecision}>
+              {pendingDecision?.action === "Approve" ? "Yes, approve" : "Yes, disapprove"}
+            </PrimaryButton>
+          </>
+        }
+      >
+        {pendingDecision?.action === "Approve"
+          ? `Approve ${pendingDecision.item.type} ${pendingDecision.item.reference} for ${pendingDecision.item.faculty}?`
+          : `Disapprove ${pendingDecision?.item.type} ${pendingDecision?.item.reference} and return it to ${pendingDecision?.item.faculty} for correction?`}
       </Modal>
     </div>
   );
